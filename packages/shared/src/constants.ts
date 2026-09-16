@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   cache: 'mustard:cache',
   /** 打开侧边栏时请求的初始视图（content → background → sidepanel） */
   pendingView: 'mustard:pending-view',
+  /** 右键「翻译选中文本」待填入输入框的内容 */
+  pendingCompose: 'mustard:pending-compose',
 } as const
 
 /**

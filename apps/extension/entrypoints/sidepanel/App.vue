@@ -52,6 +52,18 @@ onMounted(async () => {
   catch {
     // 忽略：无待处理视图
   }
+
+  try {
+    const compose = await getStored<string>(STORAGE_KEYS.pendingCompose)
+    if (compose) {
+      input.value = compose
+      view.value = 'chat'
+      await setStored(STORAGE_KEYS.pendingCompose, '')
+    }
+  }
+  catch {
+    // 忽略：无待填入内容
+  }
 })
 
 const modelOptions = computed(() => (store.settings?.providers ?? []).flatMap(p => p.models.map(m => ({

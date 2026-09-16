@@ -1,13 +1,14 @@
 import type { AiTarget } from '@mustard/core'
-import type { ChatPortClientMessage, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
+import type { ChatPortClientMessage, DictResult, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
 import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateImage, translateSentence, translateWord } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
 import { CHAT_PORT_NAME, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
-import { parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
+import { cacheKey, parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
 import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
 import { getLocalLookup } from '../lib/dictionaryStore'
 import { deleteSession, getSessions, saveSession } from '../lib/sessionStore'
+import { getCached, setCached } from '../lib/translationCache'
 import { addVocab, getVocab, importVocab, removeVocabById, updateVocab } from '../lib/vocabStore'
 
 function resolveAi(settings: Settings): AiTarget | undefined {
@@ -22,6 +23,46 @@ function resolveSourceLang(sourceLang: SourceLang, word: string, targetLang: Lan
   if (sourceLang !== 'auto')
     return sourceLang
   return /^[\x20-\x7E]+$/.test(word) ? 'en' : targetLang
+}
+
+async function buildLocalLookup(): Promise<(word: string) => DictResult | null> {
+  const settings = await getSettings()
+  const enabled = Object.entries(settings.dictionaries)
+    .filter(([, state]) => state.installed && state.enabled)
+    .map(([id]) => id)
+  return getLocalLookup(enabled)
+}
+
+async function addSelectionToVocab(text: string, url?: string): Promise<void> {
+  const settings = await getSettings()
+  const local = await buildLocalLookup()
+  const result = await translateWord(text, 'auto', settings.targetLang, {
+    online: settings.onlineDictionaryFallback,
+    ai: resolveAi(settings),
+    local,
+  })
+  if (!result.card && !result.text)
+    return
+  await addVocab(cardToEntry({
+    word: result.card?.word ?? text,
+    translation: result.card?.translation ?? result.text,
+    phonetic: result.card?.phonetic,
+    partOfSpeech: result.card?.partOfSpeech,
+    examples: result.card?.examples,
+    sourceLang: resolveSourceLang('auto', text, settings.targetLang),
+    targetLang: settings.targetLang,
+    sourceUrl: url,
+  }))
+}
+
+function setupContextMenus(): void {
+  const menus = browser.contextMenus
+  if (!menus)
+    return
+  menus.removeAll(() => {
+    menus.create({ id: 'mustard-translate', title: '用 Mustard 翻译「%s」', contexts: ['selection'] })
+    menus.create({ id: 'mustard-add-vocab', title: '加入 Mustard 生词本「%s」', contexts: ['selection'] })
+  })
 }
 
 export default defineBackground({
@@ -53,25 +94,37 @@ export default defineBackground({
           return (async () => {
             const settings = await getSettings()
             const ai = resolveAi(settings)
+            const key = cacheKey(mode, text, sourceLang, targetLang)
+            const cached = await getCached(key)
+            if (cached)
+              return cached
+
+            let result
             if (mode === 'word') {
-              const enabledDicts = Object.entries(settings.dictionaries)
-                .filter(([, state]) => state.installed && state.enabled)
-                .map(([id]) => id)
-              const local = await getLocalLookup(enabledDicts)
-              const result = await translateWord(text, sourceLang, targetLang, { online: settings.onlineDictionaryFallback, ai, local })
+              result = await translateWord(text, sourceLang, targetLang, {
+                online: settings.onlineDictionaryFallback,
+                ai,
+                local: await buildLocalLookup(),
+              })
               if (result.card && settings.vocab.autoAdd) {
                 await addVocab(cardToEntry({
-                  ...result.card,
                   word: result.card.word,
                   translation: result.card.translation,
+                  phonetic: result.card.phonetic,
+                  partOfSpeech: result.card.partOfSpeech,
+                  examples: result.card.examples,
                   sourceLang: resolveSourceLang(sourceLang, result.card.word, targetLang),
                   targetLang,
                   sourceUrl: (sender as any)?.tab?.url,
                 }))
               }
-              return result
             }
-            return translateSentence(text, sourceLang, targetLang, ai)
+            else {
+              result = await translateSentence(text, sourceLang, targetLang, ai)
+            }
+            if (result.text)
+              await setCached(key, result)
+            return result
           })()
         }
         case 'LOOKUP_WORD':
@@ -188,6 +241,37 @@ export default defineBackground({
       })
 
       port.onDisconnect.addListener(() => controller?.abort())
+    })
+
+    // 快捷键（manifest.commands：Alt+T 切网页翻译 / Alt+L 开侧边栏）
+    browser.commands?.onCommand.addListener((command) => {
+      if (command === 'open-sidebar') {
+        void openSidePanel()
+        return
+      }
+      if (command === 'toggle-page-translate') {
+        void (async () => {
+          const settings = await getSettings()
+          await updateSettings({ features: { ...settings.features, pageTranslate: !settings.features.pageTranslate } })
+        })()
+      }
+    })
+
+    // 右键菜单：翻译选中文本 / 加入生词本
+    setupContextMenus()
+    browser.contextMenus?.onClicked.addListener((info, tab) => {
+      const text = (info.selectionText ?? '').trim()
+      if (!text)
+        return
+      if (info.menuItemId === 'mustard-translate') {
+        void (async () => {
+          await setStored(STORAGE_KEYS.pendingCompose, text)
+          await openSidePanel(tab?.id)
+        })()
+      }
+      else if (info.menuItemId === 'mustard-add-vocab') {
+        void addSelectionToVocab(text, tab?.url)
+      }
     })
   },
 })

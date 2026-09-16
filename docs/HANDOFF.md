@@ -162,6 +162,21 @@
 - **未完成 / TODO**：发音用 Web Speech（未接词典音频，M10 可换 Free Dictionary 音标音频）；未做艾宾浩斯/间隔复习（DESIGN 标为可选二期）；默写未做大小写以外的容错（如忽略连字符）。
 - **下一步依赖**：M10 打磨（缓存/性能/快捷键/i18n/无障碍/错误空态）与数据源补齐。
 
+## M10 · 打磨 — 部分完成
+- **做了什么**：
+  1. **翻译缓存可持久化**：`lib/translationCache`（IndexedDB `translate-cache`，上限 300 条、按插入顺序淘汰）；background 的 `TRANSLATE_TEXT` 先查持久缓存（key = `cacheKey(mode,text,src,tgt)`），命中直接返回，未命中计算后写入（与 `core/translation` 的内存 LRU 双层）。
+  2. **快捷键**：background 监听 `browser.commands.onCommand` —— `Alt+T` 切换「网页翻译」feature（content 经 storage 变更自动启停）、`Alt+L` 打开侧边栏。
+  3. **右键菜单**：`contextMenus`（选中文本）→「用 Mustard 翻译」打开侧边栏并把选中文本预填进输入框（`STORAGE_KEYS.pendingCompose`）；「加入生词本」走 `translateWord`（本地→在线→AI）后入库。
+  4. **并发限流**：网页翻译已按并发 3 批量请求（M6）。
+- **对外暴露（新增，未改名）**：`STORAGE_KEYS.pendingCompose`；extension 内 `lib/translationCache`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 500.85 kB + 落地页 2 页）。
+- **未完成 / TODO（明确留待后续）**：
+  - **i18n（zh/en 文案抽取到 `shared/i18n`）未做**：当前 UI 文案仍是中文硬编码；设置项「界面语言」未加。
+  - **虚拟列表未做**：生词本/历史会话在超大列表下未做窗口化；历史未做分页。
+  - 翻译缓存未做 TTL/容量按设置可调；无右键菜单图标（Chrome 限制）。
+  - 无障碍（aria/键盘可达）仅局部，未系统审查。
+- **下一步依赖**：M11 宣传页只介绍已实现栏目（i18n 未完成则不宣称双语 UI）；M12 文档按实际实现撰写。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -181,4 +196,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M10 · 打磨**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M11 · 宣传页（Astro）**。

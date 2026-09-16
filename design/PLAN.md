@@ -229,7 +229,7 @@ mustard/
 | M7 会话历史 + 侧边栏 | ✅ 完成 | `core/session` + IndexedDB 持久化；`HistoryView`（倒序/相对时间/删除/当前高亮）；新建会话；`pendingView` 支持 history |
 | M8 离线词典 | ✅ 完成（数据源待补） | 本地→在线→AI 链路、IndexedDB 存取、设置页「词典」管理与许可署名；内置 ECDICT 为样例，`DICT_SOURCES` 待填（见 PROBLEMS） |
 | M9 记词（听音默写） | ✅ 完成 | `QuizDialog` 状态机（看词→默写→验证、优先未掌握、全掌握转复习不计分、完成页仅全对）；`streak` 更新走 `UPDATE_VOCAB` |
-| M10 打磨 | ⏳ 待开始 | — |
+| M10 打磨 | 🟡 部分 | 持久翻译缓存、快捷键（Alt+T/Alt+L）、右键菜单、网页翻译并发限流已完成；**i18n 与虚拟列表未做**（UI 仍中文硬编码） |
 | M11 宣传页 | 🟡 部分 | Astro + UnoCSS 骨架，zh/en 双页面可构建；完整版式与文案待做 |
 | M12 部署与文档 | 🟡 部分 | `pages.yml` / `release.yml` 已配置；中英 README 已写初版；链接已用真实地址 |
 
@@ -239,7 +239,7 @@ mustard/
 pnpm install
 pnpm lint        # 8 packages 全绿
 pnpm typecheck   # 8 packages 全绿
-pnpm build       # 扩展 499.18 kB + 落地页 2 页
+pnpm build       # 扩展 500.85 kB + 落地页 2 页
 ```
 
 ### 开发期问题记录
