@@ -221,7 +221,22 @@
   - `vocab`：`normalizeWord`、`upsertWord`（同词去重、streak 取大）、`mergeVocab`（updatedAt 新者胜 + imported）、`removeWord`、`vocabStats`。
   - `session`：`createSession`/`sessionTitle`/`sortSessions`/`upsertSession`/`removeSession`。
   - `translation.parseWordCard`（容忍 ```json 包裹）、`i18n.t`（en 插值 / zh 查表 / 缺键回退）。
-- **UI 端到端**：Chrome 152 已限制 `--load-extension`，无法自动化加载未打包扩展（见 PROBLEMS）；UI 采用手动清单验证（见 PROBLEMS「手动验证清单」）。
+- **E2E 测试（真实扩展 + CDP，推荐）**：Chrome 152 已限制 `--load-extension`，改为**人工加载 + CDP 自动化**（见 PROBLEMS 说明）。
+  - 环境：`Chrome 152 --remote-debugging-port=9222 --user-data-dir=<临时profile>`，人工在 `chrome://extensions` 加载 `apps/extension/.output/chrome-mv3`；扩展 id `olfdhgdigpijecpddkfcadeklppppeoe`。
+  - 方式：Node（全局 `WebSocket`）连 CDP，`Target.createTarget/attachToTarget` + `Runtime.evaluate`；设置类调用在扩展页（options）上下文执行。
+  - 断言 **23/23 PASS**：
+    1. 设置读取（providers/uiLang/dictionaries）
+    2. 生词本 `ADD/UPDATE(streak=3)/REMOVE` 全链路
+    3. 会话 `SAVE/GET/DELETE`
+    4. `GET_DICT_STATUS` 列表；**ECDICT 首次使用时下载** → `installed=true`
+    5. **Wordset 按字母懒下载** → 关闭在线兜底后 `TRANSLATE_TEXT('abandon')` 返回 `local:wordset` 词条（证明离线可查 + 首次下载生效）
+    6. 主题：设 dark → `documentElement[data-theme]=dark`
+    7. i18n：设 `uiLang=en` → options `h1` 变 `Mustard · Settings`
+    8. content：shadow host 挂载、悬浮球 5 个工具、`data-theme`、**划词图标**随选区出现（28×28）
+    9. 网页翻译：开启 → 顶部浮条出现（无 Key 显示「未翻译任何内容」）；还原 → 浮条移除
+    10. 悬浮翻译：hover `abandon` → `.hover-tip` 显示 Wordset 释义
+    11. sidepanel 渲染（5 个头部按钮）
+- **仍需人工验证**（需 API Key / 交互）：侧边栏流式对话、截图粘贴翻译、记词完整流程、Provider 增删改与「测试连接」、词典下载进度条视觉、网页翻译在有 Key 时的双语对照。
 
 ---
 

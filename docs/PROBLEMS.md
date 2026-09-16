@@ -84,8 +84,9 @@
 - 解决：重写 `apps/extension/lib/dictionaryStore`：单一文件包（ecdict）首次查词自动下载并按首字母分片存入 IndexedDB；按字母包（wordset）**首次用到某字母时下载该字母**；新增 `GET_DICT_STATUS`/`DICT_INSTALL`/`DICT_REMOVE` 消息，设置页显示进度/删除；下载完成后回写 `settings.dictionaries[id].installed`。移除内置 `ECDICT_SAMPLE`（不再打包），`lemmaCandidates` 修复了双写辅音（running→run）。
 - 影响/备注：离线覆盖 = Wordset 英英（较全）+ ECDICT 小样例（英汉/MIT）；完整 ECDICT 与中日等多语数据源待补，补时只需在 `DICTIONARIES` 填 `format`/`url`（或在 store 加 per-letter 源），链路与 UI 无需改。已用 Node + esbuild 对真实源跑通解析/查询测试。
 
-### 2026-09-16 · Chrome 152 无法用 `--load-extension` 加载未打包扩展（自动化 UI 测试受阻）
-- 现象：以 `--load-extension=apps/extension/.output/chrome-mv3` 启动 Chrome 152（`--headless=new` 或 headed，附加 `--enable-unsafe-extension-debugging`、`--disable-features=DisableLoadExtensionCommandLineSwitch`），CDP `http://localhost:9228/json` 目标列表始终没有本扩展的 service worker，扩展未加载。
+### 2026-09-16 · Chrome 152 无法用 `--load-extension` 加载未打包扩展（改用「手动加载 + CDP」做 E2E）
+- 现象：以 `--load-extension=apps/extension/.output/chrome-mv3` 启动 Chrome 152（`--headless=new` 或 headed，附加 `--enable-unsafe-extension-debugging`、`--disable-features=DisableLoadExtensionCommandLineSwitch`），CDP `http://localhost:9222/json` 目标列表始终没有本扩展的 service worker，扩展未加载。
 - 原因：新版 Chrome 收紧了命令行加载未打包扩展的能力（`--load-extension` 受限），正常途径是在 `chrome://extensions` 手动开启开发者模式再「加载已解压的扩展程序」。
-- 解决：自动化 UI 冒烟测试暂不可行；改为 **Node + esbuild** 对纯逻辑与数据链路做测试：① `dictionary/parse` 对真实 jsDelivr 源（ECDICT mini、Wordset a.json）解析与查询；② `vocab`（去重/合并/统计）、`session`（标题/排序/CRUD）、`translation.parseWordCard`、`i18n.t`。共 24 条断言全部 PASS。
-- 备注：**手动验证清单**（加载 `apps/extension/.output/chrome-mv3`）：悬浮球出现 → 划词出图标+气泡（无 Key 走在线词典）→ 悬浮取词 tooltip → 开启网页翻译（双语对照 + 顶部进度/还原）→ 侧边栏对话（流式）→ 生词本（记词/发音/导入导出/红点）→ 历史会话（保存/载入/删除）→ 设置（模型 CRUD/测试连接、翻译、悬浮球、词典下载进度/启用/删除、外观-界面语言 zh/en）→ 粘贴截图翻译。
+- 解决：**手动加载 + CDP 自动化**。用 `--remote-debugging-port=9222 --user-data-dir=<临时profile>` 启动 Chrome，人工在 `chrome://extensions` 加载 `chrome-mv3`；随后用 Node（`global WebSocket`）连 CDP，`Target.createTarget/attachToTarget` 打开 `options.html`/`sidepanel.html`/本地测试页，`Runtime.evaluate` 注入断言。扩展 id 从临时 profile 的 `Preferences`（`extensions.commands` 含 `open-sidebar`/`toggle-page-translate`）读出；注意**普通网页主世界没有 `chrome.runtime`**，改设置的调用需在扩展页上下文执行。
+- 结果：见 HANDOFF「E2E 测试（真实扩展）」——23 条断言全部 PASS（含词典首次下载→离线查询、网页翻译浮条、悬浮 tooltip、划词图标、主题、i18n、生词本/会话 CRUD、content shadow host）。
+- 备注：**手动验证清单**（仍在）：侧边栏流式对话（需配置 Key）、截图粘贴翻译、记词完整流程、词典弹窗下载进度条视觉、Provider 增删改与测试连接对话。
