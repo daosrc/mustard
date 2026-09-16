@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./providers": "./src/providers/client.ts",
+    "./session": "./src/session/index.ts",
     "./translation": "./src/translation/index.ts",
     "./vocab": "./src/vocab/index.ts"
   },

@@ -25,10 +25,12 @@
 - 常量：`DEFAULT_SETTINGS`、`OPENCODE_ZEN_PRESET`（apiKey 空占位）、`DEFAULT_TOOLS`、`DICTIONARIES`、`STORAGE_KEYS`、`LANGS` / `langShort()` / `langBcp47()`、`MASTERED_STREAK`
 - 消息协议：`Message` 联合类型 + `ResponseMap`（`PING/GET_SETTINGS/UPDATE_SETTINGS/TRANSLATE_TEXT/CHAT/TRANSLATE_IMAGE/LOOKUP_WORD/ADD_VOCAB/GET_VOCAB/REMOVE_VOCAB/EXPORT_VOCAB/IMPORT_VOCAB/OPEN_SIDEBAR/CAPTURE_TAB`）
 - 流式协议：`CHAT_PORT_NAME`、`ChatStartPayload`、`ChatPortClientMessage`、`ChatPortServerMessage`、`ERR_MISSING_API_KEY`
+- 会话消息：`GET_SESSIONS`（→`Session[]`）、`SAVE_SESSION`（`{ session }`→`Session`）、`DELETE_SESSION`（`{ id }`→`{ id }`）
 
 **`@mustard/platform`**
 - `send<T>(msg)` / `onMessage(handler)` / `openSidePanel(tabId?)` / `getSettings()` / `updateSettings(patch)` / `getStored` / `setStored` / `browser`
 - `startChat(payload, handlers)`：打开流式对话长连接，返回 `{ abort() }`（`handlers: onDelta/onDone/onError`）
+- IndexedDB：`idbGet(key)` / `idbSet(key, value)`（`mustard` 库、`kv` store；会话持久化用）
 
 **`@mustard/design-tokens`**
 - CSS 变量：`--m-paper / surface / surface-2 / ink / muted / faint / line / primary / primary-ink / primary-soft / accent / accent-soft / blush / warn / shadow-sm / shadow-md / shadow-lg`
@@ -40,7 +42,8 @@
 - `MIcon`（`name` + `size` + `strokeWidth`；图标见 `ICONS`）、`MChip`（`variant/removable`）、`MBadge`（`count/dot/max/variant`）、`MField`（`label/hint/inline`）、`MSelect`（`v-model` + `options: SelectOption[]`）、`MDialog`（`v-model` + `title/width`）、`MTabs`（`v-model` + `tabs: TabItem[]`）、`MStars`（`v-model` + `max/readonly`）、`MToastHost` + `useToast()`（`info/success/error`）
 
 **`@mustard/core`**
-- 子路径导出：`@mustard/core/providers`、`/translation`、`/vocab`（**content 侧只导入 `/vocab`，避免把 AI 客户端打进每个页面**）
+- 子路径导出：`@mustard/core/providers`、`/session`、`/translation`、`/vocab`（**content 侧只导入 `/vocab`，避免把 AI 客户端打进每个页面**）
+- `session`：`createSession`、`sessionTitle(messages)`、`upsertSession`、`removeSession`、`sortSessions`
 - `chatStream(provider, model, messages, signal?)`：OpenAI 兼容**流式**，未配 Key 抛 `ProviderError('MISSING_API_KEY')`
 - `chatOnce(provider, model, messages, signal?)`：非流式单次调用；`testConnection(provider, model, signal?)`
 - `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`、`toContentParts(message)`（**多模态：图片附件转 `image_url` content 数组**）、`ProviderError`、`errorCode(error)`
@@ -122,6 +125,18 @@
 - **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 478.46 kB + 落地页 2 页）。
 - **未完成 / TODO**：网页翻译状态未持久化（刷新不恢复，DESIGN 标注为可选）；句子/段落按整块请求，未做缓存持久化与限流调优（M10）；截图仅支持粘贴，未加快捷键（`CAPTURE_TAB` 已就绪，M10 再接命令）；`TRANSLATE_IMAGE` 未按 `inputs.image` 二次门控（sidepanel 已用 `canAttachActive` 前置拦截）。
 - **下一步依赖**：M7 会话历史/侧边栏完善（`core/session` + IndexedDB），网页翻译的进度/还原状态可迁到 session 持久化。
+
+## M7 · 会话历史 + 侧边栏完善 — 完成
+- **做了什么**：
+  1. `@mustard/platform`：新增 IndexedDB 封装 `idbGet/idbSet`（`mustard` 库 / `kv` store）。
+  2. `@mustard/core`：新增 `session`（`createSession/sessionTitle/upsertSession/removeSession/sortSessions`）+ 子路径导出 `./session`。
+  3. `@mustard/shared`：消息协议新增 `GET_SESSIONS`/`SAVE_SESSION`/`DELETE_SESSION` + `ResponseMap`。
+  4. background：会话读/存/删（`lib/sessionStore`，IndexedDB 持久化）。
+  5. sidepanel：消息在流式完成后持久化为 `Session`（标题取首条用户消息）；新增 `HistoryView`（按 `updatedAt` 倒序、相对时间、当前会话高亮、悬停删除）；头部新增「新建会话 ＋」「历史会话」；`openSession` 完整载入历史（含图片附件缩略）；`pendingView` 支持 `history`。
+- **对外暴露（新增，未改名）**：见上；extension 内 `lib/sessionStore`、sidepanel `HistoryView`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 483.70 kB + 落地页 2 页）。
+- **未完成 / TODO**：历史列表未分页/虚拟滚动（M10）；删除当前会话后未自动落到相邻会话（需手动选择）；会话消息未做大小上限/清理；翻译卡片（`ChatMessage.card`）在历史中仍按文本渲染。
+- **下一步依赖**：M8 离线词典与 sidepanel 词典管理弹窗；M10 对会话列表做虚拟滚动与清理策略。
 
 ---
 

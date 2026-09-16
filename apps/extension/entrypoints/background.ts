@@ -6,6 +6,7 @@ import { CHAT_PORT_NAME, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shar
 import { parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
 import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
+import { deleteSession, getSessions, saveSession } from '../lib/sessionStore'
 import { addVocab, getVocab, importVocab, removeVocabById } from '../lib/vocabStore'
 
 function resolveAi(settings: Settings): AiTarget | undefined {
@@ -110,6 +111,15 @@ export default defineBackground({
               ? parseVocabCsv(message.payload.data)
               : parseVocabJson(message.payload.data)
             return importVocab(incoming)
+          })()
+        case 'GET_SESSIONS':
+          return getSessions()
+        case 'SAVE_SESSION':
+          return saveSession(message.payload.session)
+        case 'DELETE_SESSION':
+          return (async () => {
+            await deleteSession(message.payload.id)
+            return { id: message.payload.id }
           })()
         case 'CHAT': {
           const { messages, providerId, model } = message.payload

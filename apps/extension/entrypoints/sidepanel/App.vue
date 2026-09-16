@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Attachment, ChatMessage } from '@mustard/shared'
+import type { Attachment, ChatMessage, Session } from '@mustard/shared'
+import { createSession, sessionTitle } from '@mustard/core/session'
 import { browser, getStored, send, setStored, startChat } from '@mustard/platform'
 import { langShort, STORAGE_KEYS } from '@mustard/shared'
 import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
@@ -8,23 +9,27 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
+import HistoryView from './HistoryView.vue'
 import VocabView from './VocabView.vue'
 
 useTheme()
 const store = useSettingsStore()
 const { error } = useToast()
 
-const view = ref<'chat' | 'vocab'>('chat')
+const view = ref<'chat' | 'vocab' | 'history'>('chat')
 
-const messages = ref<ChatMessage[]>([
-  {
+function welcomeMessage(): ChatMessage {
+  return {
     id: 'welcome',
     role: 'assistant',
     content: '你好，我是 Mustard（芥末）。可以帮你翻译网页、解释单词，或就截图里的内容提问。',
     status: 'done',
     createdAt: Date.now(),
-  },
-])
+  }
+}
+
+const messages = ref<ChatMessage[]>([welcomeMessage()])
+const currentSession = ref<Session | null>(null)
 const input = ref('')
 const attachments = ref<Attachment[]>([])
 const streaming = ref(false)
@@ -36,9 +41,9 @@ let handle: { abort: () => void } | null = null
 onMounted(async () => {
   await store.load()
   try {
-    const pending = await getStored<'chat' | 'vocab' | 'settings'>(STORAGE_KEYS.pendingView)
-    if (pending === 'vocab')
-      view.value = 'vocab'
+    const pending = await getStored<'chat' | 'vocab' | 'history' | 'settings'>(STORAGE_KEYS.pendingView)
+    if (pending === 'vocab' || pending === 'history')
+      view.value = pending
     else if (pending === 'settings')
       void browser.runtime.openOptionsPage()
     if (pending)
@@ -81,6 +86,49 @@ function autoGrow(): void {
     return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 132)}px`
+}
+
+function plainMessages(): ChatMessage[] {
+  return messages.value.map(m => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    attachments: m.attachments?.map(a => ({ ...a })),
+    status: 'done' as const,
+    createdAt: m.createdAt,
+  }))
+}
+
+async function persist(): Promise<void> {
+  const base = currentSession.value ?? createSession()
+  const session: Session = {
+    ...base,
+    title: sessionTitle(messages.value),
+    messages: plainMessages(),
+    updatedAt: Date.now(),
+  }
+  currentSession.value = await send({ type: 'SAVE_SESSION', payload: { session } })
+}
+
+function newChat(): void {
+  handle?.abort()
+  handle = null
+  streaming.value = false
+  currentSession.value = null
+  messages.value = [welcomeMessage()]
+  attachments.value = []
+  input.value = ''
+  view.value = 'chat'
+}
+
+function openSession(session: Session): void {
+  handle?.abort()
+  handle = null
+  streaming.value = false
+  currentSession.value = session
+  messages.value = session.messages.length ? session.messages.map(m => ({ ...m })) : [welcomeMessage()]
+  view.value = 'chat'
+  scrollToBottom()
 }
 
 async function readAsDataURL(file: File): Promise<string> {
@@ -127,6 +175,7 @@ async function translatePastedImage(file: File): Promise<void> {
     const result = await send({ type: 'TRANSLATE_IMAGE', payload: { dataUrl, targetLang: store.settings?.targetLang ?? 'zh-CN' } })
     assistant.content = result.content
     assistant.status = 'done'
+    await persist()
   }
   catch (err) {
     assistant.status = 'error'
@@ -180,7 +229,7 @@ function sendMessage(): void {
   if (!settings)
     return
 
-  messages.value.push({ id: uid('m-'), role: 'user', content: text, attachments: attachments.value.length ? structuredClone(attachments.value) : undefined, status: 'done', createdAt: Date.now() })
+  messages.value.push({ id: uid('m-'), role: 'user', content: text, attachments: attachments.value.length ? attachments.value.map(a => ({ ...a })) : undefined, status: 'done', createdAt: Date.now() })
   input.value = ''
   attachments.value = []
   autoGrow()
@@ -207,6 +256,7 @@ function sendMessage(): void {
         assistant.status = 'done'
         streaming.value = false
         handle = null
+        void persist()
       },
       onError: (code, message) => {
         assistant.status = 'error'
@@ -228,8 +278,16 @@ function sendMessage(): void {
         <MIcon name="chevron-left" :size="16" />
       </button>
       <img v-else class="mark" :src="BALL_ICON" alt="Mustard">
-      <span class="name">{{ view === 'vocab' ? '生词本' : 'Mustard · 芥末' }}</span>
+      <span class="name">{{ view === 'vocab' ? '生词本' : view === 'history' ? '历史会话' : 'Mustard · 芥末' }}</span>
       <span class="spacer" />
+      <template v-if="view === 'chat'">
+        <button class="icon-btn" title="新建会话" @click="newChat">
+          <MIcon name="plus" :size="16" />
+        </button>
+        <button class="icon-btn" title="历史会话" @click="view = 'history'">
+          <MIcon name="history" :size="16" />
+        </button>
+      </template>
       <button class="icon-btn" :class="{ active: view === 'chat' }" title="对话" @click="view = 'chat'">
         <MIcon name="message" :size="16" />
       </button>
@@ -242,6 +300,7 @@ function sendMessage(): void {
     </header>
 
     <VocabView v-if="view === 'vocab'" />
+    <HistoryView v-else-if="view === 'history'" :current-id="currentSession?.id ?? null" @open="openSession" />
 
     <template v-else>
       <main ref="bodyEl" class="panel-body">
@@ -256,8 +315,9 @@ function sendMessage(): void {
               <span v-if="message.status === 'streaming'" class="caret" />
             </template>
             <div v-if="message.attachments?.length" class="msg-atts">
-              <MChip v-for="(att, i) in message.attachments" :key="i">
-                <MIcon :name="att.type === 'image' ? 'image' : 'file'" :size="12" />
+              <img v-for="(att, i) in message.attachments.filter(a => a.type === 'image')" :key="`i-${i}`" class="msg-thumb" :src="att.dataUrl" :alt="att.name">
+              <MChip v-for="(att, i) in message.attachments.filter(a => a.type !== 'image')" :key="`f-${i}`">
+                <MIcon name="file" :size="12" />
                 {{ att.name }}
               </MChip>
             </div>
@@ -367,6 +427,7 @@ function sendMessage(): void {
 }
 @keyframes blink { 50% { opacity: 0; } }
 .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.msg-thumb { max-width: 160px; max-height: 120px; border-radius: 8px; display: block; }
 .composer { border-top: 1px solid var(--m-line); padding: 8px; background: var(--m-surface); }
 .input-box { border: 1px solid var(--m-line); border-radius: 12px; padding: 8px 8px 6px; background: var(--m-surface); }
 .input-box textarea {
