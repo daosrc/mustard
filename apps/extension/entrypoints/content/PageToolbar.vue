@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import type { UILang } from '@mustard/shared'
+import { t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
 import { pageState } from './pageTranslator'
 
+const props = defineProps<{ uiLang: UILang }>()
 defineEmits<{ restore: [] }>()
+
+function t(key: string, vars?: Record<string, string | number>): string {
+  return translateKey(props.uiLang, key, vars)
+}
 </script>
 
 <template>
@@ -10,14 +17,14 @@ defineEmits<{ restore: [] }>()
     <span v-if="pageState.total > 0 && pageState.done >= pageState.total" class="pb-dot done" />
     <span v-else class="pb-dot" />
     <span class="pb-text">
-      <template v-if="!pageState.total">正在扫描页面…</template>
-      <template v-else-if="pageState.done < pageState.total">翻译中 {{ pageState.done }}/{{ pageState.total }}</template>
-      <template v-else-if="pageState.ok">翻译完成 · {{ pageState.ok }} 段</template>
-      <template v-else>未翻译任何内容（请配置模型 API Key）</template>
+      <template v-if="!pageState.total">{{ t('content.pageScanning') }}</template>
+      <template v-else-if="pageState.done < pageState.total">{{ t('content.pageTranslating', { done: pageState.done, total: pageState.total }) }}</template>
+      <template v-else-if="pageState.ok">{{ t('content.pageDone', { ok: pageState.ok }) }}</template>
+      <template v-else>{{ t('content.pageNone') }}</template>
     </span>
     <button class="pb-btn" @click="$emit('restore')">
       <MIcon name="close" :size="13" />
-      还原原文
+      {{ t('content.restore') }}
     </button>
   </div>
 </template>

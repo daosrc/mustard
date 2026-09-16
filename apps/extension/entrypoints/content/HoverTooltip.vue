@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TranslateResult } from '@mustard/core/translation'
 import type { Settings } from '@mustard/shared'
+import { t as translateKey } from '@mustard/shared'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { addToVocab, translate } from './actions'
 
@@ -15,6 +16,10 @@ interface TipState {
 
 const props = defineProps<{ settings: Settings | null }>()
 const emit = defineEmits<{ added: [] }>()
+
+function t(key: string): string {
+  return translateKey(props.settings?.uiLang ?? 'zh', key)
+}
 
 const tooltip = ref<TipState | null>(null)
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -142,7 +147,7 @@ onBeforeUnmount(() => {
     @pointerleave="scheduleHide()"
   >
     <div v-if="tooltip.loading" class="ht-loading">
-      查询中…
+      {{ t('content.searching') }}
     </div>
     <template v-else>
       <div class="ht-text">
@@ -151,7 +156,7 @@ onBeforeUnmount(() => {
       <div class="ht-foot">
         <span class="ht-word">{{ tooltip.text }}</span>
         <button class="ht-btn" :class="{ done: tooltip.added }" :disabled="tooltip.added" @click="onAdd">
-          {{ tooltip.added ? '已加入' : '加入生词本' }}
+          {{ tooltip.added ? t('content.added') : t('content.addVocab') }}
         </button>
       </div>
     </template>

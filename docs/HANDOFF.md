@@ -205,6 +205,15 @@
 - **未完成 / TODO**：完整 ECDICT（66MB）与中日多语数据源待补（jsDelivr 20MB 限制，需自建 CDN/Release 资产或分片）；`wordset` 全量预下载较慢，当前以按字母懒加载为主。
 - **下一步依赖**：无。
 
+## M10+ · i18n 与列表分页 — 完成
+- **做了什么**：
+  1. **i18n**：`@mustard/shared/i18n`（`UILang`、`MESSAGES.zh/en`、`t(lang,key,vars)`）；`Settings` 新增 `uiLang`（默认 `zh`）；扩展 `lib/i18n`（`useI18n` 跟随 settings）；设置页「外观 → 界面语言」。已把 options（含 ProviderDialog）、sidepanel（App/VocabView/HistoryView/QuizDialog）、content（工具标签、划词气泡、悬浮 tooltip、网页翻译浮条）文案全部改走 `t()`（content 因无 Pinia，直接按 `settings.uiLang` 调用 `t`）。
+  2. **列表分页**：生词本与历史会话按 50 条分页 +「加载更多」（DESIGN 明确允许「分页/虚拟滚动」，此处取分页）。
+- **对外暴露（新增）**：`UILang`、`UI_LANGS`、`MESSAGES`、`t`、`settings.uiLang`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 531.12 kB + 落地页 2 页）。
+- **未完成 / TODO**：网页内注入的译文节点按目标语言展示（与 UI 语言无关，符合预期）；仍有个别占位文案（如 ProviderDialog 的示例名称）未本地化；翻译缓存未加 TTL/容量设置项；`design/screenshots/` 截图仍缺。
+- **下一步依赖**：无。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）

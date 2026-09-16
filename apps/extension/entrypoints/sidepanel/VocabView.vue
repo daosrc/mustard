@@ -3,12 +3,14 @@ import type { WordEntry } from '@mustard/shared'
 import { send } from '@mustard/platform'
 import { MASTERED_STREAK } from '@mustard/shared'
 import { MButton, MChip, MIcon, MSelect, MStars, useToast } from '@mustard/ui'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from '../../lib/i18n'
 import { speak } from '../../lib/speech'
 import QuizDialog from './QuizDialog.vue'
 
 const emit = defineEmits<{ changed: [] }>()
 const { success, error } = useToast()
+const { t } = useI18n()
 
 const entries = ref<WordEntry[]>([])
 const query = ref('')
@@ -16,12 +18,13 @@ const filter = ref<string>('all')
 const fileEl = ref<HTMLInputElement>()
 const quizOpen = ref(false)
 const pendingCount = computed(() => entries.value.filter(e => e.streak < MASTERED_STREAK).length)
+const PAGE_SIZE = 50
 
-const filterOptions = [
-  { label: '全部', value: 'all' },
-  { label: '练习中', value: 'learning' },
-  { label: '已掌握', value: 'mastered' },
-]
+const filterOptions = computed(() => [
+  { label: t('vocab.filterAll'), value: 'all' },
+  { label: t('vocab.filterLearning'), value: 'learning' },
+  { label: t('vocab.filterMastered'), value: 'mastered' },
+])
 
 async function load(): Promise<void> {
   entries.value = await send({ type: 'GET_VOCAB' })
@@ -37,6 +40,17 @@ const filtered = computed(() => {
       || (filter.value === 'mastered' ? e.streak >= MASTERED_STREAK : e.streak < MASTERED_STREAK))
     .filter(e => !q || e.word.toLowerCase().includes(q) || e.translation.toLowerCase().includes(q))
 })
+
+const visibleCount = ref(PAGE_SIZE)
+const paged = computed(() => filtered.value.slice(0, visibleCount.value))
+const hasMore = computed(() => filtered.value.length > visibleCount.value)
+watch([query, filter, entries], () => {
+  visibleCount.value = PAGE_SIZE
+})
+
+function loadMore(): void {
+  visibleCount.value += PAGE_SIZE
+}
 
 const stats = computed(() => {
   const mastered = entries.value.filter(e => e.streak >= MASTERED_STREAK).length
@@ -58,7 +72,7 @@ async function exportVocab(format: 'json' | 'csv'): Promise<void> {
   link.download = filename
   link.click()
   URL.revokeObjectURL(url)
-  success('已导出')
+  success(t('vocab.exported'))
 }
 
 function pickImport(): void {
@@ -75,11 +89,11 @@ async function onImportFile(event: Event): Promise<void> {
     const data = await file.text()
     const format = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'json'
     const result = await send({ type: 'IMPORT_VOCAB', payload: { format, data } })
-    success(`已导入 ${result.imported} 条，共 ${result.total} 条`)
+    success(t('vocab.imported', { n: result.imported, total: result.total }))
     await load()
   }
   catch {
-    error('导入失败：文件格式无效')
+    error(t('vocab.importFailed'))
   }
 }
 </script>
@@ -87,14 +101,14 @@ async function onImportFile(event: Event): Promise<void> {
 <template>
   <div class="vocab">
     <div class="v-toolbar">
-      <input v-model="query" class="m-input search" placeholder="搜索单词或释义…">
+      <input v-model="query" class="m-input search" :placeholder="t('vocab.search')">
       <MSelect v-model="filter" :options="filterOptions" size="sm" class="filter" />
     </div>
 
     <div class="v-actions">
       <MButton :disabled="!entries.length" @click="quizOpen = true">
         <MIcon name="sparkles" :size="14" />
-        记词 {{ pendingCount }}
+        {{ t('vocab.quiz', { n: pendingCount }) }}
       </MButton>
       <MButton variant="ghost" @click="exportVocab('json')">
         <MIcon name="download" :size="14" />
@@ -106,20 +120,20 @@ async function onImportFile(event: Event): Promise<void> {
       </MButton>
       <MButton variant="ghost" @click="pickImport">
         <MIcon name="upload" :size="14" />
-        导入
+        {{ t('vocab.import') }}
       </MButton>
       <input ref="fileEl" class="hidden-file" type="file" accept=".json,.csv,application/json,text/csv" @change="onImportFile">
     </div>
 
     <div class="v-list">
       <p v-if="!filtered.length" class="v-empty">
-        {{ entries.length ? '没有匹配的词条。' : '生词本还是空的。划词翻译单词即可自动收录。' }}
+        {{ entries.length ? t('vocab.noMatch') : t('vocab.empty') }}
       </p>
-      <div v-for="entry in filtered" :key="entry.id" class="v-item">
+      <div v-for="entry in paged" :key="entry.id" class="v-item">
         <div class="v-main">
           <div class="v-word">
             {{ entry.word }}
-            <button class="icon-btn" title="发音" @click="speak(entry.word, entry.sourceLang)">
+            <button class="icon-btn" :title="t('vocab.speak')" @click="speak(entry.word, entry.sourceLang)">
               <MIcon name="speaker" :size="14" />
             </button>
           </div>
@@ -131,18 +145,21 @@ async function onImportFile(event: Event): Promise<void> {
         </div>
         <div class="v-meta">
           <MChip v-if="entry.streak >= MASTERED_STREAK" variant="primary">
-            已掌握
+            {{ t('vocab.mastered') }}
           </MChip>
           <MStars v-else :max="3" :model-value="entry.streak" :size="13" />
-          <button class="icon-btn danger" title="删除" @click="remove(entry)">
+          <button class="icon-btn danger" :title="t('vocab.delete')" @click="remove(entry)">
             <MIcon name="trash" :size="14" />
           </button>
         </div>
       </div>
+      <button v-if="hasMore" class="v-more" @click="loadMore">
+        {{ t('vocab.loadMore', { n: filtered.length - visibleCount }) }}
+      </button>
     </div>
 
     <footer class="v-foot">
-      共 {{ stats.total }} 词 · 已掌握 {{ stats.mastered }} · 练习中 {{ stats.learning }}
+      {{ t('vocab.stats', { total: stats.total, mastered: stats.mastered, learning: stats.learning }) }}
     </footer>
 
     <QuizDialog v-model="quizOpen" :entries="entries" @done="load" />
@@ -186,5 +203,15 @@ async function onImportFile(event: Event): Promise<void> {
   font-size: 11.5px;
   color: var(--m-muted);
 }
+.v-more {
+  border: 1px dashed var(--m-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--m-muted);
+  font-size: 12.5px;
+  padding: 8px;
+  cursor: pointer;
+}
+.v-more:hover { border-color: var(--m-primary); color: var(--m-primary); }
 .hidden-file { display: none; }
 </style>

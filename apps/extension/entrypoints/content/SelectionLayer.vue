@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { TranslateResult } from '@mustard/core/translation'
 import type { Settings } from '@mustard/shared'
+import { t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { addToVocab, speakText, translate } from './actions'
 
 const props = defineProps<{ settings: Settings | null }>()
 const emit = defineEmits<{ added: [] }>()
+
+function t(key: string): string {
+  return translateKey(props.settings?.uiLang ?? 'zh', key)
+}
 
 const icon = ref<{ x: number, y: number } | null>(null)
 const popover = ref<{ x: number, y: number } | null>(null)
@@ -103,7 +108,7 @@ onBeforeUnmount(() => {
     v-if="icon"
     class="sel-icon"
     :style="{ left: `${icon.x}px`, top: `${icon.y}px` }"
-    title="翻译"
+    :title="t('content.translate')"
     @mousedown.prevent
     @click="openPopover"
   >
@@ -113,22 +118,22 @@ onBeforeUnmount(() => {
   <div v-if="popover" class="sel-pop" :style="{ left: `${popover.x}px`, top: `${popover.y}px` }">
     <header class="pop-head">
       <span class="pop-word">{{ result?.card?.word ?? text }}</span>
-      <button class="pop-btn" title="发音" @click="speakText(text, props.settings)">
+      <button class="pop-btn" :title="t('content.speak')" @click="speakText(text, props.settings)">
         <MIcon name="speaker" :size="15" />
       </button>
-      <button class="pop-btn" title="复制" @click="copy">
+      <button class="pop-btn" :title="t('content.copy')" @click="copy">
         <MIcon name="copy" :size="15" />
       </button>
-      <button class="pop-btn" title="关闭" @click="clear">
+      <button class="pop-btn" :title="t('content.close')" @click="clear">
         <MIcon name="close" :size="15" />
       </button>
     </header>
 
     <div v-if="loading" class="pop-loading">
-      查询中…
+      {{ t('content.searching') }}
     </div>
     <div v-else-if="!result || (!result.text && !result.card)" class="pop-empty">
-      未找到结果。配置模型 API Key 后可用 AI 翻译。
+      {{ t('content.notFound') }}
     </div>
     <template v-else>
       <div v-if="result.card?.phonetic || result.card?.partOfSpeech" class="pop-meta">
@@ -146,7 +151,7 @@ onBeforeUnmount(() => {
       <footer class="pop-foot">
         <button class="pop-add" :class="{ done: added }" :disabled="added" @click="onAdd">
           <MIcon :name="added ? 'check' : 'plus'" :size="14" />
-          {{ added ? '已加入' : '加入生词本' }}
+          {{ added ? t('content.added') : t('content.addVocab') }}
         </button>
       </footer>
     </template>

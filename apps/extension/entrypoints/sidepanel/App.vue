@@ -6,6 +6,7 @@ import { langShort, STORAGE_KEYS } from '@mustard/shared'
 import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { useI18n } from '../../lib/i18n'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
@@ -15,6 +16,7 @@ import VocabView from './VocabView.vue'
 useTheme()
 const store = useSettingsStore()
 const { error } = useToast()
+const { t } = useI18n()
 
 const view = ref<'chat' | 'vocab' | 'history'>('chat')
 
@@ -22,7 +24,7 @@ function welcomeMessage(): ChatMessage {
   return {
     id: 'welcome',
     role: 'assistant',
-    content: '你好，我是 Mustard（芥末）。可以帮你翻译网页、解释单词，或就截图里的内容提问。',
+    content: t('chat.welcome'),
     status: 'done',
     createdAt: Date.now(),
   }
@@ -192,8 +194,8 @@ async function translatePastedImage(file: File): Promise<void> {
   catch (err) {
     assistant.status = 'error'
     assistant.content = err instanceof Error && err.message === 'MISSING_API_KEY'
-      ? '尚未配置模型 API Key。请点击右上角设置，配置支持图片输入的模型。'
-      : '截图翻译失败，请检查模型与网络。'
+      ? t('chat.imageNoKey')
+      : t('chat.imageFailed')
   }
 }
 
@@ -206,7 +208,7 @@ function onPaste(event: ClipboardEvent): void {
     return
   event.preventDefault()
   if (!store.canAttachActive) {
-    error('当前模型不支持图片输入，请切换多模态模型')
+    error(t('chat.imageUnsupported'))
     return
   }
   const file = imageItem.getAsFile()
@@ -216,7 +218,7 @@ function onPaste(event: ClipboardEvent): void {
 
 function onAttachClick(): void {
   if (!store.canAttachActive) {
-    error('当前模型不支持附件，请切换支持图片/附件的模型')
+    error(t('chat.attachUnsupported'))
     return
   }
   fileEl.value?.click()
@@ -273,8 +275,8 @@ function sendMessage(): void {
       onError: (code, message) => {
         assistant.status = 'error'
         assistant.content = code === 'MISSING_API_KEY'
-          ? '尚未配置模型 API Key。请点击右上角设置，配置 OpenCode Zen 或自定义提供商。'
-          : `请求失败：${message}`
+          ? t('chat.noKey')
+          : t('chat.requestFailed', { message })
         streaming.value = false
         handle = null
       },
@@ -286,27 +288,27 @@ function sendMessage(): void {
 <template>
   <div class="panel">
     <header class="panel-head">
-      <button v-if="view !== 'chat'" class="icon-btn" title="返回" @click="view = 'chat'">
+      <button v-if="view !== 'chat'" class="icon-btn" :title="t('nav.back')" @click="view = 'chat'">
         <MIcon name="chevron-left" :size="16" />
       </button>
       <img v-else class="mark" :src="BALL_ICON" alt="Mustard">
-      <span class="name">{{ view === 'vocab' ? '生词本' : view === 'history' ? '历史会话' : 'Mustard · 芥末' }}</span>
+      <span class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : t('app.name') }}</span>
       <span class="spacer" />
       <template v-if="view === 'chat'">
-        <button class="icon-btn" title="新建会话" @click="newChat">
+        <button class="icon-btn" :title="t('nav.newChat')" @click="newChat">
           <MIcon name="plus" :size="16" />
         </button>
-        <button class="icon-btn" title="历史会话" @click="view = 'history'">
+        <button class="icon-btn" :title="t('nav.history')" @click="view = 'history'">
           <MIcon name="history" :size="16" />
         </button>
       </template>
-      <button class="icon-btn" :class="{ active: view === 'chat' }" title="对话" @click="view = 'chat'">
+      <button class="icon-btn" :class="{ active: view === 'chat' }" :title="t('nav.chat')" @click="view = 'chat'">
         <MIcon name="message" :size="16" />
       </button>
-      <button class="icon-btn" :class="{ active: view === 'vocab' }" title="生词本" @click="view = 'vocab'">
+      <button class="icon-btn" :class="{ active: view === 'vocab' }" :title="t('nav.vocab')" @click="view = 'vocab'">
         <MIcon name="book" :size="16" />
       </button>
-      <button class="icon-btn" title="设置" @click="openSettings">
+      <button class="icon-btn" :title="t('nav.settings')" @click="openSettings">
         <MIcon name="settings" :size="16" />
       </button>
     </header>
@@ -320,7 +322,7 @@ function sendMessage(): void {
           <img v-if="message.role === 'assistant'" class="avatar" :src="BALL_ICON" alt="">
           <div class="bubble" :class="{ error: message.status === 'error' }">
             <template v-if="message.status === 'streaming' && !message.content">
-              <span class="typing">思考中…</span>
+              <span class="typing">{{ t('chat.thinking') }}</span>
             </template>
             <template v-else>
               <span class="text">{{ message.content }}</span>
@@ -349,13 +351,13 @@ function sendMessage(): void {
             ref="textareaEl"
             v-model="input"
             rows="1"
-            placeholder="输入消息，Enter 发送 / Shift+Enter 换行"
+            :placeholder="t('chat.placeholder')"
             @input="autoGrow"
             @paste="onPaste"
             @keydown.enter.exact.prevent="onEnter"
           />
           <div class="tools-row">
-            <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? '上传附件' : '当前模型不支持附件'" @click="onAttachClick">
+            <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? t('chat.attach') : t('chat.attachUnsupported')" @click="onAttachClick">
               <MIcon name="paperclip" :size="16" />
             </button>
             <MChip variant="primary">
@@ -366,14 +368,14 @@ function sendMessage(): void {
               size="sm"
               :model-value="activeModelValue"
               :options="modelOptions"
-              placeholder="选择模型"
+              :placeholder="t('chat.modelPlaceholder')"
               @update:model-value="setActiveModel"
             />
             <span class="spacer" />
-            <button v-if="streaming" class="send stop" title="停止" @click="stop">
+            <button v-if="streaming" class="send stop" :title="t('chat.stop')" @click="stop">
               <MIcon name="close" :size="13" :stroke-width="2.4" />
             </button>
-            <button v-else class="send" title="发送" :disabled="!input.trim() && !attachments.length" @click="sendMessage">
+            <button v-else class="send" :title="t('chat.send')" :disabled="!input.trim() && !attachments.length" @click="sendMessage">
               <MIcon name="send" :size="13" :stroke-width="2" />
             </button>
           </div>

@@ -3,10 +3,12 @@ import type { Session } from '@mustard/shared'
 import { send } from '@mustard/platform'
 import { MIcon } from '@mustard/ui'
 import { timeAgo } from '@mustard/utils'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from '../../lib/i18n'
 
 const props = defineProps<{ currentId: string | null }>()
 const emit = defineEmits<{ open: [Session], changed: [] }>()
+const { t } = useI18n()
 
 const sessions = ref<Session[]>([])
 
@@ -17,6 +19,17 @@ async function load(): Promise<void> {
 onMounted(load)
 
 const ordered = computed(() => [...sessions.value].sort((a, b) => b.updatedAt - a.updatedAt))
+const PAGE_SIZE = 50
+const visibleCount = ref(PAGE_SIZE)
+const paged = computed(() => ordered.value.slice(0, visibleCount.value))
+const hasMore = computed(() => ordered.value.length > visibleCount.value)
+watch(sessions, () => {
+  visibleCount.value = PAGE_SIZE
+})
+
+function loadMore(): void {
+  visibleCount.value += PAGE_SIZE
+}
 
 async function remove(session: Session, event: Event): Promise<void> {
   event.stopPropagation()
@@ -29,10 +42,10 @@ async function remove(session: Session, event: Event): Promise<void> {
 <template>
   <div class="history">
     <p v-if="!ordered.length" class="h-empty">
-      还没有历史会话。发送第一条消息后会自动保存。
+      {{ t('history.empty') }}
     </p>
     <div
-      v-for="session in ordered"
+      v-for="session in paged"
       :key="session.id"
       class="h-item"
       :class="{ current: session.id === props.currentId }"
@@ -43,13 +56,16 @@ async function remove(session: Session, event: Event): Promise<void> {
           {{ session.title }}
         </div>
         <div class="h-meta">
-          {{ timeAgo(session.updatedAt) }} · {{ session.id === props.currentId ? '当前会话' : '点击查看' }}
+          {{ timeAgo(session.updatedAt) }} · {{ session.id === props.currentId ? t('history.current') : t('history.view') }}
         </div>
       </div>
-      <button class="icon-btn danger" title="删除" @click="remove(session, $event)">
+      <button class="icon-btn danger" :title="t('vocab.delete')" @click="remove(session, $event)">
         <MIcon name="trash" :size="14" />
       </button>
     </div>
+    <button v-if="hasMore" class="h-more" @click="loadMore">
+      {{ t('history.loadMore', { n: ordered.length - visibleCount }) }}
+    </button>
   </div>
 </template>
 
@@ -79,4 +95,14 @@ async function remove(session: Session, event: Event): Promise<void> {
 }
 .icon-btn:hover { background: var(--m-surface-2); color: var(--m-ink); }
 .icon-btn.danger:hover { color: var(--m-blush); }
+.h-more {
+  border: 1px dashed var(--m-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--m-muted);
+  font-size: 12.5px;
+  padding: 8px;
+  cursor: pointer;
+}
+.h-more:hover { border-color: var(--m-primary); color: var(--m-primary); }
 </style>

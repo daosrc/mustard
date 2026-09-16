@@ -1,3 +1,4 @@
+import type { UILang } from '../i18n'
 import type { LangCode, SourceLang } from './lang'
 import type { Provider } from './provider'
 
@@ -91,6 +92,8 @@ export interface Settings {
   floatingBall: FloatingBallSettings
   vocab: VocabSettings
   theme: ThemeMode
+  /** 扩展界面语言 */
+  uiLang: UILang
   /** 在线词典兜底（本地词典未命中时联网查询） */
   onlineDictionaryFallback: boolean
   /** 离线词典安装/启用状态 */

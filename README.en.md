@@ -92,7 +92,7 @@ See [THIRD-PARTY.md](./THIRD-PARTY.md).
 ## Known limitations
 
 - **Offline dictionaries**: data is not bundled and is **downloaded on first use**. Current sources: ECDICT (MIT; the jsDelivr copy is a small sample) and Wordset English (CC BY-SA, lazy per first letter, good coverage). The full ECDICT (~66 MB, GitHub raw) and Chinese/Japanese sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
-- **UI language**: extension UI strings are Chinese for now while the landing page is bilingual; extracting strings into `shared/i18n` and a UI-language setting are still planned.
+- **UI language**: the extension UI supports **Simplified Chinese / English** (Settings → Appearance → UI language); strings live in `shared/i18n`. Please open an issue for any hard-coded text we missed.
 - **Landing screenshots**: feature sections currently use CSS mock visuals; real screenshots will replace them once exported.
 
 ## License

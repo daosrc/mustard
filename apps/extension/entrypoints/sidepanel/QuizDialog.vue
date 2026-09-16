@@ -4,11 +4,13 @@ import { send } from '@mustard/platform'
 import { MASTERED_STREAK } from '@mustard/shared'
 import { MButton, MDialog, MIcon } from '@mustard/ui'
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from '../../lib/i18n'
 import { speak } from '../../lib/speech'
 
 const props = defineProps<{ entries: WordEntry[] }>()
 const emit = defineEmits<{ done: [] }>()
 const open = defineModel<boolean>({ default: false })
+const { t } = useI18n()
 const queue = ref<WordEntry[]>([])
 const review = ref(false)
 const index = ref(0)
@@ -88,11 +90,11 @@ async function verify(): Promise<void> {
       await send({ type: 'UPDATE_VOCAB', payload: entry })
     }
     if (index.value < queue.value.length - 1) {
-      feedback.value = { ok: true, text: '✓ 正确' }
+      feedback.value = { ok: true, text: t('quiz.correct') }
       next()
       return
     }
-    feedback.value = { ok: true, text: review.value ? '✓ 正确，复习完成' : '✓ 正确，已是最后一个单词' }
+    feedback.value = { ok: true, text: review.value ? t('quiz.reviewDone') : t('quiz.correctLast') }
     phase.value = 'view'
     if (review.value || allCorrect())
       finished.value = true
@@ -104,18 +106,18 @@ async function verify(): Promise<void> {
     entry.updatedAt = Date.now()
     await send({ type: 'UPDATE_VOCAB', payload: entry })
   }
-  feedback.value = { ok: false, text: `正确拼写：${entry.word}` }
+  feedback.value = { ok: false, text: t('quiz.wrong', { word: entry.word }) }
   phase.value = 'view'
 }
 </script>
 
 <template>
-  <MDialog v-model="open" :title="queue.length ? `记词 · ${queue.length} 词` : '记词'" width="420px">
+  <MDialog v-model="open" :title="queue.length ? t('quiz.title', { n: queue.length }) : t('quiz.titleEmpty')" width="420px">
     <div v-if="finished" class="q-done">
       <MIcon name="check" :size="30" />
-      <p>全部完成！本轮 {{ queue.length }} 词。</p>
+      <p>{{ t('quiz.done', { n: queue.length }) }}</p>
       <MButton @click="open = false">
-        关闭
+        {{ t('quiz.close') }}
       </MButton>
     </div>
 
@@ -123,7 +125,7 @@ async function verify(): Promise<void> {
       <div class="q-word">
         <span v-if="phase === 'view'" class="q-text">{{ current.word }}</span>
         <span v-else class="q-mask">•••••</span>
-        <button class="icon-btn" title="播放读音" @click="speakWord">
+        <button class="icon-btn" :title="t('quiz.play')" @click="speakWord">
           <MIcon name="speaker" :size="17" />
         </button>
       </div>
@@ -136,7 +138,7 @@ async function verify(): Promise<void> {
         ref="inputEl"
         v-model="answer"
         class="m-input q-input"
-        placeholder="默写单词…"
+        :placeholder="t('quiz.write')"
         autocomplete="off"
         @keydown.enter.prevent="verify"
       >
@@ -146,28 +148,27 @@ async function verify(): Promise<void> {
       </p>
 
       <div class="q-foot">
-        <button class="q-nav" :disabled="index === 0" title="上一个" @click="prev">
+        <button class="q-nav" :disabled="index === 0" :title="t('quiz.prev')" @click="prev">
           <MIcon name="chevron-left" :size="16" />
         </button>
         <MButton v-if="phase === 'view'" @click="phase = 'write'">
-          默写
+          {{ t('quiz.spell') }}
         </MButton>
         <MButton v-else @click="verify">
-          验证
+          {{ t('quiz.verify') }}
         </MButton>
-        <button class="q-nav" :disabled="index >= queue.length - 1" title="下一个" @click="next">
+        <button class="q-nav" :disabled="index >= queue.length - 1" :title="t('quiz.next')" @click="next">
           <MIcon name="chevron-right" :size="16" />
         </button>
       </div>
 
       <p class="q-progress">
-        {{ index + 1 }} / {{ queue.length }}
-        <span v-if="review"> · 复习模式（不计分）</span>
+        {{ index + 1 }} / {{ queue.length }}<span v-if="review">{{ t('quiz.reviewMode') }}</span>
       </p>
     </div>
 
     <p v-else class="m-muted">
-      生词本为空，先去划词收录单词吧。
+      {{ t('quiz.empty') }}
     </p>
   </MDialog>
 </template>

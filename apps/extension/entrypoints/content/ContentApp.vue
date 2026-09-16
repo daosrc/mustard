@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Settings, ToolItem } from '@mustard/shared'
 import { browser, send } from '@mustard/platform'
-import { STORAGE_KEYS } from '@mustard/shared'
+import { STORAGE_KEYS, t as translate } from '@mustard/shared'
 import { MBadge, MIcon } from '@mustard/ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useTheme } from '../../lib/useTheme'
@@ -56,6 +56,16 @@ async function refresh(): Promise<void> {
 
 function onAdded(): void {
   void refresh()
+}
+
+function tr(key: string): string {
+  return translate(settings.value?.uiLang ?? 'zh', key)
+}
+
+function toolLabel(tool: ToolItem): string {
+  const key = `content.tool.${tool.id}`
+  const value = translate(settings.value?.uiLang ?? 'zh', key)
+  return value === key ? tool.label : value
 }
 
 const ball = computed(() => settings.value?.floatingBall ?? null)
@@ -130,14 +140,14 @@ function onBallClick(): void {
           class="tool"
           :class="{ on: isOn(tool.id) }"
           :style="toolStyle(index)"
-          :title="tool.label"
+          :title="toolLabel(tool)"
           @click.stop="onToolClick(tool)"
         >
           <MIcon :name="TOOL_ICON[tool.id] ?? 'sparkles'" :size="20" />
-          <span class="tool-label">{{ tool.label }}</span>
+          <span class="tool-label">{{ toolLabel(tool) }}</span>
         </button>
       </div>
-      <button class="fab" title="Mustard 芥末" @click="onBallClick">
+      <button class="fab" :title="tr('app.name')" @click="onBallClick">
         <img class="fab-logo" :src="BALL_ICON" alt="Mustard">
         <MBadge v-if="vocabCount" dot class="fab-dot" />
       </button>
@@ -145,6 +155,6 @@ function onBallClick(): void {
 
     <SelectionLayer :settings="settings" @added="onAdded" />
     <HoverTooltip :settings="settings" @added="onAdded" />
-    <PageToolbar @restore="restorePage" />
+    <PageToolbar :ui-lang="settings?.uiLang ?? 'zh'" @restore="restorePage" />
   </div>
 </template>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { DictInstallStatus, DictionaryItem, Provider, Settings } from '@mustard/shared'
+import type { DictInstallStatus, DictionaryItem, Provider, Settings, UILang } from '@mustard/shared'
 import { send } from '@mustard/platform'
-import { DICTIONARIES, LANGS, SOURCE_LANGS } from '@mustard/shared'
+import { DICTIONARIES, LANGS, SOURCE_LANGS, UI_LANGS } from '@mustard/shared'
 import { MButton, MChip, MDialog, MField, MIcon, MSelect, MSwitch, MTabs, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from '../../lib/i18n'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
@@ -13,37 +14,44 @@ import ProviderDialog from './ProviderDialog.vue'
 useTheme()
 const store = useSettingsStore()
 const { success, error } = useToast()
+const { t } = useI18n()
 
-const tabs = [
-  { key: 'providers', label: '模型', icon: 'sparkles' },
-  { key: 'translate', label: '翻译', icon: 'translate' },
-  { key: 'ball', label: '悬浮球', icon: 'globe' },
-  { key: 'vocab', label: '生词本', icon: 'book' },
-  { key: 'dict', label: '词典', icon: 'search' },
-  { key: 'appearance', label: '外观', icon: 'settings' },
-]
+const tabs = computed(() => [
+  { key: 'providers', label: t('options.tabProviders'), icon: 'sparkles' },
+  { key: 'translate', label: t('options.tabTranslate'), icon: 'translate' },
+  { key: 'ball', label: t('options.tabBall'), icon: 'globe' },
+  { key: 'vocab', label: t('options.tabVocab'), icon: 'book' },
+  { key: 'dict', label: t('options.tabDict'), icon: 'search' },
+  { key: 'appearance', label: t('options.tabAppearance'), icon: 'settings' },
+])
+const uiLangOptions = UI_LANGS.map(l => ({ label: l.label, value: l.code }))
+
+function setUILang(value?: string): void {
+  if (value)
+    void store.patch({ uiLang: value as UILang })
+}
 const active = ref('providers')
 const theme = ref<'system' | 'light' | 'dark'>('system')
 
-const themeOptions = [
-  { label: '跟随系统', value: 'system' },
-  { label: '浅色', value: 'light' },
-  { label: '深色', value: 'dark' },
-]
+const themeOptions = computed(() => [
+  { label: t('options.themeSystem'), value: 'system' },
+  { label: t('options.themeLight'), value: 'light' },
+  { label: t('options.themeDark'), value: 'dark' },
+])
 const targetOptions = LANGS.map(l => ({ label: l.label, value: l.code }))
 const sourceOptions = SOURCE_LANGS.map(l => ({ label: l.label, value: l.code }))
-const scopeOptions = [
-  { label: '仅单词', value: 'word' },
-  { label: '整句', value: 'sentence' },
-]
-const positionOptions = [
-  { label: '右下角', value: 'right' },
-  { label: '左下角', value: 'left' },
-]
-const expandOptions = [
-  { label: '径向展开', value: 'radial' },
-  { label: '纵向排列', value: 'stack' },
-]
+const scopeOptions = computed(() => [
+  { label: t('options.scopeWord'), value: 'word' },
+  { label: t('options.scopeSentence'), value: 'sentence' },
+])
+const positionOptions = computed(() => [
+  { label: t('options.ballRight'), value: 'right' },
+  { label: t('options.ballLeft'), value: 'left' },
+])
+const expandOptions = computed(() => [
+  { label: t('options.ballRadial'), value: 'radial' },
+  { label: t('options.ballStack'), value: 'stack' },
+])
 
 onMounted(async () => {
   await store.load()
@@ -142,7 +150,7 @@ function onSaveProvider(provider: Provider): void {
     ? store.settings.providers.map(p => p.id === provider.id ? provider : p)
     : [...store.settings.providers, provider]
   void store.patch({ providers: next })
-  success('已保存提供商')
+  success(t('options.providerSaved'))
 }
 
 function removeProvider(provider: Provider): void {
@@ -150,7 +158,7 @@ function removeProvider(provider: Provider): void {
     return
   const next = store.settings.providers.filter(p => p.id !== provider.id)
   if (!next.length) {
-    error('至少保留一个提供商')
+    error(t('options.keepOneProvider'))
     return
   }
   const patch: Partial<Settings> = { providers: next }
@@ -159,6 +167,12 @@ function removeProvider(provider: Provider): void {
     patch.activeModel = next[0]!.models[0]?.name ?? ''
   }
   void store.patch(patch)
+}
+
+function toolLabel(id: string, fallback: string): string {
+  const key = `content.tool.${id}`
+  const value = t(key)
+  return value === key ? fallback : value
 }
 
 type DictState = Settings['dictionaries'][string]
@@ -212,16 +226,16 @@ async function downloadDict(dict: DictionaryItem): Promise<void> {
   void loadDictStatus()
   const res = await send({ type: 'DICT_INSTALL', payload: { id: dict.id } })
   if (res.ok)
-    success('词典下载完成')
+    success(t('options.dictDownloaded'))
   else
-    error(res.error === 'NO_SOURCE' ? '该词典数据源待补充' : `下载失败：${res.error ?? '未知错误'}`)
+    error(res.error === 'NO_SOURCE' ? t('options.dictNoSource') : t('options.dictFailed', { error: res.error ?? '' }))
   await loadDictStatus()
 }
 
 async function removeDictPack(id: string): Promise<void> {
   await send({ type: 'DICT_REMOVE', payload: { id } })
   await store.load()
-  success('已删除词典数据')
+  success(t('options.dictRemoved'))
   await loadDictStatus()
 }
 </script>
@@ -231,9 +245,9 @@ async function removeDictPack(id: string): Promise<void> {
     <header class="head">
       <img class="mark" :src="BALL_ICON" alt="Mustard">
       <div>
-        <h1>Mustard 芥末 · 设置</h1>
+        <h1>{{ t('options.title') }}</h1>
         <p class="sub">
-          模型提供商、翻译、悬浮球、生词本与外观。离线词典管理将在 M8 实现。
+          {{ t('options.subtitle') }}
         </p>
       </div>
     </header>
@@ -243,34 +257,34 @@ async function removeDictPack(id: string): Promise<void> {
     <!-- 模型 -->
     <section v-if="active === 'providers'" class="stack">
       <div class="m-card card">
-        <MField inline label="当前模型">
-          <MSelect :model-value="activeModelValue" :options="modelOptions" size="sm" placeholder="选择模型" @update:model-value="setActiveModel" />
+        <MField inline :label="t('options.currentModel')">
+          <MSelect :model-value="activeModelValue" :options="modelOptions" size="sm" :placeholder="t('chat.modelPlaceholder')" @update:model-value="setActiveModel" />
         </MField>
         <p class="m-muted">
-          附件入口由当前模型的输入能力决定：仅当支持「图片/附件」时才可上传与粘贴截图。
+          {{ t('options.modelHint') }}
         </p>
       </div>
 
       <div class="section-head">
-        <h2>提供商</h2>
+        <h2>{{ t('options.providers') }}</h2>
         <MButton variant="ghost" @click="addProvider">
           <MIcon name="plus" :size="14" />
-          添加提供商
+          {{ t('options.addProvider') }}
         </MButton>
       </div>
 
       <div v-for="provider in providers" :key="provider.id" class="m-card provider">
         <div class="p-head">
-          <span class="dot" :class="{ on: !!provider.apiKey }" :title="provider.apiKey ? '已配置 Key' : '未配置 Key'" />
+          <span class="dot" :class="{ on: !!provider.apiKey }" :title="provider.apiKey ? t('options.keySet') : t('options.keyUnset')" />
           <span class="p-name">{{ provider.name }}</span>
           <MChip v-if="provider.builtin" variant="primary">
-            内置
+            {{ t('options.builtin') }}
           </MChip>
           <span class="spacer" />
-          <button class="icon-btn" title="编辑" @click="openEdit(provider)">
+          <button class="icon-btn" :title="t('options.edit')" @click="openEdit(provider)">
             <MIcon name="chevron-right" :size="15" />
           </button>
-          <button v-if="!provider.builtin" class="icon-btn" title="删除" @click="removeProvider(provider)">
+          <button v-if="!provider.builtin" class="icon-btn" :title="t('options.delete')" @click="removeProvider(provider)">
             <MIcon name="trash" :size="15" />
           </button>
         </div>
@@ -278,17 +292,17 @@ async function removeDictPack(id: string): Promise<void> {
           <div v-for="model in provider.models" :key="model.id" class="p-model">
             <span class="m-name">{{ model.name }}</span>
             <MChip v-if="model.inputs.text">
-              文本
+              {{ t('options.capText') }}
             </MChip>
             <MChip v-if="model.inputs.image" variant="primary">
-              图片
+              {{ t('options.capImage') }}
             </MChip>
             <MChip v-if="model.inputs.file" variant="primary">
-              附件
+              {{ t('options.capFile') }}
             </MChip>
           </div>
           <p v-if="!provider.models.length" class="m-muted">
-            暂无模型，点击右侧箭头添加。
+            {{ t('options.noModels') }}
           </p>
         </div>
       </div>
@@ -297,30 +311,30 @@ async function removeDictPack(id: string): Promise<void> {
     <!-- 翻译 -->
     <section v-else-if="active === 'translate'" class="stack">
       <div class="m-card card">
-        <MField inline label="源语言">
+        <MField inline :label="t('options.sourceLang')">
           <MSelect :model-value="store.settings?.sourceLang" :options="sourceOptions" size="sm" @update:model-value="setSource" />
         </MField>
-        <MField inline label="目标语言">
+        <MField inline :label="t('options.targetLang')">
           <MSelect :model-value="store.settings?.targetLang" :options="targetOptions" size="sm" @update:model-value="setTarget" />
         </MField>
       </div>
 
       <div class="m-card card">
-        <h2>功能开关</h2>
-        <MField inline label="网页翻译">
+        <h2>{{ t('options.features') }}</h2>
+        <MField inline :label="t('options.pageTranslate')">
           <MSwitch :model-value="!!store.settings?.features.pageTranslate" @update:model-value="v => setFeature('pageTranslate', v)" />
         </MField>
-        <MField inline label="划词翻译">
+        <MField inline :label="t('options.selectionTranslate')">
           <MSwitch :model-value="!!store.settings?.features.selectionTranslate" @update:model-value="v => setFeature('selectionTranslate', v)" />
         </MField>
-        <MField inline label="悬浮翻译">
+        <MField inline :label="t('options.hoverTranslate')">
           <MSwitch :model-value="!!store.settings?.features.hoverTranslate" @update:model-value="v => setFeature('hoverTranslate', v)" />
         </MField>
       </div>
 
       <div class="m-card card">
-        <h2>悬浮翻译</h2>
-        <MField inline :label="`触发延迟 ${store.settings?.hover.delay ?? 450}ms`">
+        <h2>{{ t('options.hover') }}</h2>
+        <MField inline :label="t('options.hoverDelay', { ms: store.settings?.hover.delay ?? 450 })">
           <input
             class="slider"
             type="range"
@@ -331,7 +345,7 @@ async function removeDictPack(id: string): Promise<void> {
             @input="setHover({ delay: Number(($event.target as HTMLInputElement).value) })"
           >
         </MField>
-        <MField inline label="取词范围">
+        <MField inline :label="t('options.hoverScope')">
           <MSelect :model-value="store.settings?.hover.scope" :options="scopeOptions" size="sm" @update:model-value="v => v && setHover({ scope: v as Settings['hover']['scope'] })" />
         </MField>
       </div>
@@ -340,30 +354,30 @@ async function removeDictPack(id: string): Promise<void> {
     <!-- 悬浮球 -->
     <section v-else-if="active === 'ball'" class="stack">
       <div class="m-card card">
-        <MField inline label="启用悬浮球">
+        <MField inline :label="t('options.ballEnabled')">
           <MSwitch :model-value="!!store.settings?.floatingBall.enabled" @update:model-value="v => setBall({ enabled: v })" />
         </MField>
-        <MField inline label="位置">
+        <MField inline :label="t('options.ballPosition')">
           <MSelect :model-value="store.settings?.floatingBall.position" :options="positionOptions" size="sm" @update:model-value="v => v && setBall({ position: v as Settings['floatingBall']['position'] })" />
         </MField>
-        <MField inline label="展开方式">
+        <MField inline :label="t('options.ballExpand')">
           <MSelect :model-value="store.settings?.floatingBall.expand" :options="expandOptions" size="sm" @update:model-value="v => v && setBall({ expand: v as Settings['floatingBall']['expand'] })" />
         </MField>
       </div>
 
       <div class="m-card card">
-        <h2>工具管理</h2>
+        <h2>{{ t('options.tools') }}</h2>
         <div v-for="(tool, index) in store.settings?.floatingBall.tools ?? []" :key="tool.id" class="tool-row">
           <span class="drag">⠿</span>
-          <span class="t-label">{{ tool.label }}</span>
+          <span class="t-label">{{ toolLabel(tool.id, tool.label) }}</span>
           <MChip v-if="tool.type === 'toggle'">
-            开关
+            {{ t('options.toolToggle') }}
           </MChip>
           <span class="spacer" />
-          <button class="icon-btn" title="上移" :disabled="index === 0" @click="moveTool(index, -1)">
+          <button class="icon-btn" :title="t('options.moveUp')" :disabled="index === 0" @click="moveTool(index, -1)">
             <MIcon name="chevron-left" :size="14" class="rot90" />
           </button>
-          <button class="icon-btn" title="下移" :disabled="index === (store.settings?.floatingBall.tools.length ?? 0) - 1" @click="moveTool(index, 1)">
+          <button class="icon-btn" :title="t('options.moveDown')" :disabled="index === (store.settings?.floatingBall.tools.length ?? 0) - 1" @click="moveTool(index, 1)">
             <MIcon name="chevron-left" :size="14" class="rot270" />
           </button>
           <MSwitch :model-value="tool.visible" @update:model-value="() => toggleTool(tool.id)" />
@@ -374,14 +388,14 @@ async function removeDictPack(id: string): Promise<void> {
     <!-- 生词本 -->
     <section v-else-if="active === 'vocab'" class="stack">
       <div class="m-card card">
-        <MField inline label="翻译单词后自动收录">
+        <MField inline :label="t('options.vocabAutoAdd')">
           <MSwitch :model-value="!!store.settings?.vocab.autoAdd" @update:model-value="v => setVocab({ autoAdd: v })" />
         </MField>
-        <MField inline label="仅收录单词（非整句）">
+        <MField inline :label="t('options.vocabWordOnly')">
           <MSwitch :model-value="!!store.settings?.vocab.wordOnly" @update:model-value="v => setVocab({ wordOnly: v })" />
         </MField>
         <p class="m-muted">
-          导入 / 导出与列表管理将在 M5 实现。
+          {{ t('options.vocabHint') }}
         </p>
       </div>
     </section>
@@ -389,18 +403,18 @@ async function removeDictPack(id: string): Promise<void> {
     <!-- 词典 -->
     <section v-else-if="active === 'dict'" class="stack">
       <div class="m-card card">
-        <MField inline label="在线词典兜底" hint="本地未命中时联网查询">
+        <MField inline :label="t('options.onlineFallback')" :hint="t('options.onlineFallbackHint')">
           <MSwitch :model-value="!!store.settings?.onlineDictionaryFallback" @update:model-value="v => store.patch({ onlineDictionaryFallback: v })" />
         </MField>
         <div class="m-row">
-          <span class="m-muted">已安装 {{ installedCount }} / {{ dictList.length }} · 已启用 {{ enabledCount }}</span>
+          <span class="m-muted">{{ t('options.dictSummary', { installed: installedCount, total: dictList.length, enabled: enabledCount }) }}</span>
           <MButton variant="ghost" @click="dictDialogOpen = true">
             <MIcon name="book" :size="14" />
-            管理离线词典
+            {{ t('options.manageDict') }}
           </MButton>
         </div>
         <p class="m-muted">
-          查询顺序：本地词典 → 在线词典 → AI。关闭在线兜底即进入纯离线模式。
+          {{ t('options.dictOrderHint') }}
         </p>
       </div>
     </section>
@@ -408,30 +422,30 @@ async function removeDictPack(id: string): Promise<void> {
     <!-- 外观 -->
     <section v-else class="stack">
       <div class="m-card card">
-        <MField inline label="主题">
+        <MField inline :label="t('options.theme')">
           <MSelect :model-value="theme" :options="themeOptions" size="sm" @update:model-value="setTheme" />
         </MField>
-        <p class="m-muted">
-          界面语言与快捷键自定义将在 M10 实现。
-        </p>
+        <MField inline :label="t('options.uiLang')">
+          <MSelect :model-value="store.settings?.uiLang" :options="uiLangOptions" size="sm" @update:model-value="setUILang" />
+        </MField>
       </div>
     </section>
 
-    <MDialog v-model="dictDialogOpen" title="管理离线词典" width="540px">
+    <MDialog v-model="dictDialogOpen" :title="t('options.manageDict')" width="540px">
       <div class="dict-list">
         <div v-for="dict in dictList" :key="dict.id" class="dict-item">
           <div class="d-main">
             <div class="d-name">
               {{ dict.name }}
               <MChip v-if="dict.perLetter" variant="primary">
-                按需
+                {{ t('options.dictLazy') }}
               </MChip>
             </div>
             <div class="m-muted">
               {{ dict.langPair }} · {{ dict.size }} · {{ dict.license }}
             </div>
             <div v-if="dictStatusOf(dict.id).error" class="d-err">
-              下载失败：{{ dictStatusOf(dict.id).error }}
+              {{ t('options.dictFailed', { error: dictStatusOf(dict.id).error ?? '' }) }}
             </div>
           </div>
           <div class="d-actions">
@@ -442,17 +456,17 @@ async function removeDictPack(id: string): Promise<void> {
               </div>
               <span class="d-pct">{{ Math.round((dictStatusOf(dict.id).progress ?? 0) * 100) }}%</span>
             </template>
-            <button v-else-if="dictStatusOf(dict.id).installed" class="icon-btn" title="删除数据" @click="removeDictPack(dict.id)">
+            <button v-else-if="dictStatusOf(dict.id).installed" class="icon-btn" :title="t('options.dictDelete')" @click="removeDictPack(dict.id)">
               <MIcon name="trash" :size="15" />
             </button>
-            <MButton v-else variant="ghost" :disabled="!hasSource(dict)" :title="hasSource(dict) ? '首次使用时自动下载' : '数据源待补充'" @click="downloadDict(dict)">
-              下载
+            <MButton v-else variant="ghost" :disabled="!hasSource(dict)" :title="hasSource(dict) ? t('options.dictDownload') : t('options.dictNoSource')" @click="downloadDict(dict)">
+              {{ t('options.dictDownload') }}
             </MButton>
           </div>
         </div>
       </div>
       <p class="m-muted license">
-        词典数据不随扩展打包，首次使用时按需下载。数据来源与署名：ECDICT(MIT)、Wordset(CC BY-SA 4.0)+WordNet、CC-CEDICT(CC BY-SA)、JMdict(EDRDG)、FreeDict(GPL)，详见 THIRD-PARTY.md。
+        {{ t('options.dictLicense') }}
       </p>
     </MDialog>
 

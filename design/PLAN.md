@@ -229,7 +229,7 @@ mustard/
 | M7 会话历史 + 侧边栏 | ✅ 完成 | `core/session` + IndexedDB 持久化；`HistoryView`（倒序/相对时间/删除/当前高亮）；新建会话；`pendingView` 支持 history |
 | M8 离线词典 | ✅ 完成 | 数据**不打包**，**首次使用时下载**（ECDICT MIT 样例 / Wordset 英英按字母懒加载）→ 存 IndexedDB；本地→在线→AI 链路 + 设置页词典管理（进度/下载/删除/署名） |
 | M9 记词（听音默写） | ✅ 完成 | `QuizDialog` 状态机（看词→默写→验证、优先未掌握、全掌握转复习不计分、完成页仅全对）；`streak` 更新走 `UPDATE_VOCAB` |
-| M10 打磨 | 🟡 部分 | 持久翻译缓存、快捷键（Alt+T/Alt+L）、右键菜单、网页翻译并发限流已完成；**i18n 与虚拟列表未做**（UI 仍中文硬编码） |
+| M10 打磨 | ✅ 完成 | 持久翻译缓存、快捷键（Alt+T/Alt+L）、右键菜单、并发限流；`shared/i18n`（zh/en，`settings.uiLang`）；生词本/历史分页加载 |
 | M11 宣传页 | ✅ 完成 | `content.ts`(zh/en) + `Landing.astro`：Hero/8 功能图文交替/三步/子功能卡片/开源/安装/Footer；截图用 CSS mock 占位 |
 | M12 部署与文档 | ✅ 完成（截图待导出） | `pages.yml`/`release.yml`/`ci.yml` 就绪；中英 README 完整（含已知限制）；链接均为真实地址、无占位符；`design/screenshots/` 仍待导出 |
 
@@ -239,7 +239,7 @@ mustard/
 pnpm install
 pnpm lint        # 8 packages 全绿
 pnpm typecheck   # 8 packages 全绿
-pnpm build       # 扩展 500.85 kB + 落地页 2 页
+pnpm build       # 扩展 531.12 kB + 落地页 2 页
 ```
 
 ### 开发期问题记录

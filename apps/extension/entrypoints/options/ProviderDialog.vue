@@ -3,11 +3,13 @@ import type { Provider } from '@mustard/shared'
 import { errorCode, testConnection } from '@mustard/core'
 import { MButton, MDialog, MField, MIcon, useToast } from '@mustard/ui'
 import { reactive, ref, watch } from 'vue'
+import { useI18n } from '../../lib/i18n'
 
 const props = defineProps<{ provider: Provider | null }>()
 const emit = defineEmits<{ save: [Provider] }>()
 const open = defineModel<boolean>({ default: false })
 const { success, error } = useToast()
+const { t } = useI18n()
 
 const draft = reactive<Provider>({ id: '', name: '', baseUrl: '', apiKey: '', models: [], builtin: false })
 const testing = ref(false)
@@ -31,7 +33,7 @@ function removeModel(index: number): void {
 
 function save(): void {
   if (!draft.name.trim() || !draft.baseUrl.trim()) {
-    error('请填写名称与 baseUrl')
+    error(t('options.needNameUrl'))
     return
   }
   const models = draft.models
@@ -43,21 +45,21 @@ function save(): void {
 
 async function test(): Promise<void> {
   if (!draft.baseUrl.trim()) {
-    error('请先填写 baseUrl')
+    error(t('options.needBaseUrl'))
     return
   }
   const model = draft.models.find(m => m.name.trim())
   if (!model) {
-    error('请先添加至少一个模型')
+    error(t('options.needModel'))
     return
   }
   testing.value = true
   try {
     await testConnection({ ...structuredClone(draft), models: draft.models }, model)
-    success('连接成功')
+    success(t('options.connected'))
   }
   catch (err) {
-    error(`连接失败：${errorCode(err)}`)
+    error(t('options.connectFailed', { error: errorCode(err) }))
   }
   finally {
     testing.value = false
@@ -66,51 +68,51 @@ async function test(): Promise<void> {
 </script>
 
 <template>
-  <MDialog v-model="open" :title="provider?.builtin ? '编辑提供商（内置）' : '编辑提供商'" width="520px">
+  <MDialog v-model="open" :title="provider?.builtin ? t('options.providerEditBuiltin') : t('options.providerEdit')" width="520px">
     <div class="form">
-      <MField label="名称">
-        <input v-model="draft.name" class="m-input" placeholder="例如 OpenCode Zen">
+      <MField :label="t('options.providerName')">
+        <input v-model="draft.name" class="m-input" placeholder="OpenCode Zen">
       </MField>
-      <MField label="Base URL" hint="OpenAI 兼容：请求 {baseUrl}/chat/completions">
+      <MField :label="t('options.providerBaseUrl')">
         <input v-model="draft.baseUrl" class="m-input" placeholder="https://opencode.ai/zen/v1">
       </MField>
-      <MField label="API Key" hint="仅保存在本地">
+      <MField :label="t('options.providerKey')" :hint="t('options.providerKeyHint')">
         <input v-model="draft.apiKey" class="m-input" type="password" placeholder="sk-...">
       </MField>
 
       <div class="models">
         <div class="models-head">
-          <span class="label">模型</span>
+          <span class="label">{{ t('options.providerModels') }}</span>
           <MButton variant="ghost" @click="addModel">
             <MIcon name="plus" :size="14" />
-            添加模型
+            {{ t('options.addModel') }}
           </MButton>
         </div>
 
         <div v-for="(model, index) in draft.models" :key="index" class="model-row">
-          <input v-model="model.name" class="m-input name" placeholder="模型 ID，如 claude-sonnet-4.5">
-          <label class="cap"><input v-model="model.inputs.text" type="checkbox">文本</label>
-          <label class="cap"><input v-model="model.inputs.image" type="checkbox">图片</label>
-          <label class="cap"><input v-model="model.inputs.file" type="checkbox">附件</label>
-          <button class="del" type="button" title="移除" @click="removeModel(index)">
+          <input v-model="model.name" class="m-input name" :placeholder="t('options.modelId')">
+          <label class="cap"><input v-model="model.inputs.text" type="checkbox">{{ t('options.capText') }}</label>
+          <label class="cap"><input v-model="model.inputs.image" type="checkbox">{{ t('options.capImage') }}</label>
+          <label class="cap"><input v-model="model.inputs.file" type="checkbox">{{ t('options.capFile') }}</label>
+          <button class="del" type="button" :title="t('options.delete')" @click="removeModel(index)">
             <MIcon name="close" :size="14" />
           </button>
         </div>
         <p v-if="!draft.models.length" class="m-muted">
-          暂无模型，请添加至少一个。
+          {{ t('options.noModels') }}
         </p>
       </div>
     </div>
 
     <template #footer>
       <MButton variant="ghost" :disabled="testing" @click="test">
-        {{ testing ? '测试中…' : '测试连接' }}
+        {{ testing ? t('options.testing') : t('options.testConnection') }}
       </MButton>
       <MButton variant="ghost" @click="open = false">
-        取消
+        {{ t('options.cancel') }}
       </MButton>
       <MButton @click="save">
-        保存
+        {{ t('options.save') }}
       </MButton>
     </template>
   </MDialog>

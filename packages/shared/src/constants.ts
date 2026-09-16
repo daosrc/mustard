@@ -91,6 +91,7 @@ export const DEFAULT_SETTINGS: Settings = {
   floatingBall: { enabled: true, position: 'right', expand: 'radial', tools: DEFAULT_TOOLS },
   vocab: { autoAdd: true, wordOnly: true },
   theme: 'system',
+  uiLang: 'zh',
   onlineDictionaryFallback: true,
   dictionaries: Object.fromEntries(DICTIONARIES.map(d => [d.id, { installed: d.installed, enabled: d.enabled }])),
 }
