@@ -214,6 +214,15 @@
 - **未完成 / TODO**：网页内注入的译文节点按目标语言展示（与 UI 语言无关，符合预期）；仍有个别占位文案（如 ProviderDialog 的示例名称）未本地化；翻译缓存未加 TTL/容量设置项；`design/screenshots/` 截图仍缺。
 - **下一步依赖**：无。
 
+## 测试记录（M0–M12 全部完成后）
+- **构建与静态检查**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 531.12 kB + 落地页 2 页；`astro check` 0 error）。
+- **核心逻辑测试（Node + esbuild，真实数据源）**：24 条断言全部 PASS ——
+  - `dictionary/parse`：ECDICT mini（53 条）、Wordset `a.json`（7091 条）解析；`lemmaCandidates('running')→run`；按词查询命中。
+  - `vocab`：`normalizeWord`、`upsertWord`（同词去重、streak 取大）、`mergeVocab`（updatedAt 新者胜 + imported）、`removeWord`、`vocabStats`。
+  - `session`：`createSession`/`sessionTitle`/`sortSessions`/`upsertSession`/`removeSession`。
+  - `translation.parseWordCard`（容忍 ```json 包裹）、`i18n.t`（en 插值 / zh 查表 / 缺键回退）。
+- **UI 端到端**：Chrome 152 已限制 `--load-extension`，无法自动化加载未打包扩展（见 PROBLEMS）；UI 采用手动清单验证（见 PROBLEMS「手动验证清单」）。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）

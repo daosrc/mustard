@@ -83,3 +83,9 @@
 - 调研：ECDICT 完整 `ecdict.csv` 约 66 MB（MIT），**jsDelivr 拒绝 >20MB**（403 `File size exceeded the configured limit of 20 MB`），`raw.githubusercontent.com` 在开发环境不可达；`ecdict.mini.csv`（4KB，MIT）可直取；Wordset 词典按字母分文件（`data/<letter>.json`，a=3.8MB、s=6.9MB，均 <20MB）可经 jsDelivr 直取（CC BY-SA 4.0 + WordNet）。
 - 解决：重写 `apps/extension/lib/dictionaryStore`：单一文件包（ecdict）首次查词自动下载并按首字母分片存入 IndexedDB；按字母包（wordset）**首次用到某字母时下载该字母**；新增 `GET_DICT_STATUS`/`DICT_INSTALL`/`DICT_REMOVE` 消息，设置页显示进度/删除；下载完成后回写 `settings.dictionaries[id].installed`。移除内置 `ECDICT_SAMPLE`（不再打包），`lemmaCandidates` 修复了双写辅音（running→run）。
 - 影响/备注：离线覆盖 = Wordset 英英（较全）+ ECDICT 小样例（英汉/MIT）；完整 ECDICT 与中日等多语数据源待补，补时只需在 `DICTIONARIES` 填 `format`/`url`（或在 store 加 per-letter 源），链路与 UI 无需改。已用 Node + esbuild 对真实源跑通解析/查询测试。
+
+### 2026-09-16 · Chrome 152 无法用 `--load-extension` 加载未打包扩展（自动化 UI 测试受阻）
+- 现象：以 `--load-extension=apps/extension/.output/chrome-mv3` 启动 Chrome 152（`--headless=new` 或 headed，附加 `--enable-unsafe-extension-debugging`、`--disable-features=DisableLoadExtensionCommandLineSwitch`），CDP `http://localhost:9228/json` 目标列表始终没有本扩展的 service worker，扩展未加载。
+- 原因：新版 Chrome 收紧了命令行加载未打包扩展的能力（`--load-extension` 受限），正常途径是在 `chrome://extensions` 手动开启开发者模式再「加载已解压的扩展程序」。
+- 解决：自动化 UI 冒烟测试暂不可行；改为 **Node + esbuild** 对纯逻辑与数据链路做测试：① `dictionary/parse` 对真实 jsDelivr 源（ECDICT mini、Wordset a.json）解析与查询；② `vocab`（去重/合并/统计）、`session`（标题/排序/CRUD）、`translation.parseWordCard`、`i18n.t`。共 24 条断言全部 PASS。
+- 备注：**手动验证清单**（加载 `apps/extension/.output/chrome-mv3`）：悬浮球出现 → 划词出图标+气泡（无 Key 走在线词典）→ 悬浮取词 tooltip → 开启网页翻译（双语对照 + 顶部进度/还原）→ 侧边栏对话（流式）→ 生词本（记词/发音/导入导出/红点）→ 历史会话（保存/载入/删除）→ 设置（模型 CRUD/测试连接、翻译、悬浮球、词典下载进度/启用/删除、外观-界面语言 zh/en）→ 粘贴截图翻译。
