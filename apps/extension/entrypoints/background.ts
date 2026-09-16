@@ -1,6 +1,6 @@
 import type { AiTarget } from '@mustard/core'
 import type { ChatPortClientMessage, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
-import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateSentence, translateWord } from '@mustard/core'
+import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateImage, translateSentence, translateWord } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
 import { CHAT_PORT_NAME, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
 import { parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
@@ -70,6 +70,23 @@ export default defineBackground({
         }
         case 'LOOKUP_WORD':
           return lookupWord(message.payload.word, message.payload.targetLang)
+        case 'TRANSLATE_IMAGE': {
+          const { dataUrl, targetLang } = message.payload
+          return (async () => {
+            const ai = resolveAi(await getSettings())
+            if (!ai)
+              throw new Error(ERR_MISSING_API_KEY)
+            return { content: await translateImage(dataUrl, targetLang, ai) }
+          })()
+        }
+        case 'CAPTURE_TAB':
+          return (async () => {
+            const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+            const dataUrl = tab?.windowId !== undefined
+              ? await browser.tabs.captureVisibleTab(tab.windowId, { format: 'png' })
+              : await browser.tabs.captureVisibleTab({ format: 'png' })
+            return { dataUrl }
+          })()
         case 'GET_VOCAB':
           return getVocab()
         case 'ADD_VOCAB':

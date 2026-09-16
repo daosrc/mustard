@@ -141,3 +141,29 @@
   opacity: 1;
   transform: translateY(-50%) translateX(0);
 }
+
+/* ---------- 网页翻译：追加译文节点 ---------- */
+.mustard-translation {
+  margin: 2px 0 6px;
+  padding-left: 8px;
+  border-left: 2px solid var(--m-line);
+  color: var(--m-muted);
+  font-size: .95em;
+  line-height: 1.6;
+}
+
+.mustard-skeleton {
+  display: inline-block;
+  width: 64px;
+  height: 1em;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--m-surface-2) 25%, var(--m-line) 37%, var(--m-surface-2) 63%);
+  background-size: 400% 100%;
+  animation: mustard-shimmer 1.4s ease infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes mustard-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}

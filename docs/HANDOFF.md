@@ -43,8 +43,8 @@
 - 子路径导出：`@mustard/core/providers`、`/translation`、`/vocab`（**content 侧只导入 `/vocab`，避免把 AI 客户端打进每个页面**）
 - `chatStream(provider, model, messages, signal?)`：OpenAI 兼容**流式**，未配 Key 抛 `ProviderError('MISSING_API_KEY')`
 - `chatOnce(provider, model, messages, signal?)`：非流式单次调用；`testConnection(provider, model, signal?)`
-- `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`、`ProviderError`、`errorCode(error)`
-- `translation`：`translateWord(word, srcLang, tgtLang, { online, ai? })`（本地→在线→AI，LRU 缓存）、`translateSentence(text, srcLang, tgtLang, ai?)`、`lookupWord(word, targetLang)`、`parseWordCard(raw, fallback)`
+- `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`、`toContentParts(message)`（**多模态：图片附件转 `image_url` content 数组**）、`ProviderError`、`errorCode(error)`
+- `translation`：`translateWord(word, srcLang, tgtLang, { online, ai? })`（本地→在线→AI，LRU 缓存）、`translateSentence(text, srcLang, tgtLang, ai?)`、`lookupWord(word, targetLang)`、`parseWordCard(raw, fallback)`、`translateImage(dataUrl, targetLang, ai)`（多模态截图翻译）
 - `dictionary`：`lookupOnline(word, targetLang?)`（Free Dictionary API，≤900ms 超时，无需 Key）
 - `vocab`：`normalizeWord`、`wordKey`、`upsertWord`、`removeWord`、`mergeVocab`、`vocabStats`、`cardToEntry`
 
@@ -112,6 +112,17 @@
 - **未完成 / TODO**：离线词典（ECDICT）与词形还原在 M8，目前单词链路实际是「在线→AI」；记词（听音默写）在 M9，`streak` 仅展示不增长；红点按「生词本非空」显示，未做已读/增量；`MStars` 交互评分未接 streak 更新。
 - **下一步依赖**：M6 网页/截图翻译复用 `TRANSLATE_TEXT(mode=page)` 与 `TRANSLATE_IMAGE`（待实现）并在 `buildChatBody` 加入图片内容块；M8 在 `translateWord` 的本地分支接入 ECDICT 并补词形归一。
 
+## M6 · 网页翻译 + 截图翻译 — 完成
+- **做了什么**：
+  1. `@mustard/core`：`buildChatBody` 支持多模态（新增 `toContentParts(message)`：图片附件 → `image_url` content 数组，文件附件文本并入）；新增 `translateImage(dataUrl, targetLang, ai)`。
+  2. background：新增 `TRANSLATE_IMAGE`（多模态翻译，未配 Key 抛 `MISSING_API_KEY`）与 `CAPTURE_TAB`（`tabs.captureVisibleTab`）。
+  3. content：新增 `pageTranslator`（块级扫描「叶子块」→ 原元素后追加 `.mustard-translation` 节点、先 shimmer 骨架、逐段 `TRANSLATE_TEXT(mode=page)` 替换、并发 3、`MutationObserver` 增量、`stopPageTranslate` 全部移除并还原）+ `PageToolbar` 顶部浮条（`翻译中 n/N` / `完成 · n 段` / 未翻译提示 + 还原原文）；悬浮球「网页翻译」开关经 `watch(features.pageTranslate)` 驱动启停。
+  4. sidepanel：粘贴 `image/*` 直接走 `TRANSLATE_IMAGE`，把图片作为用户消息、译文作为助手消息渲染（无 Key 给引导文案）。
+- **对外暴露（新增，未改名）**：`toContentParts`、`translateImage`；extension 内 `content/pageTranslator`（`startPageTranslate/stopPageTranslate/setPageSettings/pageState`）、`content/PageToolbar`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 478.46 kB + 落地页 2 页）。
+- **未完成 / TODO**：网页翻译状态未持久化（刷新不恢复，DESIGN 标注为可选）；句子/段落按整块请求，未做缓存持久化与限流调优（M10）；截图仅支持粘贴，未加快捷键（`CAPTURE_TAB` 已就绪，M10 再接命令）；`TRANSLATE_IMAGE` 未按 `inputs.image` 二次门控（sidepanel 已用 `canAttachActive` 前置拦截）。
+- **下一步依赖**：M7 会话历史/侧边栏完善（`core/session` + IndexedDB），网页翻译的进度/还原状态可迁到 session 持久化。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -131,4 +142,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M6 · 网页翻译 + 截图翻译**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M7 · 会话历史 + 侧边栏完善**。

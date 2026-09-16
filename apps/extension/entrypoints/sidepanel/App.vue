@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Attachment, ChatMessage } from '@mustard/shared'
-import { browser, getStored, setStored, startChat } from '@mustard/platform'
+import { browser, getStored, send, setStored, startChat } from '@mustard/platform'
 import { langShort, STORAGE_KEYS } from '@mustard/shared'
 import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
@@ -110,6 +110,32 @@ function onPickFile(event: Event): void {
   el.value = ''
 }
 
+async function translatePastedImage(file: File): Promise<void> {
+  const dataUrl = await readAsDataURL(file)
+  messages.value.push({
+    id: uid('m-'),
+    role: 'user',
+    content: '',
+    attachments: [{ type: 'image', name: 'screenshot.png', dataUrl, mime: file.type }],
+    status: 'done',
+    createdAt: Date.now(),
+  })
+  messages.value.push({ id: uid('m-'), role: 'assistant', content: '', status: 'streaming', createdAt: Date.now() })
+  const assistant = messages.value[messages.value.length - 1]!
+  scrollToBottom()
+  try {
+    const result = await send({ type: 'TRANSLATE_IMAGE', payload: { dataUrl, targetLang: store.settings?.targetLang ?? 'zh-CN' } })
+    assistant.content = result.content
+    assistant.status = 'done'
+  }
+  catch (err) {
+    assistant.status = 'error'
+    assistant.content = err instanceof Error && err.message === 'MISSING_API_KEY'
+      ? '尚未配置模型 API Key。请点击右上角设置，配置支持图片输入的模型。'
+      : '截图翻译失败，请检查模型与网络。'
+  }
+}
+
 function onPaste(event: ClipboardEvent): void {
   const items = event.clipboardData?.items
   if (!items)
@@ -124,7 +150,7 @@ function onPaste(event: ClipboardEvent): void {
   }
   const file = imageItem.getAsFile()
   if (file)
-    void addFile(file)
+    void translatePastedImage(file)
 }
 
 function onAttachClick(): void {

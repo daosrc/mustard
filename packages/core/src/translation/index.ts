@@ -122,3 +122,16 @@ export async function translateSentence(
 export async function lookupWord(word: string, targetLang: LangCode): Promise<DictResult | null> {
   return lookupOnline(word, targetLang)
 }
+
+/** 截图/图片翻译：交给多模态模型识别并翻译（需支持图片输入的模型） */
+export async function translateImage(dataUrl: string, targetLang: LangCode, ai: AiTarget): Promise<string> {
+  const message: ChatMessage = {
+    id: `img-${Date.now()}`,
+    role: 'user',
+    content: `请识别图片中的文字并翻译为 ${targetLang}，只输出译文，不要解释。`,
+    attachments: [{ type: 'image', name: 'image.png', dataUrl }],
+    createdAt: Date.now(),
+  }
+  const content = await chatOnce(ai.provider, ai.model, [message])
+  return content.trim()
+}

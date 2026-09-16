@@ -44,10 +44,35 @@ export function parseSseDelta(line: string): string | null {
   }
 }
 
+export type ChatContentPart
+  = | { type: 'text', text: string }
+    | { type: 'image_url', image_url: { url: string } }
+
+export interface ChatBodyMessage {
+  role: ChatMessage['role']
+  content: string | ChatContentPart[]
+}
+
 export interface ChatBody {
   model: string
   stream: boolean
-  messages: Array<{ role: ChatMessage['role'], content: string }>
+  messages: ChatBodyMessage[]
+}
+
+/** 把消息（含图片/文件附件）转成 OpenAI 兼容 content（多模态为 content 数组） */
+export function toContentParts(message: ChatMessage): string | ChatContentPart[] {
+  const images = (message.attachments ?? []).filter(a => a.type === 'image' && a.dataUrl)
+  const fileText = (message.attachments ?? []).filter(a => a.type === 'file' && a.text).map(a => a.text).join('\n')
+  const text = [message.content, fileText].filter(Boolean).join('\n')
+
+  if (!images.length)
+    return text
+  const parts: ChatContentPart[] = []
+  if (text)
+    parts.push({ type: 'text', text })
+  for (const image of images)
+    parts.push({ type: 'image_url', image_url: { url: image.dataUrl! } })
+  return parts
 }
 
 /** 组装 OpenAI 兼容的 chat/completions 请求体 */
@@ -57,7 +82,7 @@ export function buildChatBody(model: ModelDef, messages: ChatMessage[], stream =
     stream,
     messages: messages.map(m => ({
       role: m.role,
-      content: m.content,
+      content: toContentParts(m),
     })),
   }
 }

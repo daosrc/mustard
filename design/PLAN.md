@@ -225,7 +225,7 @@ mustard/
 | M3 UI 组件库 + 主题 | ✅ 完成 | `design-tokens`（token + preset + shortcuts + 深浅色 + `applyTheme`）；`ui` 新增 Icon/Chip/Badge/Field/Select/Dialog/Tabs/Stars/Toast；extension 用 ui 重构 + 主题设置生效 |
 | M4 模型提供商与设置 | ✅ 完成 | `core/providers`（流式 + 非流式 + 测试连接）；设置页（提供商 CRUD + 模型能力、翻译/悬浮球/生词本/外观）；sidepanel 流式对话 + 附件门控 |
 | M5 划词/悬浮 + 生词本 | ✅ 完成 | `core` 词典/翻译/vocab；content 划词气泡 + 悬浮 tooltip + 红点；sidepanel 生词本视图（搜索/筛选/发音/删除/JSON-CSV 导入导出）；无 Key 时在线词典可用 |
-| M6 网页翻译 + 截图翻译 | ⏳ 待开始 | — |
+| M6 网页翻译 + 截图翻译 | ✅ 完成 | 块级双语对照 + shimmer 骨架 + 顶部进度条/还原 + MutationObserver 增量；`⌘V` 粘贴截图 → `TRANSLATE_IMAGE` 多模态译文 |
 | M7 会话历史 + 侧边栏 | ⏳ 待开始 | `platform` 已有 messaging/storage；Session 类型已定义 |
 | M8 离线词典 | ⏳ 待开始 | `shared` 已定义词典清单与状态结构 |
 | M9 记词（听音默写） | ⏳ 待开始 | 交互规则见 DESIGN 5.7（已在原型验证） |
@@ -239,7 +239,7 @@ mustard/
 pnpm install
 pnpm lint        # 8 packages 全绿
 pnpm typecheck   # 8 packages 全绿
-pnpm build       # 扩展 472.43 kB + 落地页 2 页
+pnpm build       # 扩展 478.46 kB + 落地页 2 页
 ```
 
 ### 开发期问题记录

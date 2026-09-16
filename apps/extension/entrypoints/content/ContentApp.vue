@@ -3,10 +3,12 @@ import type { Settings, ToolItem } from '@mustard/shared'
 import { browser, send } from '@mustard/platform'
 import { STORAGE_KEYS } from '@mustard/shared'
 import { MBadge, MIcon } from '@mustard/ui'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from './ball'
 import HoverTooltip from './HoverTooltip.vue'
+import PageToolbar from './PageToolbar.vue'
+import { setPageSettings, startPageTranslate, stopPageTranslate } from './pageTranslator'
 import SelectionLayer from './SelectionLayer.vue'
 
 const TOOL_ICON: Record<string, string> = {
@@ -67,6 +69,24 @@ const tools = computed(() =>
 
 useTheme(() => (enabled.value ? rootEl.value : undefined))
 
+watch(settings, value => setPageSettings(value))
+watch(() => settings.value?.features.pageTranslate, (on) => {
+  if (on)
+    startPageTranslate(settings.value)
+  else
+    stopPageTranslate()
+})
+
+function restorePage(): void {
+  stopPageTranslate()
+  if (settings.value) {
+    void send({
+      type: 'UPDATE_SETTINGS',
+      payload: { features: { ...settings.value.features, pageTranslate: false } },
+    })
+  }
+}
+
 function toolStyle(index: number): Record<string, string | number> {
   const angle = (180 - index * STEP_DEG) * Math.PI / 180
   return {
@@ -125,5 +145,6 @@ function onBallClick(): void {
 
     <SelectionLayer :settings="settings" @added="onAdded" />
     <HoverTooltip :settings="settings" @added="onAdded" />
+    <PageToolbar @restore="restorePage" />
   </div>
 </template>
