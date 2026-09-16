@@ -1,0 +1,278 @@
+---
+import type { Locale } from '../config/links'
+import { CONTENT } from '../config/content'
+import { LINKS } from '../config/links'
+import Layout from '../layouts/Layout.astro'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const c = CONTENT[locale]
+const base = import.meta.env.BASE_URL
+const altHref = locale === 'zh' ? `${base}en/` : base
+---
+
+<Layout lang={c.lang} title={c.title} description={c.description}>
+  <header class="sticky top-0 z-20 backdrop-blur bg-paper/85 border-b border-line">
+    <nav class="max-w-5xl mx-auto flex items-center gap-5 px-5 h-14">
+      <a class="flex items-center gap-2 no-underline text-ink font-700" href={base}>
+        <img class="w-7 h-7 rounded-lg" src={`${base}favicon.png`} alt="Mustard">
+        <span>{c.hero.title}</span>
+      </a>
+      <span class="flex-1" />
+      <a class="nav-link hidden sm:inline" href="#features">{c.nav.features}</a>
+      <a class="nav-link hidden sm:inline" href="#steps">{c.nav.steps}</a>
+      <a class="nav-link hidden sm:inline" href="#install">{c.nav.install}</a>
+      <a class="nav-link" href={LINKS.repo} target="_blank" rel="noreferrer">{c.nav.github}</a>
+      <a class="nav-link" href={altHref}>{c.nav.altLabel}</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="max-w-5xl mx-auto px-5 pt-16 pb-10 text-center">
+      <img class="w-20 h-20 mx-auto rounded-2xl shadow-md" src={`${base}favicon.png`} alt="Mustard">
+      <p class="mt-5 chip">{c.hero.badge}</p>
+      <h1 class="mt-4 text-4xl sm:text-5xl font-800 tracking-tight">{c.hero.title}</h1>
+      <p class="mt-4 text-muted leading-relaxed max-w-2xl mx-auto">{c.hero.tagline}</p>
+      <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
+        <a class="btn-primary" href={LINKS.releases} target="_blank" rel="noreferrer">{c.hero.install}</a>
+        <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">{c.hero.source}</a>
+      </div>
+
+      <div class="mt-12 mock-window text-left">
+        <div class="mock-bar">
+          <span class="mock-dots"><i /><i /><i /></span>
+          <span class="mock-url">example.com</span>
+        </div>
+        <div class="mock-body">
+          <p class="mock-p">Serendipity is the luck some people have in finding interesting or valuable things by chance.</p>
+          <p class="mock-tr">意外发现美好事物的能力；机缘巧合 —— 有些人凭机缘巧合发现有趣或有价值的事物。</p>
+          <div class="mock-ball"><span>✿</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="max-w-5xl mx-auto px-5 py-14">
+      <h2 class="section-title">{c.featuresTitle}</h2>
+      <div class="flex flex-col gap-12 mt-10">
+        {c.features.map((f, i) => (
+          <article class:list={['feature', i % 2 === 1 && 'feature-reverse']}>
+            <div class="feature-text">
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+            <div class="feature-visual">
+              {f.visual === 'selection' && (
+                <div class="mock-window sm">
+                  <div class="mock-body">
+                    <p class="mock-p">The word <mark>serendipity</mark> is hard to translate.</p>
+                    <div class="mock-pop">
+                      <strong>serendipity</strong>
+                      <span class="mock-ph">/ˌserənˈdipədi/</span>
+                      <p class="mock-tr2">意外发现美好事物的能力</p>
+                      <div class="mock-btns"><span>🔊</span><span>＋ 生词本</span></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'hover' && (
+                <div class="mock-window sm">
+                  <div class="mock-body">
+                    <p class="mock-p">Reading about <mark class="soft">ephemeral</mark> pleasures…</p>
+                    <div class="mock-tip">短暂的，转瞬即逝的</div>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'page' && (
+                <div class="mock-window sm">
+                  <div class="mock-body">
+                    <p class="mock-p">Time flies when you are having fun.</p>
+                    <p class="mock-tr">当你享受其中时，时间飞逝。</p>
+                    <p class="mock-p">Practice makes perfect.</p>
+                    <p class="mock-tr">熟能生巧。</p>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'image' && (
+                <div class="mock-window sm">
+                  <div class="mock-body">
+                    <div class="mock-img">🖼️ screenshot</div>
+                    <p class="mock-tr">图片中的文字译文……</p>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'chat' && (
+                <div class="mock-window sm">
+                  <div class="mock-body mock-chat">
+                    <p class="mock-bubble user">帮我翻译这段关于光合作用的英文</p>
+                    <p class="mock-bubble ai">光合作用是植物将光能转化为化学能的过程……</p>
+                    <div class="mock-input">输入消息… <span>➤</span></div>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'vocab' && (
+                <div class="mock-window sm">
+                  <div class="mock-body mock-vocab">
+                    <div class="mock-row"><span>ephemeral</span><span class="mock-stars">★☆☆</span></div>
+                    <div class="mock-row"><span>candid</span><span class="mock-stars">★★☆</span></div>
+                    <div class="mock-row"><span>nuance</span><span class="mock-mastered">已掌握</span></div>
+                    <div class="mock-input">默写：c _ n d _ d</div>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'dict' && (
+                <div class="mock-window sm">
+                  <div class="mock-body mock-dict">
+                    <p class="mock-p">查询：<mark>resilient</mark></p>
+                    <ol class="mock-chain">
+                      <li>本地词典 <b>✓</b></li>
+                      <li>在线词典</li>
+                      <li>AI 兜底</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+              {f.visual === 'providers' && (
+                <div class="mock-window sm">
+                  <div class="mock-body mock-prov">
+                    <div class="mock-prov-head"><i /> OpenCode Zen</div>
+                    <div class="mock-chips"><span>claude-sonnet-4.5</span><span class="on">图片</span><span class="on">附件</span></div>
+                    <div class="mock-chips"><span>deepseek-v4.1-flash</span><span>文本</span></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- Steps -->
+    <section id="steps" class="bg-surface-2 border-y border-line">
+      <div class="max-w-5xl mx-auto px-5 py-14">
+        <h2 class="section-title">{c.stepsTitle}</h2>
+        <div class="grid gap-4 sm:grid-cols-3 mt-10">
+          {c.steps.map(s => (
+            <div class="card step">
+              <span class="step-n">{s.n}</span>
+              <h3 class="mt-3 mb-2 text-base font-700">{s.title}</h3>
+              <p class="m-0 text-sm text-muted leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- More -->
+    <section class="max-w-5xl mx-auto px-5 py-14">
+      <h2 class="section-title">{c.moreTitle}</h2>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-10">
+        {c.more.map(m => (
+          <article class="card">
+            <h3 class="mt-0 mb-2 text-base font-700">{m.title}</h3>
+            <p class="m-0 text-sm text-muted leading-relaxed">{m.desc}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- Open source -->
+    <section class="bg-surface-2 border-y border-line">
+      <div class="max-w-3xl mx-auto px-5 py-14 text-center">
+        <h2 class="section-title">{c.ossTitle}</h2>
+        <p class="mt-4 text-muted leading-relaxed">{c.ossDesc}</p>
+        <div class="mt-6 flex justify-center gap-3 flex-wrap">
+          <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">GitHub</a>
+          <a class="btn-ghost" href={LINKS.issues} target="_blank" rel="noreferrer">Issues</a>
+          <a class="btn-ghost" href={LINKS.license} target="_blank" rel="noreferrer">MIT License</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section id="install" class="max-w-5xl mx-auto px-5 py-14">
+      <h2 class="section-title">{c.installTitle}</h2>
+      <p class="mt-3 text-muted">{c.installDesc}</p>
+      <div class="grid gap-4 sm:grid-cols-2 mt-8">
+        {c.installOptions.map(o => (
+          <div class="card">
+            <h3 class="mt-0 mb-3 text-base font-700">{o.title}</h3>
+            <ol class="m-0 pl-5 text-sm text-muted leading-relaxed">
+              {o.steps.map(step => <li>{step}</li>)}
+            </ol>
+          </div>
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-line py-8 text-center text-xs text-faint">
+    {c.footerNote} · <a class="text-muted no-underline hover:text-primary" href={LINKS.repo} target="_blank" rel="noreferrer">GitHub</a>
+  </footer>
+</Layout>
+
+<style>
+.nav-link { font-size: .875rem; color: var(--m-muted); text-decoration: none; transition: color .15s; }
+.nav-link:hover { color: var(--m-primary); }
+.section-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+
+.feature { display: grid; gap: 22px; align-items: center; }
+@media (min-width: 768px) {
+  .feature { grid-template-columns: 1fr 1.1fr; }
+  .feature-reverse .feature-text { order: 2; }
+}
+.feature-text h3 { font-size: 1.15rem; font-weight: 700; margin: 0 0 8px; }
+.feature-text p { margin: 0; color: var(--m-muted); line-height: 1.7; font-size: .95rem; }
+
+.mock-window {
+  border: 1px solid var(--m-line);
+  border-radius: 14px;
+  background: var(--m-surface);
+  overflow: hidden;
+  box-shadow: var(--m-shadow-md);
+  margin: 0 auto;
+  max-width: 560px;
+}
+.mock-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--m-surface-2); border-bottom: 1px solid var(--m-line); }
+.mock-dots { display: inline-flex; gap: 5px; }
+.mock-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--m-faint); display: block; }
+.mock-url { font-size: 11px; color: var(--m-muted); }
+.mock-body { position: relative; padding: 16px; }
+.mock-p { margin: 0 0 6px; font-size: .92rem; line-height: 1.7; color: var(--m-ink); }
+.mock-tr { margin: 0 0 12px; font-size: .92rem; line-height: 1.7; color: var(--m-muted); padding-left: 10px; border-left: 2px solid var(--m-primary); }
+.mock-body mark { background: var(--m-primary-soft); color: var(--m-primary); border-radius: 4px; padding: 0 3px; }
+.mock-body mark.soft { background: var(--m-blush); color: #fff; }
+.mock-ball { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--m-primary), #A8D96B); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: var(--m-shadow-md); }
+
+.mock-pop { margin-top: 10px; border: 1px solid var(--m-line); border-radius: 10px; padding: 10px 12px; background: var(--m-surface); box-shadow: var(--m-shadow-md); }
+.mock-ph { color: var(--m-faint); font-size: 12px; margin-left: 6px; }
+.mock-tr2 { margin: 6px 0; font-size: .88rem; }
+.mock-btns { display: flex; gap: 8px; font-size: 11px; color: var(--m-primary); }
+.mock-tip { margin-top: 12px; display: inline-block; background: var(--m-ink); color: var(--m-paper); border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+
+.mock-img { height: 84px; border: 1px dashed var(--m-line); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--m-faint); font-size: 12px; margin-bottom: 10px; }
+.mock-chat { display: flex; flex-direction: column; gap: 8px; }
+.mock-bubble { margin: 0; padding: 8px 10px; border-radius: 10px; font-size: .85rem; line-height: 1.5; max-width: 85%; }
+.mock-bubble.user { align-self: flex-end; background: var(--m-primary); color: var(--m-primary-ink); }
+.mock-bubble.ai { align-self: flex-start; background: var(--m-surface-2); color: var(--m-ink); }
+.mock-input { margin-top: 4px; border: 1px solid var(--m-line); border-radius: 8px; padding: 7px 10px; font-size: 12px; color: var(--m-faint); display: flex; justify-content: space-between; }
+
+.mock-vocab, .mock-dict { display: flex; flex-direction: column; gap: 8px; }
+.mock-row { display: flex; justify-content: space-between; align-items: center; font-size: .88rem; border-bottom: 1px solid var(--m-line); padding-bottom: 6px; }
+.mock-stars { color: var(--m-warn); letter-spacing: 2px; }
+.mock-mastered { background: var(--m-primary-soft); color: var(--m-primary); border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.mock-chain { margin: 0; padding-left: 18px; color: var(--m-muted); font-size: .88rem; line-height: 1.9; }
+.mock-chain b { color: var(--m-primary); }
+.mock-prov { display: flex; flex-direction: column; gap: 10px; }
+.mock-prov-head { display: flex; align-items: center; gap: 6px; font-size: .92rem; font-weight: 600; }
+.mock-prov-head i { width: 8px; height: 8px; border-radius: 50%; background: var(--m-primary); }
+.mock-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mock-chips span { font-size: 11px; border: 1px solid var(--m-line); border-radius: 7px; padding: 3px 8px; color: var(--m-muted); }
+.mock-chips span.on { background: var(--m-primary-soft); color: var(--m-primary); border-color: transparent; }
+
+.step-n { font-size: 1.4rem; font-weight: 800; color: var(--m-primary); }
+</style>

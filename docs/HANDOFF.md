@@ -177,6 +177,14 @@
   - 无障碍（aria/键盘可达）仅局部，未系统审查。
 - **下一步依赖**：M11 宣传页只介绍已实现栏目（i18n 未完成则不宣称双语 UI）；M12 文档按实际实现撰写。
 
+## M11 · 宣传页（Astro）— 完成
+- **做了什么**：`apps/landing` 落地页完整版 —— 新增 `src/config/content.ts`（zh/en 同源文案，含 8 个功能区块、三步上手、子功能卡片、开源、安装）与 `src/components/Landing.astro`（Hero + Nav + 8 个图文交替功能区块 + 三步 + 更多细节 + 开源贡献 + 安装指引 + Footer）；`pages/index.astro`（zh）与 `pages/en/index.astro`（en）改为传入 locale。
+- **视觉**：因 `design/screenshots/` 仍为空（M1 TODO），功能配图用**纯 CSS mock 界面**（浏览器窗、划词气泡、双语段落、侧边栏、生词本/记词、词典链路、提供商卡片）占位，全部走 design-tokens，深浅色自适应；未引入二进制截图。
+- **对外暴露**：landing `CONTENT`（zh/en）、`Landing.astro`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（落地页 2 页，`astro check` 0 error）；构建产物 `dist/index.html` 与 `dist/en/index.html` 均含全部区块。
+- **未完成 / TODO**：**真实截图仍缺**（`design/screenshots/` 空）→ 用 mock 顶替，后续导出后替换即可；UI 为中文/英文两份静态文案，未接入 `shared/i18n`（与 M10 一致）。
+- **下一步依赖**：M12 部署（Pages/release workflow 已在 M0/M4 配好）与 README 中英初稿；链接已在 `links.ts` 用真实地址。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -196,4 +204,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M11 · 宣传页（Astro）**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M12 · 部署与文档**。
