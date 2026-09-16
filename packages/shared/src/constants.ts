@@ -7,6 +7,8 @@ export const STORAGE_KEYS = {
   vocab: 'mustard:vocab',
   sessions: 'mustard:sessions',
   cache: 'mustard:cache',
+  /** 打开侧边栏时请求的初始视图（content → background → sidepanel） */
+  pendingView: 'mustard:pending-view',
 } as const
 
 /**

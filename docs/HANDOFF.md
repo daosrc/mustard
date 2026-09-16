@@ -40,9 +40,13 @@
 - `MIcon`（`name` + `size` + `strokeWidth`；图标见 `ICONS`）、`MChip`（`variant/removable`）、`MBadge`（`count/dot/max/variant`）、`MField`（`label/hint/inline`）、`MSelect`（`v-model` + `options: SelectOption[]`）、`MDialog`（`v-model` + `title/width`）、`MTabs`（`v-model` + `tabs: TabItem[]`）、`MStars`（`v-model` + `max/readonly`）、`MToastHost` + `useToast()`（`info/success/error`）
 
 **`@mustard/core`**
+- 子路径导出：`@mustard/core/providers`、`/translation`、`/vocab`（**content 侧只导入 `/vocab`，避免把 AI 客户端打进每个页面**）
 - `chatStream(provider, model, messages, signal?)`：OpenAI 兼容**流式**，未配 Key 抛 `ProviderError('MISSING_API_KEY')`
 - `chatOnce(provider, model, messages, signal?)`：非流式单次调用；`testConnection(provider, model, signal?)`
 - `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`、`ProviderError`、`errorCode(error)`
+- `translation`：`translateWord(word, srcLang, tgtLang, { online, ai? })`（本地→在线→AI，LRU 缓存）、`translateSentence(text, srcLang, tgtLang, ai?)`、`lookupWord(word, targetLang)`、`parseWordCard(raw, fallback)`
+- `dictionary`：`lookupOnline(word, targetLang?)`（Free Dictionary API，≤900ms 超时，无需 Key）
+- `vocab`：`normalizeWord`、`wordKey`、`upsertWord`、`removeWord`、`mergeVocab`、`vocabStats`、`cardToEntry`
 
 **`@mustard/utils`**
 - `uid()` / `timeAgo()` / `sleep()` / `LRU` / `hashString()` / `cacheKey()` / `vocabToCsv()` / `vocabToJson()` / `parseVocabCsv()` / `parseVocabJson()`
@@ -95,6 +99,19 @@
 - **未完成 / TODO**：**附件/图片尚未真正发给模型**（`buildChatBody` 仍为纯文本，多模态在 M6）；会话历史/持久化在 M7；provider「测试连接」直接从 options 页 fetch（后续可统一走 background）；`aiConfigured` 仅看 apiKey 非空。
 - **下一步依赖**：M5 划词/悬浮/生词本复用 `core` 调用与 sidepanel 消息；M6 在 `buildChatBody` 中加入图片/附件内容块（门控已就绪）；M7 把 sidepanel 的本地 `messages` 迁到 `core/session` + IndexedDB。
 
+## M5 · 划词翻译 + 悬浮翻译 + 生词本 — 完成
+- **做了什么**：
+  1. `@mustard/core`：新增 `dictionary/online`（Free Dictionary API 兜底，900ms 超时）、`translation`（单词链路 本地→在线→AI + 句子 AI + LRU 缓存 + 词条 JSON 解析）、`vocab`（归一化/去重 upsert/合并导入/删除/统计/`cardToEntry`）；新增子路径导出 `./providers` `./translation` `./vocab`。
+  2. `@mustard/shared`：`STORAGE_KEYS` 增加 `pendingView`。
+  3. `apps/extension`：`lib/vocabStore`（storage 持久化）、`lib/speech`（Web Speech 发音）。
+  4. background：实现 `TRANSLATE_TEXT`（单词自动入库）、`LOOKUP_WORD`、`GET_VOCAB`/`ADD_VOCAB`/`REMOVE_VOCAB`/`EXPORT_VOCAB`/`IMPORT_VOCAB`；`OPEN_SIDEBAR` 写入 `pendingView` 供侧边栏定位视图。
+  5. content：`SelectionLayer`（划词图标 + 翻译气泡卡片：音标/词性/释义/例句/发音/复制/加入生词本）、`HoverTooltip`（延迟取词/取句 + tooltip + 加入生词本）、悬浮球按生词本数量显示红点；均按 `settings.features` 门控。
+  6. sidepanel：新增生词本视图 `VocabView`（搜索、掌握度筛选、发音、删除、JSON/CSV 导入导出、底部统计），头部加入对话/生词本/设置导航，并按 `pendingView` 初始化视图。
+- **对外暴露（新增，未改名）**：见上方核心/冻结接口新增条目；extension 内 `lib/vocabStore`、`lib/speech`、content `SelectionLayer/HoverTooltip/actions`、sidepanel `VocabView`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 472.43 kB + 落地页 2 页）。
+- **未完成 / TODO**：离线词典（ECDICT）与词形还原在 M8，目前单词链路实际是「在线→AI」；记词（听音默写）在 M9，`streak` 仅展示不增长；红点按「生词本非空」显示，未做已读/增量；`MStars` 交互评分未接 streak 更新。
+- **下一步依赖**：M6 网页/截图翻译复用 `TRANSLATE_TEXT(mode=page)` 与 `TRANSLATE_IMAGE`（待实现）并在 `buildChatBody` 加入图片内容块；M8 在 `translateWord` 的本地分支接入 ECDICT 并补词形归一。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -114,4 +131,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M5 · 划词翻译 + 悬浮翻译 + 生词本**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M6 · 网页翻译 + 截图翻译**。

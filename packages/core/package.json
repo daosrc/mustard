@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./providers": "./src/providers/client.ts",
+    "./translation": "./src/translation/index.ts",
+    "./vocab": "./src/vocab/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

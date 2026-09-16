@@ -224,7 +224,7 @@ mustard/
 | M2 扩展骨架 | ✅ 完成 | WXT 0.21 + Vue3 + TS + Pinia + UnoCSS；background / content(shadow) / sidepanel / options 四入口；manifest 权限、commands、side_panel 均生效；`pnpm build:ext` 通过 |
 | M3 UI 组件库 + 主题 | ✅ 完成 | `design-tokens`（token + preset + shortcuts + 深浅色 + `applyTheme`）；`ui` 新增 Icon/Chip/Badge/Field/Select/Dialog/Tabs/Stars/Toast；extension 用 ui 重构 + 主题设置生效 |
 | M4 模型提供商与设置 | ✅ 完成 | `core/providers`（流式 + 非流式 + 测试连接）；设置页（提供商 CRUD + 模型能力、翻译/悬浮球/生词本/外观）；sidepanel 流式对话 + 附件门控 |
-| M5 划词/悬浮 + 生词本 | ⏳ 待开始 | `shared` 已定义 WordEntry/streak/DictResult；`utils` 已有 LRU/hash/vocab 导入导出 |
+| M5 划词/悬浮 + 生词本 | ✅ 完成 | `core` 词典/翻译/vocab；content 划词气泡 + 悬浮 tooltip + 红点；sidepanel 生词本视图（搜索/筛选/发音/删除/JSON-CSV 导入导出）；无 Key 时在线词典可用 |
 | M6 网页翻译 + 截图翻译 | ⏳ 待开始 | — |
 | M7 会话历史 + 侧边栏 | ⏳ 待开始 | `platform` 已有 messaging/storage；Session 类型已定义 |
 | M8 离线词典 | ⏳ 待开始 | `shared` 已定义词典清单与状态结构 |
@@ -239,7 +239,7 @@ mustard/
 pnpm install
 pnpm lint        # 8 packages 全绿
 pnpm typecheck   # 8 packages 全绿
-pnpm build       # 扩展 446.87 kB + 落地页 2 页
+pnpm build       # 扩展 472.43 kB + 落地页 2 页
 ```
 
 ### 开发期问题记录

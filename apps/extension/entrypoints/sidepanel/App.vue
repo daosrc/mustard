@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import type { Attachment, ChatMessage } from '@mustard/shared'
-import { browser, startChat } from '@mustard/platform'
-import { langShort } from '@mustard/shared'
+import { browser, getStored, setStored, startChat } from '@mustard/platform'
+import { langShort, STORAGE_KEYS } from '@mustard/shared'
 import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
+import VocabView from './VocabView.vue'
 
 useTheme()
 const store = useSettingsStore()
 const { error } = useToast()
 
-onMounted(() => store.load())
+const view = ref<'chat' | 'vocab'>('chat')
 
 const messages = ref<ChatMessage[]>([
   {
@@ -32,12 +33,32 @@ const textareaEl = ref<HTMLTextAreaElement>()
 const fileEl = ref<HTMLInputElement>()
 let handle: { abort: () => void } | null = null
 
+onMounted(async () => {
+  await store.load()
+  try {
+    const pending = await getStored<'chat' | 'vocab' | 'settings'>(STORAGE_KEYS.pendingView)
+    if (pending === 'vocab')
+      view.value = 'vocab'
+    else if (pending === 'settings')
+      void browser.runtime.openOptionsPage()
+    if (pending)
+      await setStored(STORAGE_KEYS.pendingView, '')
+  }
+  catch {
+    // 忽略：无待处理视图
+  }
+})
+
 const modelOptions = computed(() => (store.settings?.providers ?? []).flatMap(p => p.models.map(m => ({
   label: `${p.name} · ${m.name}`,
   value: `${p.id}::${m.name}`,
 }))))
 const activeModelValue = computed(() => store.settings ? `${store.settings.activeProviderId}::${store.settings.activeModel}` : undefined)
 const target = computed(() => store.settings ? langShort(store.settings.targetLang) : '中')
+
+function openSettings(): void {
+  void browser.runtime.openOptionsPage()
+}
 
 function setActiveModel(value?: string): void {
   if (!value)
@@ -117,7 +138,7 @@ function onAttachClick(): void {
 function onEnter(event: KeyboardEvent): void {
   if (event.isComposing)
     return
-  send()
+  sendMessage()
 }
 
 function stop(): void {
@@ -125,7 +146,7 @@ function stop(): void {
   streaming.value = false
 }
 
-function send(): void {
+function sendMessage(): void {
   const text = input.value.trim()
   if (streaming.value || (!text && !attachments.value.length))
     return
@@ -177,78 +198,91 @@ function send(): void {
 <template>
   <div class="panel">
     <header class="panel-head">
-      <img class="mark" :src="BALL_ICON" alt="Mustard">
-      <span class="name">Mustard · 芥末</span>
+      <button v-if="view !== 'chat'" class="icon-btn" title="返回" @click="view = 'chat'">
+        <MIcon name="chevron-left" :size="16" />
+      </button>
+      <img v-else class="mark" :src="BALL_ICON" alt="Mustard">
+      <span class="name">{{ view === 'vocab' ? '生词本' : 'Mustard · 芥末' }}</span>
       <span class="spacer" />
-      <button class="icon-btn" title="设置" @click="browser.runtime.openOptionsPage()">
+      <button class="icon-btn" :class="{ active: view === 'chat' }" title="对话" @click="view = 'chat'">
+        <MIcon name="message" :size="16" />
+      </button>
+      <button class="icon-btn" :class="{ active: view === 'vocab' }" title="生词本" @click="view = 'vocab'">
+        <MIcon name="book" :size="16" />
+      </button>
+      <button class="icon-btn" title="设置" @click="openSettings">
         <MIcon name="settings" :size="16" />
       </button>
     </header>
 
-    <main ref="bodyEl" class="panel-body">
-      <div v-for="message in messages" :key="message.id" class="msg" :class="message.role">
-        <img v-if="message.role === 'assistant'" class="avatar" :src="BALL_ICON" alt="">
-        <div class="bubble" :class="{ error: message.status === 'error' }">
-          <template v-if="message.status === 'streaming' && !message.content">
-            <span class="typing">思考中…</span>
-          </template>
-          <template v-else>
-            <span class="text">{{ message.content }}</span>
-            <span v-if="message.status === 'streaming'" class="caret" />
-          </template>
-          <div v-if="message.attachments?.length" class="msg-atts">
-            <MChip v-for="(att, i) in message.attachments" :key="i">
+    <VocabView v-if="view === 'vocab'" />
+
+    <template v-else>
+      <main ref="bodyEl" class="panel-body">
+        <div v-for="message in messages" :key="message.id" class="msg" :class="message.role">
+          <img v-if="message.role === 'assistant'" class="avatar" :src="BALL_ICON" alt="">
+          <div class="bubble" :class="{ error: message.status === 'error' }">
+            <template v-if="message.status === 'streaming' && !message.content">
+              <span class="typing">思考中…</span>
+            </template>
+            <template v-else>
+              <span class="text">{{ message.content }}</span>
+              <span v-if="message.status === 'streaming'" class="caret" />
+            </template>
+            <div v-if="message.attachments?.length" class="msg-atts">
+              <MChip v-for="(att, i) in message.attachments" :key="i">
+                <MIcon :name="att.type === 'image' ? 'image' : 'file'" :size="12" />
+                {{ att.name }}
+              </MChip>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="composer">
+        <div class="input-box">
+          <div v-if="attachments.length" class="att-strip">
+            <MChip v-for="(att, i) in attachments" :key="i" removable @remove="attachments.splice(i, 1)">
               <MIcon :name="att.type === 'image' ? 'image' : 'file'" :size="12" />
               {{ att.name }}
             </MChip>
           </div>
-        </div>
-      </div>
-    </main>
-
-    <footer class="composer">
-      <div class="input-box">
-        <div v-if="attachments.length" class="att-strip">
-          <MChip v-for="(att, i) in attachments" :key="i" removable @remove="attachments.splice(i, 1)">
-            <MIcon :name="att.type === 'image' ? 'image' : 'file'" :size="12" />
-            {{ att.name }}
-          </MChip>
-        </div>
-        <textarea
-          ref="textareaEl"
-          v-model="input"
-          rows="1"
-          placeholder="输入消息，Enter 发送 / Shift+Enter 换行"
-          @input="autoGrow"
-          @paste="onPaste"
-          @keydown.enter.exact.prevent="onEnter"
-        />
-        <div class="tools-row">
-          <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? '上传附件' : '当前模型不支持附件'" @click="onAttachClick">
-            <MIcon name="paperclip" :size="16" />
-          </button>
-          <MChip variant="primary">
-            {{ target }}
-          </MChip>
-          <MSelect
-            class="model-select"
-            size="sm"
-            :model-value="activeModelValue"
-            :options="modelOptions"
-            placeholder="选择模型"
-            @update:model-value="setActiveModel"
+          <textarea
+            ref="textareaEl"
+            v-model="input"
+            rows="1"
+            placeholder="输入消息，Enter 发送 / Shift+Enter 换行"
+            @input="autoGrow"
+            @paste="onPaste"
+            @keydown.enter.exact.prevent="onEnter"
           />
-          <span class="spacer" />
-          <button v-if="streaming" class="send stop" title="停止" @click="stop">
-            <MIcon name="close" :size="13" :stroke-width="2.4" />
-          </button>
-          <button v-else class="send" title="发送" :disabled="!input.trim() && !attachments.length" @click="send">
-            <MIcon name="send" :size="13" :stroke-width="2" />
-          </button>
+          <div class="tools-row">
+            <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? '上传附件' : '当前模型不支持附件'" @click="onAttachClick">
+              <MIcon name="paperclip" :size="16" />
+            </button>
+            <MChip variant="primary">
+              {{ target }}
+            </MChip>
+            <MSelect
+              class="model-select"
+              size="sm"
+              :model-value="activeModelValue"
+              :options="modelOptions"
+              placeholder="选择模型"
+              @update:model-value="setActiveModel"
+            />
+            <span class="spacer" />
+            <button v-if="streaming" class="send stop" title="停止" @click="stop">
+              <MIcon name="close" :size="13" :stroke-width="2.4" />
+            </button>
+            <button v-else class="send" title="发送" :disabled="!input.trim() && !attachments.length" @click="sendMessage">
+              <MIcon name="send" :size="13" :stroke-width="2" />
+            </button>
+          </div>
         </div>
-      </div>
-      <input ref="fileEl" class="hidden-file" type="file" accept="image/*,application/pdf,.txt,.md,.doc,.docx" multiple @change="onPickFile">
-    </footer>
+        <input ref="fileEl" class="hidden-file" type="file" accept="image/*,application/pdf,.txt,.md,.doc,.docx" multiple @change="onPickFile">
+      </footer>
+    </template>
 
     <MToastHost />
   </div>
@@ -277,6 +311,7 @@ function send(): void {
   cursor: pointer;
 }
 .icon-btn:hover:not(.disabled) { background: var(--m-surface-2); color: var(--m-ink); }
+.icon-btn.active { color: var(--m-primary); background: var(--m-primary-soft); }
 .icon-btn.disabled { opacity: .4; cursor: not-allowed; }
 .panel-body { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
 .msg { display: flex; align-items: flex-start; gap: 8px; }

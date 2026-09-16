@@ -1,9 +1,26 @@
-import type { ChatPortClientMessage, Message } from '@mustard/shared'
-import { chatOnce, chatStream, errorCode } from '@mustard/core'
-import { getSettings, openSidePanel, updateSettings } from '@mustard/platform'
-import { CHAT_PORT_NAME, ERR_MISSING_API_KEY } from '@mustard/shared'
+import type { AiTarget } from '@mustard/core'
+import type { ChatPortClientMessage, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
+import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateSentence, translateWord } from '@mustard/core'
+import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
+import { CHAT_PORT_NAME, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
+import { parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
 import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
+import { addVocab, getVocab, importVocab, removeVocabById } from '../lib/vocabStore'
+
+function resolveAi(settings: Settings): AiTarget | undefined {
+  const provider = settings.providers.find(p => p.id === settings.activeProviderId)
+  const model = provider?.models.find(m => m.name === settings.activeModel)
+  if (!provider || !model || !provider.apiKey)
+    return undefined
+  return { provider, model }
+}
+
+function resolveSourceLang(sourceLang: SourceLang, word: string, targetLang: LangCode): LangCode {
+  if (sourceLang !== 'auto')
+    return sourceLang
+  return /^[\x20-\x7E]+$/.test(word) ? 'en' : targetLang
+}
 
 export default defineBackground({
   type: 'module',
@@ -20,8 +37,63 @@ export default defineBackground({
           return getSettings()
         case 'UPDATE_SETTINGS':
           return updateSettings(message.payload)
-        case 'OPEN_SIDEBAR':
-          return openSidePanel((sender as any)?.tab?.id).then(() => ({ ok: true }))
+        case 'OPEN_SIDEBAR': {
+          const view = message.payload?.view
+          return (async () => {
+            if (view)
+              await setStored(STORAGE_KEYS.pendingView, view)
+            await openSidePanel((sender as any)?.tab?.id)
+            return { ok: true }
+          })()
+        }
+        case 'TRANSLATE_TEXT': {
+          const { text, sourceLang, targetLang, mode } = message.payload
+          return (async () => {
+            const settings = await getSettings()
+            const ai = resolveAi(settings)
+            if (mode === 'word') {
+              const result = await translateWord(text, sourceLang, targetLang, { online: settings.onlineDictionaryFallback, ai })
+              if (result.card && settings.vocab.autoAdd) {
+                await addVocab(cardToEntry({
+                  ...result.card,
+                  word: result.card.word,
+                  translation: result.card.translation,
+                  sourceLang: resolveSourceLang(sourceLang, result.card.word, targetLang),
+                  targetLang,
+                  sourceUrl: (sender as any)?.tab?.url,
+                }))
+              }
+              return result
+            }
+            return translateSentence(text, sourceLang, targetLang, ai)
+          })()
+        }
+        case 'LOOKUP_WORD':
+          return lookupWord(message.payload.word, message.payload.targetLang)
+        case 'GET_VOCAB':
+          return getVocab()
+        case 'ADD_VOCAB':
+          return addVocab(message.payload)
+        case 'REMOVE_VOCAB':
+          return (async () => {
+            await removeVocabById(message.payload.id)
+            return { id: message.payload.id }
+          })()
+        case 'EXPORT_VOCAB':
+          return (async () => {
+            const entries = await getVocab()
+            const stamp = new Date().toISOString().slice(0, 10)
+            if (message.payload.format === 'csv')
+              return { data: vocabToCsv(entries), filename: `mustard-vocab-${stamp}.csv` }
+            return { data: vocabToJson(entries), filename: `mustard-vocab-${stamp}.json` }
+          })()
+        case 'IMPORT_VOCAB':
+          return (async () => {
+            const incoming = message.payload.format === 'csv'
+              ? parseVocabCsv(message.payload.data)
+              : parseVocabJson(message.payload.data)
+            return importVocab(incoming)
+          })()
         case 'CHAT': {
           const { messages, providerId, model } = message.payload
           return (async () => {

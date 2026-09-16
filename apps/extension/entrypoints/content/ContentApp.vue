@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { Settings, ToolItem } from '@mustard/shared'
-import { send } from '@mustard/platform'
-import { MIcon } from '@mustard/ui'
-import { computed, onMounted, ref } from 'vue'
+import { browser, send } from '@mustard/platform'
+import { STORAGE_KEYS } from '@mustard/shared'
+import { MBadge, MIcon } from '@mustard/ui'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from './ball'
+import HoverTooltip from './HoverTooltip.vue'
+import SelectionLayer from './SelectionLayer.vue'
 
 const TOOL_ICON: Record<string, string> = {
   pageTranslate: 'globe',
@@ -25,16 +28,33 @@ const STEP_DEG = 26
 
 const rootEl = ref<HTMLElement>()
 const settings = ref<Settings | null>(null)
+const vocabCount = ref(0)
 const open = ref(false)
 
-onMounted(async () => {
+onMounted(() => {
+  void refresh()
+  browser.storage.onChanged.addListener(onStorage)
+})
+onBeforeUnmount(() => browser.storage.onChanged.removeListener(onStorage))
+
+function onStorage(changes: Record<string, unknown>): void {
+  if (changes[STORAGE_KEYS.settings] || changes[STORAGE_KEYS.vocab])
+    void refresh()
+}
+
+async function refresh(): Promise<void> {
   try {
     settings.value = await send({ type: 'GET_SETTINGS' })
+    vocabCount.value = (await send({ type: 'GET_VOCAB' })).length
   }
   catch {
     settings.value = null
   }
-})
+}
+
+function onAdded(): void {
+  void refresh()
+}
 
 const ball = computed(() => settings.value?.floatingBall ?? null)
 const enabled = computed(() => ball.value?.enabled !== false)
@@ -99,7 +119,11 @@ function onBallClick(): void {
       </div>
       <button class="fab" title="Mustard 芥末" @click="onBallClick">
         <img class="fab-logo" :src="BALL_ICON" alt="Mustard">
+        <MBadge v-if="vocabCount" dot class="fab-dot" />
       </button>
     </div>
+
+    <SelectionLayer :settings="settings" @added="onAdded" />
+    <HoverTooltip :settings="settings" @added="onAdded" />
   </div>
 </template>
