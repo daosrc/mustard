@@ -40,3 +40,9 @@
   2. 采用**里程碑小步提交**（每完成一个里程碑就 commit），即使被限流打断也不丢进度。
   3. 长任务拆成多个会话按里程碑推进（M3 起）。
 - 影响/备注：**限流不影响代码正确性**，只影响单次会话能推进的量与连续操作能力。若被中断，以 `pnpm lint && pnpm typecheck && pnpm build` 复核当前状态即可；必要时也可提升服务商 TPM 档位。
+
+### 2026-09-16 · 运行时 import `@mustard/design-tokens` 把 `unocss`/`oxc-parser` 拖进扩展产物，`wxt build` 失败
+- 现象：M3 让 `apps/extension` 在运行时代码里 `import { applyTheme } from '@mustard/design-tokens'`（用于深色模式）后，`pnpm build:ext` 报 `Rolldown failed to resolve import "@oxc-parser/binding-wasm32-wasi" from oxc-parser/src-js/wasm.js`，构建失败。
+- 原因：`packages/design-tokens/src/index.ts` 通过 `export *` 同时导出了 `preset.ts`，而 `preset.ts` 顶层 `import { presetWind3 } from 'unocss'`。`unocss` 入口会**立即** `import '@unocss/transformer-attributify-jsx'`，后者依赖 `oxc-parser`；包未声明 `sideEffects`，tree-shaking 不会移除，于是构建器试图把 oxc-parser 打进产物，触发 wasm 兜底解析失败。（此前仅 `uno.config.ts` 在 Node 侧引 `presetMustard`，不进产物，所以没暴露。）
+- 解决：给 `@mustard/design-tokens` 增加子路径导出 `./theme`、`./tokens`、`./preset`；运行时代码改为从 `@mustard/design-tokens/theme` 导入（只含纯函数），不再经过 barrel。
+- 影响/备注：**运行时代码不要从带 UnoCSS 的 barrel 导入**；需要 token/主题纯函数时走 `@mustard/design-tokens/theme`、`/tokens`，`presetMustard` 仅限构建配置（`uno.config.ts`）使用。

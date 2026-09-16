@@ -1,13 +1,26 @@
 <script setup lang="ts">
-import type { Settings } from '@mustard/shared'
+import type { Settings, ThemeMode } from '@mustard/shared'
 import { send } from '@mustard/platform'
+import { MField, MSelect, MSwitch, MToastHost, useToast } from '@mustard/ui'
 import { onMounted, ref } from 'vue'
+import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from '../content/ball'
 
+useTheme()
+const { success } = useToast()
+
 const settings = ref<Settings | null>(null)
+const theme = ref<ThemeMode>('system')
+
+const themeOptions = [
+  { label: '跟随系统', value: 'system' },
+  { label: '浅色', value: 'light' },
+  { label: '深色', value: 'dark' },
+]
 
 onMounted(async () => {
   settings.value = await send({ type: 'GET_SETTINGS' })
+  theme.value = settings.value.theme
 })
 
 async function toggle<K extends keyof Settings['features']>(key: K) {
@@ -15,6 +28,13 @@ async function toggle<K extends keyof Settings['features']>(key: K) {
     return
   const features = { ...settings.value.features, [key]: !settings.value.features[key] }
   settings.value = await send({ type: 'UPDATE_SETTINGS', payload: { features } })
+}
+
+async function persistTheme(value?: string) {
+  if (!value)
+    return
+  settings.value = await send({ type: 'UPDATE_SETTINGS', payload: { theme: value as ThemeMode } })
+  success('已更新主题')
 }
 </script>
 
@@ -30,29 +50,35 @@ async function toggle<K extends keyof Settings['features']>(key: K) {
       </div>
     </header>
 
-    <section class="card">
+    <section class="m-card card">
       <h2>功能开关</h2>
-      <label class="row">
-        <span>网页翻译</span>
-        <input type="checkbox" :checked="settings?.features.pageTranslate" @change="toggle('pageTranslate')">
-      </label>
-      <label class="row">
-        <span>划词翻译</span>
-        <input type="checkbox" :checked="settings?.features.selectionTranslate" @change="toggle('selectionTranslate')">
-      </label>
-      <label class="row">
-        <span>悬浮翻译</span>
-        <input type="checkbox" :checked="settings?.features.hoverTranslate" @change="toggle('hoverTranslate')">
-      </label>
+      <MField inline label="网页翻译">
+        <MSwitch :model-value="!!settings?.features.pageTranslate" @update:model-value="toggle('pageTranslate')" />
+      </MField>
+      <MField inline label="划词翻译">
+        <MSwitch :model-value="!!settings?.features.selectionTranslate" @update:model-value="toggle('selectionTranslate')" />
+      </MField>
+      <MField inline label="悬浮翻译">
+        <MSwitch :model-value="!!settings?.features.hoverTranslate" @update:model-value="toggle('hoverTranslate')" />
+      </MField>
     </section>
 
-    <section class="card">
+    <section class="m-card card">
+      <h2>外观</h2>
+      <MField inline label="主题">
+        <MSelect v-model="theme" :options="themeOptions" size="sm" @update:model-value="persistTheme" />
+      </MField>
+    </section>
+
+    <section class="m-card card">
       <h2>模型提供商</h2>
       <pre>{{ settings?.providers.map(p => p.name).join('\n') }}</pre>
-      <p class="hint">
+      <p class="m-muted hint">
         默认 OpenCode Zen 为占位配置，需在后续版本填入 API Key。
       </p>
     </section>
+
+    <MToastHost />
   </div>
 </template>
 
@@ -62,16 +88,8 @@ async function toggle<K extends keyof Settings['features']>(key: K) {
 .mark { width: 44px; height: 44px; border-radius: 12px; }
 h1 { font-size: 20px; margin: 0 0 4px; }
 .sub { color: var(--m-muted); font-size: 13px; margin: 0; line-height: 1.6; }
-.card {
-  background: var(--m-surface);
-  border: 1px solid var(--m-line);
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 16px;
-}
-.card h2 { font-size: 14px; margin: 0 0 12px; }
-.row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--m-line); }
-.row:last-child { border-bottom: 0; }
-pre { background: var(--m-surface-2); padding: 10px 12px; border-radius: 10px; font-size: 12px; overflow: auto; }
-.hint { color: var(--m-muted); font-size: 12px; margin: 10px 0 0; }
+.card { padding: 16px 18px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+.card h2 { font-size: 14px; margin: 0 0 2px; }
+pre { background: var(--m-surface-2); padding: 10px 12px; border-radius: 10px; font-size: 12px; overflow: auto; margin: 0; }
+.hint { margin: 0; }
 </style>

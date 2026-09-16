@@ -1,8 +1,12 @@
 /**
- * Mustard 芥末绿主题变量（浅色为默认，深色通过 data-theme 切换）。
+ * Mustard 芥末绿主题变量（浅色为默认，深色通过 html[data-theme="dark"] 切换）。
  * 由 @mustard/design-tokens 提供，扩展与宣传页共用。
+ * 注意：选择器不带 `:root`，以便无 `all` 重置的 Shadow DOM 宿主元素也能命中
+ * （content script 会把 data-theme 写在 shadow host 上，避免污染宿主页面）。
  */
-:root {
+:root,
+[data-theme='light'] {
+  color-scheme: light;
   --m-paper: #F3FAEC;
   --m-surface: #FFFFFF;
   --m-surface-2: #EBF5E1;
@@ -17,9 +21,13 @@
   --m-accent-soft: #E6F5D8;
   --m-blush: #F3A3B8;
   --m-warn: #E0A63A;
+  --m-shadow-sm: 0 2px 10px rgba(45, 75, 28, .07);
+  --m-shadow-md: 0 8px 26px rgba(45, 75, 28, .11);
+  --m-shadow-lg: 0 18px 50px rgba(45, 75, 28, .16);
 }
 
 [data-theme='dark'] {
+  color-scheme: dark;
   --m-paper: #171E13;
   --m-surface: #1F2A19;
   --m-surface-2: #2A3622;
@@ -34,10 +42,34 @@
   --m-accent-soft: #2B3A20;
   --m-blush: #E794AC;
   --m-warn: #E0A63A;
+  --m-shadow-sm: 0 2px 10px rgba(0, 0, 0, .35);
+  --m-shadow-md: 0 8px 26px rgba(0, 0, 0, .45);
+  --m-shadow-lg: 0 18px 50px rgba(0, 0, 0, .55);
 }
 
+/**
+ * 未显式设置 data-theme 时（首帧、脚本加载前）跟随系统，避免闪白。
+ * 应用会在设置加载后写入明确的 data-theme。
+ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme]) {
     color-scheme: dark;
+    --m-paper: #171E13;
+    --m-surface: #1F2A19;
+    --m-surface-2: #2A3622;
+    --m-ink: #E9F2E0;
+    --m-muted: #9DB08E;
+    --m-faint: #6E8060;
+    --m-line: #33422A;
+    --m-primary: #8FCF4A;
+    --m-primary-ink: #12200A;
+    --m-primary-soft: #2B3A20;
+    --m-accent: #7BC043;
+    --m-accent-soft: #2B3A20;
+    --m-blush: #E794AC;
+    --m-warn: #E0A63A;
+    --m-shadow-sm: 0 2px 10px rgba(0, 0, 0, .35);
+    --m-shadow-md: 0 8px 26px rgba(0, 0, 0, .45);
+    --m-shadow-lg: 0 18px 50px rgba(0, 0, 0, .55);
   }
 }

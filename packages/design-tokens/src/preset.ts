@@ -36,7 +36,22 @@ export function presetMustard(): Preset[] {
           md: '12px',
           lg: '16px',
         },
+        boxShadow: {
+          sm: 'var(--m-shadow-sm)',
+          md: 'var(--m-shadow-md)',
+          lg: 'var(--m-shadow-lg)',
+        },
       },
+      shortcuts: [
+        ['m-card', 'bg-surface border border-line rounded-md'],
+        ['m-panel', 'bg-surface border border-line rounded-lg'],
+        ['m-row', 'flex items-center justify-between gap-3'],
+        ['m-col', 'flex flex-col gap-3'],
+        ['m-chip', 'inline-flex items-center gap-1 text-[11px] leading-none text-muted bg-surface-2 border border-line px-2 py-1 rounded-sm'],
+        ['m-input', 'w-full bg-surface text-ink border border-line rounded-md px-3 py-2 text-sm outline-none transition focus:border-primary'],
+        ['m-icon-btn', 'inline-flex items-center justify-center w-7 h-7 rounded-sm text-muted cursor-pointer transition hover:text-ink hover:bg-surface-2'],
+        ['m-muted', 'text-muted text-[12px] leading-relaxed'],
+      ],
     },
   ]
 }

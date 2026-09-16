@@ -18,6 +18,9 @@ export const tokenVars = {
   blush: '--m-blush',
   warn: '--m-warn',
   primaryInk: '--m-primary-ink',
+  shadowSm: '--m-shadow-sm',
+  shadowMd: '--m-shadow-md',
+  shadowLg: '--m-shadow-lg',
 } as const
 
 export type TokenName = keyof typeof tokenVars
@@ -37,6 +40,9 @@ export const lightTokens: Record<string, string> = {
   '--m-accent-soft': '#E6F5D8',
   '--m-blush': '#F3A3B8',
   '--m-warn': '#E0A63A',
+  '--m-shadow-sm': '0 2px 10px rgba(45,75,28,.07)',
+  '--m-shadow-md': '0 8px 26px rgba(45,75,28,.11)',
+  '--m-shadow-lg': '0 18px 50px rgba(45,75,28,.16)',
 }
 
 export const darkTokens: Record<string, string> = {
@@ -54,6 +60,9 @@ export const darkTokens: Record<string, string> = {
   '--m-accent-soft': '#2B3A20',
   '--m-blush': '#E794AC',
   '--m-warn': '#E0A63A',
+  '--m-shadow-sm': '0 2px 10px rgba(0,0,0,.35)',
+  '--m-shadow-md': '0 8px 26px rgba(0,0,0,.45)',
+  '--m-shadow-lg': '0 18px 50px rgba(0,0,0,.55)',
 }
 
 /** 品牌渐变（悬浮球/Logo 背景等） */
@@ -62,7 +71,7 @@ export const brandGradient = 'linear-gradient(135deg, var(--m-primary), #A8D96B)
 export const radii = { sm: '8px', md: '12px', lg: '16px' } as const
 
 export const shadows = {
-  sm: '0 2px 10px rgba(45,75,28,.07)',
-  md: '0 8px 26px rgba(45,75,28,.11)',
-  lg: '0 18px 50px rgba(45,75,28,.16)',
+  sm: 'var(--m-shadow-sm)',
+  md: 'var(--m-shadow-md)',
+  lg: 'var(--m-shadow-lg)',
 } as const

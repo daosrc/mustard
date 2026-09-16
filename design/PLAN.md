@@ -222,7 +222,7 @@ mustard/
 | M0 工程基建 | ✅ 完成 | pnpm workspace + Turborepo + `@mustard/config` + CI + LICENSE + `.editorconfig`/`.npmrc` |
 | M1 设计资产入库 | 🟡 部分 | `design/` 已入库 DESIGN.md / PLAN.md / 原型 / 图标 / mascot；**截图待导出** |
 | M2 扩展骨架 | ✅ 完成 | WXT 0.21 + Vue3 + TS + Pinia + UnoCSS；background / content(shadow) / sidepanel / options 四入口；manifest 权限、commands、side_panel 均生效；`pnpm build:ext` 通过 |
-| M3 UI 组件库 + 主题 | 🟡 部分 | `design-tokens`（token + UnoCSS preset + 深浅色）完成；`ui` 仅 MButton / MSwitch |
+| M3 UI 组件库 + 主题 | ✅ 完成 | `design-tokens`（token + preset + shortcuts + 深浅色 + `applyTheme`）；`ui` 新增 Icon/Chip/Badge/Field/Select/Dialog/Tabs/Stars/Toast；extension 用 ui 重构 + 主题设置生效 |
 | M4 模型提供商与设置 | 🟡 部分 | `core/providers` 已实现 OpenAI 兼容流式客户端（SSE 解析 + MISSING_API_KEY 错误码）；设置页待实现 |
 | M5 划词/悬浮 + 生词本 | ⏳ 待开始 | `shared` 已定义 WordEntry/streak/DictResult；`utils` 已有 LRU/hash/vocab 导入导出 |
 | M6 网页翻译 + 截图翻译 | ⏳ 待开始 | — |
@@ -239,7 +239,7 @@ mustard/
 pnpm install
 pnpm lint        # 8 packages 全绿
 pnpm typecheck   # 8 packages 全绿
-pnpm build       # 扩展 379.74 kB + 落地页 2 页
+pnpm build       # 扩展 410.76 kB + 落地页 2 页
 ```
 
 ### 开发期问题记录

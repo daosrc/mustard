@@ -5,6 +5,9 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
+    "./preset": "./src/preset.ts",
+    "./theme": "./src/theme.ts",
+    "./tokens": "./src/tokens.ts",
     "./theme.css": "./src/theme.css"
   },
   "scripts": {
