@@ -64,3 +64,10 @@
 - 原因：这些 action 的 v4 运行时仍是 Node 20；GitHub 已开始强制其在 Node 24 上运行并给出弃用告警。
 - 解决：三个 workflow 统一升级到 Node 24 运行时版本 —— `actions/checkout@v5`、`actions/setup-node@v5`、`pnpm/action-setup@v6`（`node-version` 仍用 22）。
 - 影响/备注：仅运行时升级，`with` 参数（`version`/`cache: pnpm`）不变；不再出现 Node 20 弃用告警。
+
+### 2026-09-16 · `Deploy landing page` 报 `Get Pages site failed`（仓库未启用 Pages）
+- 现象：pages.yml 的 build 阶段 `actions/configure-pages@v5` 失败：`HttpError: Not Found … get-a-apiname-pages-site`，提示仓库未启用 Pages 或未配置为 GitHub Actions；同一步还带 `actions/configure-pages@v5` 的 Node 20 弃用告警。
+- 原因：`GET /repos/{owner}/{repo}/pages` 返回 404，说明该仓库**尚未开启 GitHub Pages**（不是 source 选错，source 错误会返回 200）。configure-pages 的 `enablement` 参数虽然能自动开启，但其 action.yml 明确要求**必须用非 `GITHUB_TOKEN` 的 token**（PAT 的 `repo`/Pages write，或 GitHub App 的 `administration:write`+`pages:write`），默认 `github.token` 无法开启。
+- 解决（代码侧）：三个 Pages 相关 action 升到 Node 24 运行时版本 —— `actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`；release.yml 的 `actions/upload-artifact@v7`、`softprops/action-gh-release@v3` 一并升级。
+- 解决（一次性手动，必须由仓库管理员执行）：**Settings → Pages → Build and deployment → Source 选 `GitHub Actions`**。完成后再重跑 pages.yml 即可部署。若想免手动，需新建 PAT secret 并把 `enablement: true` + `token: ${{ secrets.PAGES_TOKEN }}` 传给 configure-pages。
+- 影响/备注：`astro.config.mjs` 已设 `site: https://daosrc.github.io` + `base: /mustard`，与仓库名一致，无需改动。
