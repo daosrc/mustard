@@ -52,3 +52,15 @@
 - 原因：根 `pnpm-workspace.yaml` 设了 `trustPolicy: no-downgrade`；`chokidar@4.0.3`（来自 landing 的 devDependency `@astrojs/check`）在 registry 的信任等级较 lockfile 记录下降，被策略拒绝。
 - 解决：在 `pnpm-workspace.yaml` 增加 `trustPolicyExclude: ['chokidar@4.0.3']`（仅精确排除该版本），随后 `pnpm install` 正常；lockfile 仅新增 `@mustard/core` 的 importer 条目。
 - 影响/备注：该依赖只用于 `astro check`（dev 工具），不影响扩展产物；若后续 `@astrojs/check` 升级到 chokidar@5，可移除该豁免。信任策略的其余部分保持不变。
+
+### 2026-09-16 · CI `pnpm install` 报 `ERR_PNPM_IGNORED_BUILDS`（esbuild 构建脚本被拦截）
+- 现象：GitHub Actions 的 `pnpm install --frozen-lockfile` 在 CI 环境（`CI=true`）以 `[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: esbuild@0.28.2` 失败退出 1；本地 `pnpm install` 只告警、退出 0。
+- 原因：pnpm 10.3+ 的 `strictDepBuilds` 默认 `true`，CI 下未被批准的依赖构建脚本会变成硬错误。**pnpm 11 已移除 `onlyBuiltDependencies`，改用 `allowBuilds` 映射**，所以先前写的 `onlyBuiltDependencies: [esbuild]` 完全不生效。
+- 解决：在 `pnpm-workspace.yaml` 用 `allowBuilds: { esbuild: true }` 显式批准（保留 `strictDepBuilds` 默认的严格策略）。用临时 worktree + `CI=true pnpm install --frozen-lockfile` 复现并验证修复（install/lint/typecheck/build 全绿）。
+- 影响/备注：esbuild 的平台二进制其实由 optionalDependencies 提供，构建脚本被拦截也能构建；但显式 `allowBuilds` 更干净、可复现，且避免 CI 因严格策略中断。
+
+### 2026-09-16 · GitHub Actions `actions/*@v4` 触发 Node 20 弃用告警
+- 现象：CI 输出 `Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, pnpm/action-setup@v4`。
+- 原因：这些 action 的 v4 运行时仍是 Node 20；GitHub 已开始强制其在 Node 24 上运行并给出弃用告警。
+- 解决：三个 workflow 统一升级到 Node 24 运行时版本 —— `actions/checkout@v5`、`actions/setup-node@v5`、`pnpm/action-setup@v6`（`node-version` 仍用 22）。
+- 影响/备注：仅运行时升级，`with` 参数（`version`/`cache: pnpm`）不变；不再出现 Node 20 弃用告警。

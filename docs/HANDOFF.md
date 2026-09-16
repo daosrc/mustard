@@ -104,6 +104,8 @@
 - 细节与解决过程见 `docs/PROBLEMS.md`；Token 纪律见 `AGENTS.md`。
 - **运行时代码不要从 `@mustard/design-tokens` barrel 导入**（会拖入 `unocss`/`oxc-parser` 导致 `wxt build` 失败）；用 `@mustard/design-tokens/theme` 或 `/tokens`。
 - `pnpm-workspace.yaml` 的 `trustPolicyExclude` 精确豁免了 `chokidar@4.0.3`（`astro check` 的传递依赖），否则改动 lockfile 时 `pnpm install` 会被 `trustPolicy: no-downgrade` 拒绝。
+- CI 依赖脚本用 `allowBuilds`（**pnpm 11 已移除 `onlyBuiltDependencies`**）：当前 `allowBuilds: { esbuild: true }`；`strictDepBuilds` 默认 true，未批准的构建会让 CI 以 `ERR_PNPM_IGNORED_BUILDS` 失败（本地不报错，只有 `CI=true` 才失败）。
+- GitHub Actions 统一用 Node 24 运行时版本：`actions/checkout@v5`、`actions/setup-node@v5`、`pnpm/action-setup@v6`。
 
 ## 下一个会话的启动清单
 ```bash
