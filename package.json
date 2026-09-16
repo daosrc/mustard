@@ -1,0 +1,29 @@
+{
+  "name": "mustard",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:ext": "turbo run dev --filter=@mustard/extension",
+    "dev:landing": "turbo run dev --filter=@mustard/landing",
+    "build": "turbo run build",
+    "build:ext": "turbo run build --filter=@mustard/extension",
+    "build:landing": "turbo run build --filter=@mustard/landing",
+    "lint": "turbo run lint",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:",
+    "cookie": "catalog:",
+    "eslint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

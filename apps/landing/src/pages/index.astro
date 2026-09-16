@@ -1,0 +1,58 @@
+---
+import { LINKS } from '../config/links'
+import Layout from '../layouts/Layout.astro'
+
+const base = import.meta.env.BASE_URL
+const features = [
+  { title: '划词翻译', desc: '选中即译，音标/词性/释义/例句一目了然，可一键加入生词本。' },
+  { title: '悬浮翻译', desc: '鼠标悬停即显示译文，阅读不打断。' },
+  { title: '网页翻译', desc: '整页双语对照，原文译文逐段对应，可随时还原。' },
+  { title: '侧边栏 AI 对话', desc: '按提供商选择模型，支持附件与截图提问。' },
+  { title: '生词本与记词', desc: '自动收录、单词发音；连续答对 3 次判定掌握，支持听音默写。' },
+  { title: '离线词典', desc: '内置 ECDICT，支持按需下载更多词典，含在线兜底。' },
+]
+---
+
+<Layout title="Mustard 芥末 · 开源 Chrome 划词翻译插件" description="划词/悬浮/网页翻译 + AI 对话与生词本的开源 Chrome 扩展">
+  <header class="sticky top-0 z-10 backdrop-blur bg-paper/80 border-b border-line">
+    <nav class="max-w-5xl mx-auto flex items-center gap-4 px-5 h-14">
+      <a class="flex items-center gap-2 no-underline text-ink font-700" href={`${base}`}>
+        <img class="w-7 h-7 rounded-lg" src={`${base}favicon.png`} alt="Mustard">
+        Mustard 芥末
+      </a>
+      <span class="flex-1" />
+      <a class="text-sm text-muted no-underline hover:text-primary" href={LINKS.repo} target="_blank" rel="noreferrer">GitHub</a>
+      <a class="text-sm text-muted no-underline hover:text-primary" href={`${base}en/`}>English</a>
+    </nav>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-5">
+    <section class="py-16 text-center">
+      <img class="w-20 h-20 mx-auto rounded-2xl" src={`${base}favicon.png`} alt="Mustard">
+      <p class="mt-4 chip">开源 Chrome 划词翻译插件 · MIT</p>
+      <h1 class="mt-4 text-4xl font-800 tracking-tight">Mustard 芥末</h1>
+      <p class="mt-4 text-muted leading-relaxed max-w-2xl mx-auto">
+        划词 / 悬浮 / 网页翻译，侧边栏 AI 对话，生词本与记词，离线词典。<br>
+        仅通过 GitHub 开源分发，无商店版本。
+      </p>
+      <div class="mt-8 flex items-center justify-center gap-3">
+        <a class="btn-primary" href={LINKS.releases} target="_blank" rel="noreferrer">安装（GitHub）</a>
+        <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">查看源码</a>
+      </div>
+      <p class="mt-4 text-xs text-faint">当前为 M0 骨架预览，完整落地页将在 M11 完成。</p>
+    </section>
+
+    <section class="pb-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {features.map(f => (
+        <article class="card">
+          <h3 class="mt-0 mb-2 text-base font-700">{f.title}</h3>
+          <p class="m-0 text-sm text-muted leading-relaxed">{f.desc}</p>
+        </article>
+      ))}
+    </section>
+  </main>
+
+  <footer class="border-t border-line py-8 text-center text-xs text-faint">
+    Mustard 芥末 · MIT · <a class="text-muted no-underline hover:text-primary" href={LINKS.repo} target="_blank" rel="noreferrer">GitHub</a>
+  </footer>
+</Layout>

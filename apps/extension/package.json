@@ -1,0 +1,30 @@
+{
+  "name": "@mustard/extension",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "lint": "eslint .",
+    "typecheck": "wxt prepare && vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@mustard/design-tokens": "workspace:*",
+    "@mustard/platform": "workspace:*",
+    "@mustard/shared": "workspace:*",
+    "@mustard/ui": "workspace:*",
+    "@mustard/utils": "workspace:*",
+    "@vueuse/core": "catalog:",
+    "pinia": "catalog:",
+    "vue": "catalog:"
+  },
+  "devDependencies": {
+    "@wxt-dev/module-vue": "catalog:",
+    "unocss": "catalog:",
+    "vue-tsc": "catalog:",
+    "wxt": "catalog:"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@mustard/landing",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "lint": "eslint .",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@mustard/design-tokens": "workspace:*",
+    "astro": "catalog:"
+  },
+  "devDependencies": {
+    "@astrojs/check": "catalog:",
+    "@unocss/astro": "catalog:",
+    "@unocss/reset": "catalog:",
+    "typescript": "catalog:",
+    "unocss": "catalog:"
+  }
+}

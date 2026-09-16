@@ -1,0 +1,13 @@
+html, body, #app {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--m-paper);
+  color: var(--m-ink);
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+}
+
+* { box-sizing: border-box; }

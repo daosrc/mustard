@@ -1,0 +1,26 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# build outputs
+dist
+.output
+.wxt
+.astro
+.turbo
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs / os
+*.log
+.DS_Store
+Thumbs.db
+
+# editors
+.idea
+.vscode/*
+!.vscode/extensions.json

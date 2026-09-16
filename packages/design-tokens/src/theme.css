@@ -1,0 +1,43 @@
+/**
+ * Mustard 芥末绿主题变量（浅色为默认，深色通过 data-theme 切换）。
+ * 由 @mustard/design-tokens 提供，扩展与宣传页共用。
+ */
+:root {
+  --m-paper: #F3FAEC;
+  --m-surface: #FFFFFF;
+  --m-surface-2: #EBF5E1;
+  --m-ink: #25331C;
+  --m-muted: #6C7C5F;
+  --m-faint: #9CB08C;
+  --m-line: #DBE9CD;
+  --m-primary: #7ABE3E;
+  --m-primary-ink: #FFFFFF;
+  --m-primary-soft: #E8F6D9;
+  --m-accent: #66B23A;
+  --m-accent-soft: #E6F5D8;
+  --m-blush: #F3A3B8;
+  --m-warn: #E0A63A;
+}
+
+[data-theme='dark'] {
+  --m-paper: #171E13;
+  --m-surface: #1F2A19;
+  --m-surface-2: #2A3622;
+  --m-ink: #E9F2E0;
+  --m-muted: #9DB08E;
+  --m-faint: #6E8060;
+  --m-line: #33422A;
+  --m-primary: #8FCF4A;
+  --m-primary-ink: #12200A;
+  --m-primary-soft: #2B3A20;
+  --m-accent: #7BC043;
+  --m-accent-soft: #2B3A20;
+  --m-blush: #E794AC;
+  --m-warn: #E0A63A;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}

@@ -1,0 +1,131 @@
+/* Mustard content UI（挂载在 Shadow DOM 内） */
+:host {
+  all: initial;
+}
+
+.mustard-wrap {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 2147483646;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--m-ink);
+}
+
+/* ---------- 悬浮球 ---------- */
+.fab-root {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  transition: right .32s cubic-bezier(.4, 0, .2, 1);
+}
+
+.fab {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: block;
+  box-shadow: 0 10px 26px rgba(45, 75, 28, .32);
+  transform-origin: 50% 50%;
+  transition: transform .34s cubic-bezier(.34, 1.56, .64, 1), box-shadow .34s ease;
+}
+
+.fab-root:hover .fab-logo {
+  transform: scale(1.12) rotate(-6deg);
+  box-shadow: 0 15px 36px rgba(45, 75, 28, .42);
+  animation: fabPop .5s cubic-bezier(.34, 1.56, .64, 1) forwards;
+}
+
+@keyframes fabPop {
+  0% { transform: scale(1) rotate(0); }
+  55% { transform: scale(1.2) rotate(-10deg); }
+  100% { transform: scale(1.12) rotate(-6deg); }
+}
+
+/* ---------- 工具环 ---------- */
+.tools {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tool {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border-radius: 50%;
+  background: var(--m-surface);
+  border: 1px solid var(--m-line);
+  color: var(--m-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 26px rgba(45, 75, 28, .11);
+  opacity: 0;
+  transform: translate(0, 0) scale(.4);
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), opacity .2s, background .15s;
+  pointer-events: none;
+}
+
+.fab-root.open .tool,
+.fab-root:hover .tool {
+  opacity: 1;
+  transform: translate(var(--x), var(--y)) scale(1);
+  pointer-events: auto;
+}
+
+.fab-root.stack.open .tool,
+.fab-root.stack:hover .tool {
+  transform: translate(0, calc(var(--i) * -46px - 56px)) scale(1);
+}
+
+.tool:hover {
+  background: var(--m-primary);
+  color: var(--m-primary-ink);
+  border-color: var(--m-primary);
+}
+
+.tool.on {
+  background: var(--m-accent);
+  color: var(--m-primary-ink);
+  border-color: var(--m-accent);
+}
+
+.tool-label {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  background: var(--m-ink);
+  color: var(--m-paper);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: .15s;
+}
+
+.fab-root.open .tool:hover .tool-label,
+.fab-root:hover .tool:hover .tool-label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}

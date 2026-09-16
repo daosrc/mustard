@@ -1,0 +1,14 @@
+{
+  "name": "@mustard/config",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.vue.json": "./tsconfig.vue.json"
+  },
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.vue.json"
+  ]
+}
