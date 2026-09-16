@@ -12,6 +12,7 @@
     "typecheck": "wxt prepare && vue-tsc --noEmit"
   },
   "dependencies": {
+    "@mustard/core": "workspace:*",
     "@mustard/design-tokens": "workspace:*",
     "@mustard/platform": "workspace:*",
     "@mustard/shared": "workspace:*",

@@ -12,6 +12,11 @@
   color: var(--m-ink);
 }
 
+.mustard-wrap.left {
+  right: auto;
+  left: 22px;
+}
+
 /* ---------- 悬浮球 ---------- */
 .fab-root {
   position: relative;

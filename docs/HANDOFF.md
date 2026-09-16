@@ -24,9 +24,11 @@
 - 类型：`Settings` / `Provider` / `ModelDef` / `ModelInputs` / `ToolItem` / `WordEntry` / `Streak` / `Session` / `ChatMessage` / `Attachment` / `TranslationCard` / `DictResult` / `TranslateMode` / `LangCode` / `SourceLang`
 - 常量：`DEFAULT_SETTINGS`、`OPENCODE_ZEN_PRESET`（apiKey 空占位）、`DEFAULT_TOOLS`、`DICTIONARIES`、`STORAGE_KEYS`、`LANGS` / `langShort()` / `langBcp47()`、`MASTERED_STREAK`
 - 消息协议：`Message` 联合类型 + `ResponseMap`（`PING/GET_SETTINGS/UPDATE_SETTINGS/TRANSLATE_TEXT/CHAT/TRANSLATE_IMAGE/LOOKUP_WORD/ADD_VOCAB/GET_VOCAB/REMOVE_VOCAB/EXPORT_VOCAB/IMPORT_VOCAB/OPEN_SIDEBAR/CAPTURE_TAB`）
+- 流式协议：`CHAT_PORT_NAME`、`ChatStartPayload`、`ChatPortClientMessage`、`ChatPortServerMessage`、`ERR_MISSING_API_KEY`
 
 **`@mustard/platform`**
 - `send<T>(msg)` / `onMessage(handler)` / `openSidePanel(tabId?)` / `getSettings()` / `updateSettings(patch)` / `getStored` / `setStored` / `browser`
+- `startChat(payload, handlers)`：打开流式对话长连接，返回 `{ abort() }`（`handlers: onDelta/onDone/onError`）
 
 **`@mustard/design-tokens`**
 - CSS 变量：`--m-paper / surface / surface-2 / ink / muted / faint / line / primary / primary-ink / primary-soft / accent / accent-soft / blush / warn / shadow-sm / shadow-md / shadow-lg`
@@ -38,8 +40,9 @@
 - `MIcon`（`name` + `size` + `strokeWidth`；图标见 `ICONS`）、`MChip`（`variant/removable`）、`MBadge`（`count/dot/max/variant`）、`MField`（`label/hint/inline`）、`MSelect`（`v-model` + `options: SelectOption[]`）、`MDialog`（`v-model` + `title/width`）、`MTabs`（`v-model` + `tabs: TabItem[]`）、`MStars`（`v-model` + `max/readonly`）、`MToastHost` + `useToast()`（`info/success/error`）
 
 **`@mustard/core`**
-- `chatStream(provider, model, messages, signal?)`：OpenAI 兼容**流式**，未配 Key 抛 `MISSING_API_KEY`
-- `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`
+- `chatStream(provider, model, messages, signal?)`：OpenAI 兼容**流式**，未配 Key 抛 `ProviderError('MISSING_API_KEY')`
+- `chatOnce(provider, model, messages, signal?)`：非流式单次调用；`testConnection(provider, model, signal?)`
+- `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`、`ProviderError`、`errorCode(error)`
 
 **`@mustard/utils`**
 - `uid()` / `timeAgo()` / `sleep()` / `LRU` / `hashString()` / `cacheKey()` / `vocabToCsv()` / `vocabToJson()` / `parseVocabCsv()` / `parseVocabJson()`
@@ -77,6 +80,21 @@
 - **未完成 / TODO**：Storybook/组件预览页未做（M3 验收的替代 = 扩展内实际呈现）；sidepanel 仍是骨架（对话/附件/历史在 M4/M7）；悬浮球工具开关仍未落 `settings.floatingBall.tools`；`MToastHost` 目前仅在 options/sidepanel 挂载。
 - **下一步依赖**：M4 设置页可直接复用 `MField/MSelect/MSwitch/MDialog/MTabs`；M5 可复用 `MIcon/MStars/MChip`（生词本掌握度）；后续运行时代码**不要**从 `@mustard/design-tokens` barrel 导入（见 PROBLEMS）。
 
+## M4 · 模型提供商与设置 — 完成
+- **做了什么**：
+  1. `@mustard/shared`：新增流式协议 `stream.ts`（`CHAT_PORT_NAME` / `ChatStartPayload` / `ChatPortClientMessage` / `ChatPortServerMessage` / `ERR_MISSING_API_KEY`）。
+  2. `@mustard/core`：新增 `ProviderError`、`errorCode()`、`chatOnce()`（非流式）、`testConnection()`；`chatStream` 未配 Key 改抛 `ProviderError('MISSING_API_KEY')`。
+  3. `@mustard/platform`：新增 `startChat(payload, handlers)` 长连接客户端（`onDelta/onDone/onError` + `abort()`）。
+  4. `apps/extension/background.ts`：`onConnect` 处理 `CHAT_PORT_NAME`，逐块转发 SSE delta / done / error，支持 abort；`CHAT` 消息用 `chatOnce` 兜底。
+  5. `apps/extension/stores/settings.ts`：Pinia 设置 store（`load/patch/saveProviders` + `activeProvider/activeModel/aiConfigured/canAttachActive`）。
+  6. options 页重写为 MTabs（模型 / 翻译 / 悬浮球 / 生词本 / 外观）：提供商卡片（内置不可删、状态点、模型能力标签）+ `ProviderDialog`（名称/baseUrl/apiKey、模型逐条增删 + 文本/图片/附件能力、测试连接）；当前模型选择；源/目标语言；功能开关；悬浮延迟滑块与取词范围；悬浮球启用/位置/展开/工具排序显隐；生词本自动收录；主题。
+  7. sidepanel：流式对话（Enter 发送 / Shift+Enter 换行、逐字输出、停止）、模型下拉、目标语言、附件条与 📎（按 `canAttachActive` 门控）、粘贴截图门控。
+  8. content 悬浮球改为由 `settings.floatingBall` 驱动（enabled/position/expand/tools 排序显隐），toggle 工具读写 `settings.features`。
+- **对外暴露（新增，未改名）**：见上方「冻结接口」新增条目；extension 内 `stores/settings.ts`、options `ProviderDialog.vue`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 446.87 kB + 落地页 2 页）。
+- **未完成 / TODO**：**附件/图片尚未真正发给模型**（`buildChatBody` 仍为纯文本，多模态在 M6）；会话历史/持久化在 M7；provider「测试连接」直接从 options 页 fetch（后续可统一走 background）；`aiConfigured` 仅看 apiKey 非空。
+- **下一步依赖**：M5 划词/悬浮/生词本复用 `core` 调用与 sidepanel 消息；M6 在 `buildChatBody` 中加入图片/附件内容块（门控已就绪）；M7 把 sidepanel 的本地 `messages` 迁到 `core/session` + IndexedDB。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -85,6 +103,7 @@
 - 家目录 `~/node_modules/cookie@0.7.2` 会遮蔽工作区版本 → 根 `package.json` 已显式声明 `cookie: catalog:`，**不要删**。
 - 细节与解决过程见 `docs/PROBLEMS.md`；Token 纪律见 `AGENTS.md`。
 - **运行时代码不要从 `@mustard/design-tokens` barrel 导入**（会拖入 `unocss`/`oxc-parser` 导致 `wxt build` 失败）；用 `@mustard/design-tokens/theme` 或 `/tokens`。
+- `pnpm-workspace.yaml` 的 `trustPolicyExclude` 精确豁免了 `chokidar@4.0.3`（`astro check` 的传递依赖），否则改动 lockfile 时 `pnpm install` 会被 `trustPolicy: no-downgrade` 拒绝。
 
 ## 下一个会话的启动清单
 ```bash
@@ -92,4 +111,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M4 · 模型提供商与设置**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M5 · 划词翻译 + 悬浮翻译 + 生词本**。

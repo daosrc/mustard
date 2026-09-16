@@ -1,65 +1,99 @@
 <script setup lang="ts">
+import type { Settings, ToolItem } from '@mustard/shared'
 import { send } from '@mustard/platform'
 import { MIcon } from '@mustard/ui'
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from './ball'
 
-interface ToolDef {
-  id: string
-  label: string
-  type: 'toggle' | 'action'
-  x: string
-  y: string
-  i: number
-  icon: string
+const TOOL_ICON: Record<string, string> = {
+  pageTranslate: 'globe',
+  hoverTranslate: 'message',
+  selectionTranslate: 'translate',
+  vocab: 'book',
+  settings: 'settings',
 }
 
-const TOOLS: ToolDef[] = [
-  { id: 'pageTranslate', label: '网页翻译', type: 'toggle', x: '-100px', y: '0px', i: 0, icon: 'globe' },
-  { id: 'hoverTranslate', label: '悬浮翻译', type: 'toggle', x: '-90px', y: '-44px', i: 1, icon: 'message' },
-  { id: 'selectionTranslate', label: '划词翻译', type: 'toggle', x: '-61px', y: '-79px', i: 2, icon: 'translate' },
-  { id: 'vocab', label: '生词本', type: 'action', x: '-20px', y: '-98px', i: 3, icon: 'book' },
-  { id: 'settings', label: '设置', type: 'action', x: '26px', y: '-97px', i: 4, icon: 'settings' },
-]
+const FEATURE_BY_TOOL: Record<string, keyof Settings['features']> = {
+  pageTranslate: 'pageTranslate',
+  hoverTranslate: 'hoverTranslate',
+  selectionTranslate: 'selectionTranslate',
+}
+
+const RADIUS = 100
+const STEP_DEG = 26
 
 const rootEl = ref<HTMLElement>()
-useTheme(() => rootEl.value)
-
+const settings = ref<Settings | null>(null)
 const open = ref(false)
-const toggles = ref<Record<string, boolean>>({
-  pageTranslate: false,
-  hoverTranslate: false,
-  selectionTranslate: true,
+
+onMounted(async () => {
+  try {
+    settings.value = await send({ type: 'GET_SETTINGS' })
+  }
+  catch {
+    settings.value = null
+  }
 })
 
-function onBallClick() {
-  void send({ type: 'OPEN_SIDEBAR', payload: { view: 'chat' } })
+const ball = computed(() => settings.value?.floatingBall ?? null)
+const enabled = computed(() => ball.value?.enabled !== false)
+const isStack = computed(() => ball.value?.expand === 'stack')
+const tools = computed(() =>
+  [...(ball.value?.tools ?? [])]
+    .filter(tool => tool.visible)
+    .sort((a, b) => a.order - b.order),
+)
+
+useTheme(() => (enabled.value ? rootEl.value : undefined))
+
+function toolStyle(index: number): Record<string, string | number> {
+  const angle = (180 - index * STEP_DEG) * Math.PI / 180
+  return {
+    '--x': `${Math.round(RADIUS * Math.cos(angle))}px`,
+    '--y': `${-Math.round(RADIUS * Math.sin(angle))}px`,
+    '--i': index,
+  }
 }
 
-function onToolClick(tool: ToolDef) {
+function isOn(id: string): boolean {
+  const key = FEATURE_BY_TOOL[id]
+  return key ? !!settings.value?.features[key] : false
+}
+
+async function onToolClick(tool: ToolItem): Promise<void> {
   if (tool.type === 'toggle') {
-    toggles.value[tool.id] = !toggles.value[tool.id]
+    const key = FEATURE_BY_TOOL[tool.id]
+    if (!key || !settings.value)
+      return
+    settings.value = await send({
+      type: 'UPDATE_SETTINGS',
+      payload: { features: { ...settings.value.features, [key]: !settings.value.features[key] } },
+    })
     return
   }
   void send({ type: 'OPEN_SIDEBAR', payload: { view: tool.id === 'vocab' ? 'vocab' : 'settings' } })
 }
+
+function onBallClick(): void {
+  void send({ type: 'OPEN_SIDEBAR', payload: { view: 'chat' } })
+}
 </script>
 
 <template>
-  <div ref="rootEl" class="mustard-wrap">
-    <div class="fab-root" :class="{ open }" @pointerenter="open = true" @pointerleave="open = false">
+  <div v-if="enabled" ref="rootEl" class="mustard-wrap" :class="ball?.position === 'left' ? 'left' : 'right'">
+    <div class="fab-root" :class="{ open, stack: isStack }" @pointerenter="open = true" @pointerleave="open = false">
       <div class="tools">
         <button
-          v-for="tool in TOOLS"
+          v-for="(tool, index) in tools"
           :key="tool.id"
           class="tool"
-          :class="{ on: toggles[tool.id] }"
-          :style="{ '--x': tool.x, '--y': tool.y, '--i': tool.i }"
+          :class="{ on: isOn(tool.id) }"
+          :style="toolStyle(index)"
           :title="tool.label"
           @click.stop="onToolClick(tool)"
         >
-          <MIcon :name="tool.icon" :size="20" />
+          <MIcon :name="TOOL_ICON[tool.id] ?? 'sparkles'" :size="20" />
           <span class="tool-label">{{ tool.label }}</span>
         </button>
       </div>

@@ -77,6 +77,9 @@ importers:
 
   apps/extension:
     dependencies:
+      '@mustard/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@mustard/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens

@@ -22,9 +22,9 @@ export function useTheme(getTarget?: () => HTMLElement | null | undefined): {
   const resolved = ref<ResolvedTheme>('light')
 
   function target(): HTMLElement | null {
-    const custom = getTarget?.()
-    if (custom)
-      return custom
+    // 提供 getTarget 时不回退到 documentElement（content 侧避免污染宿主页面）
+    if (getTarget)
+      return getTarget() ?? null
     return typeof document === 'undefined' ? null : document.documentElement
   }
 

@@ -46,3 +46,9 @@
 - 原因：`packages/design-tokens/src/index.ts` 通过 `export *` 同时导出了 `preset.ts`，而 `preset.ts` 顶层 `import { presetWind3 } from 'unocss'`。`unocss` 入口会**立即** `import '@unocss/transformer-attributify-jsx'`，后者依赖 `oxc-parser`；包未声明 `sideEffects`，tree-shaking 不会移除，于是构建器试图把 oxc-parser 打进产物，触发 wasm 兜底解析失败。（此前仅 `uno.config.ts` 在 Node 侧引 `presetMustard`，不进产物，所以没暴露。）
 - 解决：给 `@mustard/design-tokens` 增加子路径导出 `./theme`、`./tokens`、`./preset`；运行时代码改为从 `@mustard/design-tokens/theme` 导入（只含纯函数），不再经过 barrel。
 - 影响/备注：**运行时代码不要从带 UnoCSS 的 barrel 导入**；需要 token/主题纯函数时走 `@mustard/design-tokens/theme`、`/tokens`，`presetMustard` 仅限构建配置（`uno.config.ts`）使用。
+
+### 2026-09-16 · `pnpm install` 报 `chokidar@4.0.3` 信任降级，无法更新 lockfile
+- 现象：M4 给 `apps/extension` 增加 `@mustard/core` 依赖后，`pnpm install` 失败：`ERR_PNPM_TRUST_DOWNGRADE ... chokidar@4.0.3 High-risk trust downgrade`。此前 lockfile 未变时 install 能通过（无需校验），一旦要改写 lockfile 就会重新校验并命中该条目。
+- 原因：根 `pnpm-workspace.yaml` 设了 `trustPolicy: no-downgrade`；`chokidar@4.0.3`（来自 landing 的 devDependency `@astrojs/check`）在 registry 的信任等级较 lockfile 记录下降，被策略拒绝。
+- 解决：在 `pnpm-workspace.yaml` 增加 `trustPolicyExclude: ['chokidar@4.0.3']`（仅精确排除该版本），随后 `pnpm install` 正常；lockfile 仅新增 `@mustard/core` 的 importer 条目。
+- 影响/备注：该依赖只用于 `astro check`（dev 工具），不影响扩展产物；若后续 `@astrojs/check` 升级到 chokidar@5，可移除该豁免。信任策略的其余部分保持不变。

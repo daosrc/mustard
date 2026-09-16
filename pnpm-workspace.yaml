@@ -27,6 +27,8 @@ minimumReleaseAgeExclude:
   - unocss@66.10.4
 
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  - chokidar@4.0.3
 shellEmulator: true
 
 packages:
