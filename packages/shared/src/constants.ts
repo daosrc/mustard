@@ -15,7 +15,8 @@ export const STORAGE_KEYS = {
 
 /**
  * 默认模型提供商：OpenCode Zen（OpenAI 兼容）。
- * ⚠️ baseUrl / 鉴权 / 模型 ID 均为占位，以官方文档为准；用户需在设置页填入 API Key。
+ * baseUrl：`https://opencode.ai/zen/v1`；模型 ID 为 `GET /models` 的真实返回值。
+ * 用户需在设置页填入 API Key（付费模型需在 OpenCode 工作区绑定付款方式）。
  */
 export const OPENCODE_ZEN_PRESET: Provider = {
   id: 'opencode-zen',
@@ -25,13 +26,13 @@ export const OPENCODE_ZEN_PRESET: Provider = {
   builtin: true,
   models: [
     {
-      id: 'opencode-zen:deepseek-v4.1-flash',
-      name: 'deepseek/deepseek-v4.1-flash',
+      id: 'opencode-zen:deepseek-v4-flash',
+      name: 'deepseek-v4-flash',
       inputs: { text: true, image: false, file: false },
     },
     {
-      id: 'opencode-zen:claude-sonnet-4.5',
-      name: 'claude-sonnet-4.5',
+      id: 'opencode-zen:gemini-3.1-pro',
+      name: 'gemini-3.1-pro',
       inputs: { text: true, image: true, file: true },
     },
   ],

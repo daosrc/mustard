@@ -90,3 +90,9 @@
 - 解决：**手动加载 + CDP 自动化**。用 `--remote-debugging-port=9222 --user-data-dir=<临时profile>` 启动 Chrome，人工在 `chrome://extensions` 加载 `chrome-mv3`；随后用 Node（`global WebSocket`）连 CDP，`Target.createTarget/attachToTarget` 打开 `options.html`/`sidepanel.html`/本地测试页，`Runtime.evaluate` 注入断言。扩展 id 从临时 profile 的 `Preferences`（`extensions.commands` 含 `open-sidebar`/`toggle-page-translate`）读出；注意**普通网页主世界没有 `chrome.runtime`**，改设置的调用需在扩展页上下文执行。
 - 结果：见 HANDOFF「E2E 测试（真实扩展）」——23 条断言全部 PASS（含词典首次下载→离线查询、网页翻译浮条、悬浮 tooltip、划词图标、主题、i18n、生词本/会话 CRUD、content shadow host）。
 - 备注：**手动验证清单**（仍在）：侧边栏流式对话（需配置 Key）、截图粘贴翻译、记词完整流程、词典弹窗下载进度条视觉、Provider 增删改与测试连接对话。
+
+### 2026-09-16 · OpenCode Zen：预设模型名过期；免费模型不可用于扩展，付费模型需绑定付款
+- 现象：用 API Key 调 `POST https://opencode.ai/zen/v1/chat/completions`：预设里的 `claude-sonnet-4.5` 报 `Model ... is not supported`（模型名过期）；改成真实 ID 后付费模型报 `No payment method. Add a payment method .../billing`；免费模型 `*-free` 报 `OpenCode's free tier can only be used in OpenCode`，`muse-spark-*-contributor-free` 报 `not available in your country`。
+- 原因：① `OPENCODE_ZEN_PRESET` 的模型 ID 是占位/过期，真实列表应以 `GET /models` 为准（当前含 `deepseek-v4-flash`、`gemini-3.1-pro`、`claude-sonnet-5`、`gpt-5.x` 等）；② OpenCode Zen 免费额度仅限其自家客户端，第三方（含本扩展）需用付费模型并先绑定付款方式。
+- 解决：把预设改为**真实模型 ID**（`deepseek-v4-flash` 文本、`gemini-3.1-pro` 多模态）；`getSettings` 对内置提供商**补齐预设模型**、并在 `activeModel` 失效时回退默认，避免旧存储里的占位名导致 `MODEL_NOT_FOUND`。AI 端到端测试必须用账号可用的模型（绑定付款 / 换其他 OpenAI 兼容服务）。
+- 影响/备注：扩展本地功能（划词/词典/生词本等）不受影响；AI 相关（对话流式、句子/网页翻译、截图翻译）需可用模型。测试用 Key 请勿写入仓库，测完建议轮换。
