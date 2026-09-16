@@ -16,7 +16,7 @@
 | **Side-panel chat** | Pick a model grouped by provider; attach files (image / PDF / TXT / Word / Markdown) or screenshots |
 | **Vocabulary** | Auto-saved words, pronunciation, delete, import/export (JSON / CSV) |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
-| **Offline dictionaries** | ECDICT built in, more downloadable, with an online fallback |
+| **Offline dictionaries** | Local dictionary → online dictionary → AI fallback; common English words are built in, so lookups work without an API key (more data sources pending) |
 | **Model providers** | OpenCode Zen by default (OpenAI-compatible), custom providers supported; models added one by one with declared input capabilities |
 | **Chat history** | Create / switch / delete sessions and reload past conversations |
 | **Target language** | Simplified Chinese by default, 14 languages supported |
@@ -88,6 +88,12 @@ design/                Design assets (prototype, design doc, icons, screenshots)
 
 Bundled/downloadable dictionary data keeps its original license (ECDICT=MIT, CC-CEDICT/JMdict=CC BY-SA, some FreeDict=GPL).
 See [THIRD-PARTY.md](./THIRD-PARTY.md).
+
+## Known limitations
+
+- **Offline dictionaries**: only a small built-in sample of common English words ships today; the full ECDICT dataset and more download sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
+- **UI language**: extension UI strings are Chinese for now while the landing page is bilingual; extracting strings into `shared/i18n` and a UI-language setting are still planned.
+- **Landing screenshots**: feature sections currently use CSS mock visuals; real screenshots will replace them once exported.
 
 ## License
 

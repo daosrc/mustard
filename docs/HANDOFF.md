@@ -185,6 +185,16 @@
 - **未完成 / TODO**：**真实截图仍缺**（`design/screenshots/` 空）→ 用 mock 顶替，后续导出后替换即可；UI 为中文/英文两份静态文案，未接入 `shared/i18n`（与 M10 一致）。
 - **下一步依赖**：M12 部署（Pages/release workflow 已在 M0/M4 配好）与 README 中英初稿；链接已在 `links.ts` 用真实地址。
 
+## M12 · 部署与文档 — 完成（截图待导出）
+- **做了什么**：
+  1. **CI/CD**：`.github/workflows/pages.yml`（Astro build → GitHub Pages，含 `actions/configure-pages@v6`/`upload-pages-artifact@v5`/`deploy-pages@v5`）与 `release.yml`（`pnpm build:ext` → 打包 `mustard-<version>-chrome.zip` → Release，`actions/upload-artifact@v7`/`softprops/action-gh-release@v3`）已就绪；`ci.yml` 全绿（lint/typecheck/build）。
+  2. **README**：`README.md`（中文）+ `README.en.md`（English）含功能表、安装（Release zip / 源码构建）、使用、开发、隐私、第三方数据、许可，并新增**已知限制**（离线词典数据源、界面语言、宣传页截图）。
+  3. **链接**：`apps/landing/src/config/links.ts` 与 README 均使用真实地址（仓库/Pages/Releases/Issues/License），**无 `__GITHUB_*__` 占位符残留**。
+  4. 宣传页安装指引与 README 文案保持一致。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 500.85 kB + 落地页 2 页）；`astro check` 0 error。
+- **未完成 / TODO**：`design/screenshots/` 仍为空 —— 宣传页/README 的正式截图需在实现稳定后导出并替换（当前宣传页用 CSS mock 占位）；README 未嵌入截图。
+- **下一步依赖**：无（M0–M12 全部里程碑完成）。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -204,4 +214,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M12 · 部署与文档**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。M0–M12 里程碑已全部完成；遗留项见 PLAN 进度表与各交接记录的「未完成 / TODO」。

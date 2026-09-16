@@ -231,7 +231,7 @@ mustard/
 | M9 记词（听音默写） | ✅ 完成 | `QuizDialog` 状态机（看词→默写→验证、优先未掌握、全掌握转复习不计分、完成页仅全对）；`streak` 更新走 `UPDATE_VOCAB` |
 | M10 打磨 | 🟡 部分 | 持久翻译缓存、快捷键（Alt+T/Alt+L）、右键菜单、网页翻译并发限流已完成；**i18n 与虚拟列表未做**（UI 仍中文硬编码） |
 | M11 宣传页 | ✅ 完成 | `content.ts`(zh/en) + `Landing.astro`：Hero/8 功能图文交替/三步/子功能卡片/开源/安装/Footer；截图用 CSS mock 占位 |
-| M12 部署与文档 | 🟡 部分 | `pages.yml` / `release.yml` 已配置；中英 README 已写初版；链接已用真实地址 |
+| M12 部署与文档 | ✅ 完成（截图待导出） | `pages.yml`/`release.yml`/`ci.yml` 就绪；中英 README 完整（含已知限制）；链接均为真实地址、无占位符；`design/screenshots/` 仍待导出 |
 
 ### 验证命令（当前全部通过）
 
