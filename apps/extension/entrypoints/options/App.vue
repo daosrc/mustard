@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { Provider, Settings } from '@mustard/shared'
+import type { DictInstallStatus, DictionaryItem, Provider, Settings } from '@mustard/shared'
+import { send } from '@mustard/platform'
 import { DICTIONARIES, LANGS, SOURCE_LANGS } from '@mustard/shared'
 import { MButton, MChip, MDialog, MField, MIcon, MSelect, MSwitch, MTabs, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
-import { computed, onMounted, ref } from 'vue'
-import { dictHasSource, installDictionary, uninstallDictionary } from '../../lib/dictionaryStore'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
@@ -169,8 +169,38 @@ function dictState(id: string): DictState {
 
 const dictList = DICTIONARIES
 const dictDialogOpen = ref(false)
-const installedCount = computed(() => DICTIONARIES.filter(d => dictState(d.id).installed).length)
-const enabledCount = computed(() => DICTIONARIES.filter(d => dictState(d.id).installed && dictState(d.id).enabled).length)
+const dictStatuses = ref<Record<string, DictInstallStatus>>({})
+let pollTimer: ReturnType<typeof setInterval> | undefined
+
+function dictStatusOf(id: string): DictInstallStatus {
+  return dictStatuses.value[id] ?? { id, installed: dictState(id).installed, enabled: dictState(id).enabled, progress: null }
+}
+
+const installedCount = computed(() => DICTIONARIES.filter(d => dictStatusOf(d.id).installed).length)
+const enabledCount = computed(() => DICTIONARIES.filter(d => dictStatusOf(d.id).installed && dictStatusOf(d.id).enabled).length)
+
+function hasSource(dict: DictionaryItem): boolean {
+  return !!dict.format && (!!dict.url || !!dict.perLetter)
+}
+
+async function loadDictStatus(): Promise<void> {
+  const list = await send({ type: 'GET_DICT_STATUS' })
+  dictStatuses.value = Object.fromEntries(list.map(s => [s.id, s]))
+  const busy = list.some(s => s.progress !== null)
+  if (busy && !pollTimer) {
+    pollTimer = setInterval(loadDictStatus, 700)
+  }
+  else if (!busy && pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = undefined
+  }
+}
+
+onMounted(loadDictStatus)
+onBeforeUnmount(() => {
+  if (pollTimer)
+    clearInterval(pollTimer)
+})
 
 function toggleDict(id: string, enabled: boolean): void {
   if (!store.settings)
@@ -178,30 +208,21 @@ function toggleDict(id: string, enabled: boolean): void {
   void store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { ...dictState(id), enabled } } })
 }
 
-async function installDict(id: string): Promise<void> {
-  if (!store.settings)
-    return
-  try {
-    await installDictionary(id)
-    await store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { installed: true, enabled: true } } })
-    success('已安装词典')
-  }
-  catch (err) {
-    error(err instanceof Error && err.message === 'NO_SOURCE' ? '该词典下载源待补充，当前可离线查询英文常用词' : '下载失败，请稍后重试')
-  }
+async function downloadDict(dict: DictionaryItem): Promise<void> {
+  void loadDictStatus()
+  const res = await send({ type: 'DICT_INSTALL', payload: { id: dict.id } })
+  if (res.ok)
+    success('词典下载完成')
+  else
+    error(res.error === 'NO_SOURCE' ? '该词典数据源待补充' : `下载失败：${res.error ?? '未知错误'}`)
+  await loadDictStatus()
 }
 
-async function uninstallDict(id: string): Promise<void> {
-  const item = DICTIONARIES.find(d => d.id === id)
-  if (item?.builtin) {
-    error('内置词典不可删除')
-    return
-  }
-  if (!store.settings)
-    return
-  await uninstallDictionary(id)
-  await store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { installed: false, enabled: false } } })
-  success('已删除词典')
+async function removeDictPack(id: string): Promise<void> {
+  await send({ type: 'DICT_REMOVE', payload: { id } })
+  await store.load()
+  success('已删除词典数据')
+  await loadDictStatus()
 }
 </script>
 
@@ -402,29 +423,36 @@ async function uninstallDict(id: string): Promise<void> {
           <div class="d-main">
             <div class="d-name">
               {{ dict.name }}
-              <MChip v-if="dict.builtin" variant="primary">
-                内置
+              <MChip v-if="dict.perLetter" variant="primary">
+                按需
               </MChip>
             </div>
             <div class="m-muted">
               {{ dict.langPair }} · {{ dict.size }} · {{ dict.license }}
             </div>
+            <div v-if="dictStatusOf(dict.id).error" class="d-err">
+              下载失败：{{ dictStatusOf(dict.id).error }}
+            </div>
           </div>
           <div class="d-actions">
-            <template v-if="dictState(dict.id).installed">
-              <MSwitch :model-value="dictState(dict.id).enabled" @update:model-value="v => toggleDict(dict.id, v)" />
-              <button v-if="!dict.builtin" class="icon-btn" title="删除" @click="uninstallDict(dict.id)">
-                <MIcon name="trash" :size="15" />
-              </button>
+            <MSwitch :model-value="dictStatusOf(dict.id).enabled" @update:model-value="v => toggleDict(dict.id, v)" />
+            <template v-if="dictStatusOf(dict.id).progress !== null">
+              <div class="d-progress">
+                <i :style="{ width: `${Math.round((dictStatusOf(dict.id).progress ?? 0) * 100)}%` }" />
+              </div>
+              <span class="d-pct">{{ Math.round((dictStatusOf(dict.id).progress ?? 0) * 100) }}%</span>
             </template>
-            <MButton v-else variant="ghost" :disabled="!dictHasSource(dict.id)" :title="dictHasSource(dict.id) ? '下载' : '下载源待补充'" @click="installDict(dict.id)">
+            <button v-else-if="dictStatusOf(dict.id).installed" class="icon-btn" title="删除数据" @click="removeDictPack(dict.id)">
+              <MIcon name="trash" :size="15" />
+            </button>
+            <MButton v-else variant="ghost" :disabled="!hasSource(dict)" :title="hasSource(dict) ? '首次使用时自动下载' : '数据源待补充'" @click="downloadDict(dict)">
               下载
             </MButton>
           </div>
         </div>
       </div>
       <p class="m-muted license">
-        数据来源与许可见 THIRD-PARTY.md：ECDICT(MIT)、WordNet(WordNet License)、CC-CEDICT(CC BY-SA)、JMdict(EDRDG)、FreeDict(GPL)。
+        词典数据不随扩展打包，首次使用时按需下载。数据来源与署名：ECDICT(MIT)、Wordset(CC BY-SA 4.0)+WordNet、CC-CEDICT(CC BY-SA)、JMdict(EDRDG)、FreeDict(GPL)，详见 THIRD-PARTY.md。
       </p>
     </MDialog>
 
@@ -476,5 +504,9 @@ h1 { font-size: 20px; margin: 0 0 4px; }
 .d-main { flex: 1; min-width: 0; }
 .d-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
 .d-actions { display: flex; align-items: center; gap: 6px; }
+.d-err { color: var(--m-blush); font-size: 11.5px; margin-top: 3px; }
+.d-progress { width: 84px; height: 6px; border-radius: 999px; background: var(--m-surface-2); overflow: hidden; }
+.d-progress i { display: block; height: 100%; background: var(--m-primary); transition: width .2s; }
+.d-pct { font-size: 11.5px; color: var(--m-muted); width: 32px; text-align: right; }
 .license { margin: 12px 0 0; }
 </style>

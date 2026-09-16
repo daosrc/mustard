@@ -1,4 +1,4 @@
-import type { Attachment, ChatMessage, DictResult, LangCode, Session, Settings, SourceLang, TranslateMode, WordEntry } from './types'
+import type { Attachment, ChatMessage, DictInstallStatus, DictResult, LangCode, Session, Settings, SourceLang, TranslateMode, WordEntry } from './types'
 
 /** content / sidepanel ⇄ background 的消息协议 */
 export type Message
@@ -15,6 +15,9 @@ export type Message
     | { type: 'REMOVE_VOCAB', payload: { id: string } }
     | { type: 'EXPORT_VOCAB', payload: { format: 'json' | 'csv' } }
     | { type: 'IMPORT_VOCAB', payload: { format: 'json' | 'csv', data: string } }
+    | { type: 'GET_DICT_STATUS' }
+    | { type: 'DICT_INSTALL', payload: { id: string } }
+    | { type: 'DICT_REMOVE', payload: { id: string } }
     | { type: 'GET_SESSIONS' }
     | { type: 'SAVE_SESSION', payload: { session: Session } }
     | { type: 'DELETE_SESSION', payload: { id: string } }
@@ -37,6 +40,9 @@ export interface ResponseMap {
   REMOVE_VOCAB: { id: string }
   EXPORT_VOCAB: { data: string, filename: string }
   IMPORT_VOCAB: { imported: number, total: number }
+  GET_DICT_STATUS: DictInstallStatus[]
+  DICT_INSTALL: { id: string, ok: boolean, error?: string }
+  DICT_REMOVE: { id: string }
   GET_SESSIONS: Session[]
   SAVE_SESSION: Session
   DELETE_SESSION: { id: string }

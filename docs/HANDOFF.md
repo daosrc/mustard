@@ -195,6 +195,16 @@
 - **未完成 / TODO**：`design/screenshots/` 仍为空 —— 宣传页/README 的正式截图需在实现稳定后导出并替换（当前宣传页用 CSS mock 占位）；README 未嵌入截图。
 - **下一步依赖**：无（M0–M12 全部里程碑完成）。
 
+## M8+ · 离线词典改为首次使用时下载 — 完成
+- **做了什么**：
+  1. `@mustard/shared`：`DictionaryItem` 增加可选 `format/url/perLetter/attribution`；`DICTIONARIES` 重定义为可下载包（**无内置数据**）——`ecdict`（MIT，jsDelivr `ecdict.mini.csv` 样例）、`wordset`（CC BY-SA 4.0 + WordNet，按首字母）、cc-cedict/jmdict/freedict 待补源；新增 `DictInstallStatus` 与 `GET_DICT_STATUS`/`DICT_INSTALL`/`DICT_REMOVE` 消息。
+  2. `@mustard/core`：新增 `dictionary/parse`（`parseEcdictCsv`、`parseWordsetJson`）；`local.ts` 移除内置样例、修复词形还原双写辅音（running→run）。
+  3. `apps/extension`：`lib/dictionaryStore` 重写为**按需下载**（单文件分片 / 按字母懒加载，存入 IndexedDB，带进度与错误状态）；`lookupLocal` 异步链路；background 用 `enabled` 词典构造查询并在下载后回写 `installed`；options 词典弹窗显示进度条、下载/删除、署名。
+- **对外暴露（新增/变更）**：`parseEcdictCsv`、`parseWordsetJson`；`DictInstallStatus`；`GET_DICT_STATUS`/`DICT_INSTALL`/`DICT_REMOVE`；`DictionaryItem` 可选字段。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿；Node+esbuild 对真实 jsDelivr 源跑通解析与查询（`/tmp/opencode/dtest.ts`：ECDICT 53 条、Wordset a.json 7091 条、lemma/查询全部 PASS）。
+- **未完成 / TODO**：完整 ECDICT（66MB）与中日多语数据源待补（jsDelivr 20MB 限制，需自建 CDN/Release 资产或分片）；`wordset` 全量预下载较慢，当前以按字母懒加载为主。
+- **下一步依赖**：无。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）

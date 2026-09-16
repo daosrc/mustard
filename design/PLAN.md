@@ -227,7 +227,7 @@ mustard/
 | M5 划词/悬浮 + 生词本 | ✅ 完成 | `core` 词典/翻译/vocab；content 划词气泡 + 悬浮 tooltip + 红点；sidepanel 生词本视图（搜索/筛选/发音/删除/JSON-CSV 导入导出）；无 Key 时在线词典可用 |
 | M6 网页翻译 + 截图翻译 | ✅ 完成 | 块级双语对照 + shimmer 骨架 + 顶部进度条/还原 + MutationObserver 增量；`⌘V` 粘贴截图 → `TRANSLATE_IMAGE` 多模态译文 |
 | M7 会话历史 + 侧边栏 | ✅ 完成 | `core/session` + IndexedDB 持久化；`HistoryView`（倒序/相对时间/删除/当前高亮）；新建会话；`pendingView` 支持 history |
-| M8 离线词典 | ✅ 完成（数据源待补） | 本地→在线→AI 链路、IndexedDB 存取、设置页「词典」管理与许可署名；内置 ECDICT 为样例，`DICT_SOURCES` 待填（见 PROBLEMS） |
+| M8 离线词典 | ✅ 完成 | 数据**不打包**，**首次使用时下载**（ECDICT MIT 样例 / Wordset 英英按字母懒加载）→ 存 IndexedDB；本地→在线→AI 链路 + 设置页词典管理（进度/下载/删除/署名） |
 | M9 记词（听音默写） | ✅ 完成 | `QuizDialog` 状态机（看词→默写→验证、优先未掌握、全掌握转复习不计分、完成页仅全对）；`streak` 更新走 `UPDATE_VOCAB` |
 | M10 打磨 | 🟡 部分 | 持久翻译缓存、快捷键（Alt+T/Alt+L）、右键菜单、网页翻译并发限流已完成；**i18n 与虚拟列表未做**（UI 仍中文硬编码） |
 | M11 宣传页 | ✅ 完成 | `content.ts`(zh/en) + `Landing.astro`：Hero/8 功能图文交替/三步/子功能卡片/开源/安装/Footer；截图用 CSS mock 占位 |

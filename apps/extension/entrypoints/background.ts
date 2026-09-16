@@ -2,11 +2,11 @@ import type { AiTarget } from '@mustard/core'
 import type { ChatPortClientMessage, DictResult, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
 import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateImage, translateSentence, translateWord } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
-import { CHAT_PORT_NAME, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
+import { CHAT_PORT_NAME, DICTIONARIES, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
 import { cacheKey, parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
 import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
-import { getLocalLookup } from '../lib/dictionaryStore'
+import { dictStatus, getInstalledIds, installDict, lookupLocal, removeDict } from '../lib/dictionaryStore'
 import { deleteSession, getSessions, saveSession } from '../lib/sessionStore'
 import { getCached, setCached } from '../lib/translationCache'
 import { addVocab, getVocab, importVocab, removeVocabById, updateVocab } from '../lib/vocabStore'
@@ -25,22 +25,42 @@ function resolveSourceLang(sourceLang: SourceLang, word: string, targetLang: Lan
   return /^[\x20-\x7E]+$/.test(word) ? 'en' : targetLang
 }
 
-async function buildLocalLookup(): Promise<(word: string) => DictResult | null> {
+async function localLookupFn(): Promise<(word: string) => Promise<DictResult | null>> {
   const settings = await getSettings()
   const enabled = Object.entries(settings.dictionaries)
-    .filter(([, state]) => state.installed && state.enabled)
+    .filter(([, state]) => state.enabled)
     .map(([id]) => id)
-  return getLocalLookup(enabled)
+  return (word: string) => lookupLocal(enabled, word)
+}
+
+/** 下载完成后把 installed 状态写回 settings（设置页据此展示） */
+async function syncDictSettings(): Promise<void> {
+  const installedIds = getInstalledIds()
+  if (!installedIds.length)
+    return
+  const settings = await getSettings()
+  const dictionaries = { ...settings.dictionaries }
+  let changed = false
+  for (const id of installedIds) {
+    const current = dictionaries[id]
+    if (current && !current.installed) {
+      dictionaries[id] = { ...current, installed: true }
+      changed = true
+    }
+  }
+  if (changed)
+    await updateSettings({ dictionaries })
 }
 
 async function addSelectionToVocab(text: string, url?: string): Promise<void> {
   const settings = await getSettings()
-  const local = await buildLocalLookup()
+  const local = await localLookupFn()
   const result = await translateWord(text, 'auto', settings.targetLang, {
     online: settings.onlineDictionaryFallback,
     ai: resolveAi(settings),
     local,
   })
+  void syncDictSettings()
   if (!result.card && !result.text)
     return
   await addVocab(cardToEntry({
@@ -104,8 +124,9 @@ export default defineBackground({
               result = await translateWord(text, sourceLang, targetLang, {
                 online: settings.onlineDictionaryFallback,
                 ai,
-                local: await buildLocalLookup(),
+                local: await localLookupFn(),
               })
+              void syncDictSettings()
               if (result.card && settings.vocab.autoAdd) {
                 await addVocab(cardToEntry({
                   word: result.card.word,
@@ -171,6 +192,34 @@ export default defineBackground({
               ? parseVocabCsv(message.payload.data)
               : parseVocabJson(message.payload.data)
             return importVocab(incoming)
+          })()
+        case 'GET_DICT_STATUS':
+          return (async () => {
+            const settings = await getSettings()
+            return DICTIONARIES.map(d => dictStatus(
+              d.id,
+              settings.dictionaries[d.id]?.enabled ?? false,
+              settings.dictionaries[d.id]?.installed ?? false,
+            ))
+          })()
+        case 'DICT_INSTALL':
+          return (async () => {
+            try {
+              await installDict(message.payload.id)
+              await syncDictSettings()
+              return { id: message.payload.id, ok: true }
+            }
+            catch (error) {
+              return { id: message.payload.id, ok: false, error: errorCode(error) }
+            }
+          })()
+        case 'DICT_REMOVE':
+          return (async () => {
+            await removeDict(message.payload.id)
+            const settings = await getSettings()
+            if (settings.dictionaries[message.payload.id])
+              await updateSettings({ dictionaries: { ...settings.dictionaries, [message.payload.id]: { installed: false, enabled: false } } })
+            return { id: message.payload.id }
           })()
         case 'GET_SESSIONS':
           return getSessions()

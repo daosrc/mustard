@@ -16,7 +16,7 @@
 | **Side-panel chat** | Pick a model grouped by provider; attach files (image / PDF / TXT / Word / Markdown) or screenshots |
 | **Vocabulary** | Auto-saved words, pronunciation, delete, import/export (JSON / CSV) |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
-| **Offline dictionaries** | Local dictionary → online dictionary → AI fallback; common English words are built in, so lookups work without an API key (more data sources pending) |
+| **Offline dictionaries** | Local → online → AI fallback; dictionary data is **not bundled** but **downloaded on first use** (ECDICT MIT sample, Wordset English per-letter), then works offline |
 | **Model providers** | OpenCode Zen by default (OpenAI-compatible), custom providers supported; models added one by one with declared input capabilities |
 | **Chat history** | Create / switch / delete sessions and reload past conversations |
 | **Target language** | Simplified Chinese by default, 14 languages supported |
@@ -91,7 +91,7 @@ See [THIRD-PARTY.md](./THIRD-PARTY.md).
 
 ## Known limitations
 
-- **Offline dictionaries**: only a small built-in sample of common English words ships today; the full ECDICT dataset and more download sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
+- **Offline dictionaries**: data is not bundled and is **downloaded on first use**. Current sources: ECDICT (MIT; the jsDelivr copy is a small sample) and Wordset English (CC BY-SA, lazy per first letter, good coverage). The full ECDICT (~66 MB, GitHub raw) and Chinese/Japanese sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
 - **UI language**: extension UI strings are Chinese for now while the landing page is bilingual; extracting strings into `shared/i18n` and a UI-language setting are still planned.
 - **Landing screenshots**: feature sections currently use CSS mock visuals; real screenshots will replace them once exported.
 

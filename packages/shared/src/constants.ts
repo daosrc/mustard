@@ -45,12 +45,39 @@ export const DEFAULT_TOOLS: ToolItem[] = [
   { id: 'settings', label: '设置', type: 'action', visible: true, order: 4 },
 ]
 
+/**
+ * 离线词典清单：数据不打包进扩展，**首次使用时按需下载**（见 apps/extension/lib/dictionaryStore）。
+ * - ecdict：ECDICT CSV（MIT），jsDelivr 上的样例文件（完整版体积大，可用自定义源）。
+ * - wordset：Wordset 英英（CC BY-SA 4.0 + WordNet），**按首字母懒加载**，逐字母下载。
+ */
 export const DICTIONARIES: DictionaryItem[] = [
-  { id: 'ecdict', name: 'ECDICT 英汉双解', langPair: '英 → 中', license: 'MIT', size: '8.2 MB', builtin: true, installed: true, enabled: true },
-  { id: 'wordnet', name: 'WordNet 英英释义', langPair: '英 → 英', license: 'WordNet', size: '12 MB', builtin: true, installed: false, enabled: false },
-  { id: 'cc-cedict', name: 'CC-CEDICT 汉英', langPair: '中 → 英', license: 'CC BY-SA', size: '4.1 MB', installed: false, enabled: false },
-  { id: 'jmdict', name: 'JMdict 日英', langPair: '日 → 英', license: 'EDRDG', size: '28 MB', installed: false, enabled: false },
-  { id: 'freedict', name: 'FreeDict 多语种', langPair: '多语', license: 'GPL', size: '按需下载', installed: false, enabled: false },
+  {
+    id: 'ecdict',
+    name: 'ECDICT 英汉（MIT）',
+    langPair: '英 → 中',
+    license: 'MIT',
+    size: '~4 KB（样例，首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'ecdict-csv',
+    url: 'https://cdn.jsdelivr.net/gh/skywind3000/ECDICT@master/ecdict.mini.csv',
+    attribution: 'ECDICT © skywind3000 (MIT)',
+  },
+  {
+    id: 'wordset',
+    name: 'Wordset 英英（CC BY-SA）',
+    langPair: '英 → 英',
+    license: 'CC BY-SA 4.0',
+    size: '按首字母下载（0.1–7 MB）',
+    installed: false,
+    enabled: true,
+    format: 'wordset-letters',
+    perLetter: true,
+    attribution: 'Wordset (CC BY-SA 4.0) + WordNet 3.0',
+  },
+  { id: 'cc-cedict', name: 'CC-CEDICT 汉英', langPair: '中 → 英', license: 'CC BY-SA', size: '待补充数据源', installed: false, enabled: false },
+  { id: 'jmdict', name: 'JMdict 日英', langPair: '日 → 英', license: 'EDRDG', size: '待补充数据源', installed: false, enabled: false },
+  { id: 'freedict', name: 'FreeDict 多语种', langPair: '多语', license: 'GPL', size: '待补充数据源', installed: false, enabled: false },
 ]
 
 export const DEFAULT_SETTINGS: Settings = {

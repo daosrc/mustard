@@ -17,8 +17,8 @@ export interface TranslateOptions {
   /** 是否允许在线词典兜底（settings.onlineDictionaryFallback） */
   online?: boolean
   ai?: AiTarget
-  /** 本地离线词典查询（ECDICT 等） */
-  local?: (word: string) => DictResult | null
+  /** 本地离线词典查询（首次使用时下载；可为异步） */
+  local?: (word: string) => DictResult | null | Promise<DictResult | null>
 }
 
 export const WORD_CARD_SYSTEM_PROMPT
@@ -81,7 +81,7 @@ export async function translateWord(
     return cached
 
   // ① 本地离线词典 → ② 在线词典 → ③ AI
-  let card: DictResult | null = options.local?.(term) ?? null
+  let card: DictResult | null = (await options.local?.(term)) ?? null
   if (!card && options.online !== false)
     card = await lookupOnline(term, targetLang)
   if (!card && options.ai)

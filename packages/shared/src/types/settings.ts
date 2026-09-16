@@ -54,11 +54,28 @@ export interface DictionaryItem {
   langPair: string
   license: string
   size: string
-  /** 内置 */
+  /** 内置（随扩展分发）——当前词典均首次使用时下载，故不带内置 */
   builtin?: boolean
   /** 是否已安装（下载完成） */
   installed: boolean
   enabled: boolean
+  /** 下载格式与地址（首次使用时下载） */
+  format?: 'ecdict-csv' | 'wordset-letters'
+  url?: string
+  /** 按字母懒加载（wordset） */
+  perLetter?: boolean
+  /** 数据来源与署名 */
+  attribution?: string
+}
+
+/** 词典下载/安装状态（设置页展示用） */
+export interface DictInstallStatus {
+  id: string
+  installed: boolean
+  enabled: boolean
+  /** 0–1 进度；null 表示未在下载 */
+  progress: number | null
+  error?: string
 }
 
 export type DictionaryState = Record<string, Pick<DictionaryItem, 'installed' | 'enabled'>>

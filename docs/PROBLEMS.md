@@ -77,3 +77,9 @@
 - 原因：属**数据资产获取/预处理**问题，非代码问题；仓库不宜直接提交大体积词典二进制。
 - 解决（当前）：把机制做完整，数据留接口 —— `core/dictionary/local`（`LocalEntry`、`lemmaCandidates` 规则词形还原、`createLocalLookup` 查询）；`translateWord` 链路改为**本地→在线→AI**；`lib/dictionaryStore` 用 IndexedDB 存取可下载词典；设置页新增「词典」管理（启用/删除/在线兜底/许可署名）。内置 `ECDICT_SAMPLE`（约 45 个常用词）保证离线查词链可用；可下载词典 `DICT_SOURCES` 暂为空，下载按钮禁用并提示「下载源待补充」。
 - 影响/备注：离线查词当前只覆盖内置样例，未达全量 ECDICT；补齐时只需：① 用裁剪后的数据集替换/扩充 `ECDICT_SAMPLE`（或作为资源懒加载）；② 填 `DICT_SOURCES` 的 URL（指向预处理的 JSON/gzip），链路与 UI 无需改动。词形还原为规则版，M10 可换 ECDICT `exchange/lemma`。
+
+### 2026-09-16 · 离线词典改为「首次使用时下载」（不再打包）
+- 需求：词典数据不打包进扩展，改为首次使用时下载。
+- 调研：ECDICT 完整 `ecdict.csv` 约 66 MB（MIT），**jsDelivr 拒绝 >20MB**（403 `File size exceeded the configured limit of 20 MB`），`raw.githubusercontent.com` 在开发环境不可达；`ecdict.mini.csv`（4KB，MIT）可直取；Wordset 词典按字母分文件（`data/<letter>.json`，a=3.8MB、s=6.9MB，均 <20MB）可经 jsDelivr 直取（CC BY-SA 4.0 + WordNet）。
+- 解决：重写 `apps/extension/lib/dictionaryStore`：单一文件包（ecdict）首次查词自动下载并按首字母分片存入 IndexedDB；按字母包（wordset）**首次用到某字母时下载该字母**；新增 `GET_DICT_STATUS`/`DICT_INSTALL`/`DICT_REMOVE` 消息，设置页显示进度/删除；下载完成后回写 `settings.dictionaries[id].installed`。移除内置 `ECDICT_SAMPLE`（不再打包），`lemmaCandidates` 修复了双写辅音（running→run）。
+- 影响/备注：离线覆盖 = Wordset 英英（较全）+ ECDICT 小样例（英汉/MIT）；完整 ECDICT 与中日等多语数据源待补，补时只需在 `DICTIONARIES` 填 `format`/`url`（或在 store 加 per-letter 源），链路与 UI 无需改。已用 Node + esbuild 对真实源跑通解析/查询测试。
