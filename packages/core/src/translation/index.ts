@@ -17,6 +17,8 @@ export interface TranslateOptions {
   /** 是否允许在线词典兜底（settings.onlineDictionaryFallback） */
   online?: boolean
   ai?: AiTarget
+  /** 本地离线词典查询（ECDICT 等） */
+  local?: (word: string) => DictResult | null
 }
 
 export const WORD_CARD_SYSTEM_PROMPT
@@ -73,13 +75,14 @@ export async function translateWord(
   if (!term)
     return { text: '' }
 
-  const key = cacheKey('w', term.toLowerCase(), sourceLang, targetLang, options.online === false ? 'off' : 'on', options.ai ? 'ai' : 'noai')
+  const key = cacheKey('w', term.toLowerCase(), sourceLang, targetLang, options.online === false ? 'off' : 'on', options.ai ? 'ai' : 'noai', options.local ? 'local' : 'nolocal')
   const cached = cache.get(key)
   if (cached)
     return cached
 
-  let card: DictResult | null = null
-  if (options.online !== false)
+  // ① 本地离线词典 → ② 在线词典 → ③ AI
+  let card: DictResult | null = options.local?.(term) ?? null
+  if (!card && options.online !== false)
     card = await lookupOnline(term, targetLang)
   if (!card && options.ai)
     card = await aiWordCard(term, sourceLang, targetLang, options.ai)

@@ -5,6 +5,7 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
+    "./dictionary": "./src/dictionary/index.ts",
     "./providers": "./src/providers/client.ts",
     "./session": "./src/session/index.ts",
     "./translation": "./src/translation/index.ts",

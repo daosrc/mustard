@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Provider, Settings } from '@mustard/shared'
-import { LANGS, SOURCE_LANGS } from '@mustard/shared'
-import { MButton, MChip, MField, MIcon, MSelect, MSwitch, MTabs, MToastHost, useToast } from '@mustard/ui'
+import { DICTIONARIES, LANGS, SOURCE_LANGS } from '@mustard/shared'
+import { MButton, MChip, MDialog, MField, MIcon, MSelect, MSwitch, MTabs, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, onMounted, ref } from 'vue'
+import { dictHasSource, installDictionary, uninstallDictionary } from '../../lib/dictionaryStore'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
@@ -18,6 +19,7 @@ const tabs = [
   { key: 'translate', label: '翻译', icon: 'translate' },
   { key: 'ball', label: '悬浮球', icon: 'globe' },
   { key: 'vocab', label: '生词本', icon: 'book' },
+  { key: 'dict', label: '词典', icon: 'search' },
   { key: 'appearance', label: '外观', icon: 'settings' },
 ]
 const active = ref('providers')
@@ -157,6 +159,49 @@ function removeProvider(provider: Provider): void {
     patch.activeModel = next[0]!.models[0]?.name ?? ''
   }
   void store.patch(patch)
+}
+
+type DictState = Settings['dictionaries'][string]
+
+function dictState(id: string): DictState {
+  return store.settings?.dictionaries[id] ?? { installed: false, enabled: false }
+}
+
+const dictList = DICTIONARIES
+const dictDialogOpen = ref(false)
+const installedCount = computed(() => DICTIONARIES.filter(d => dictState(d.id).installed).length)
+const enabledCount = computed(() => DICTIONARIES.filter(d => dictState(d.id).installed && dictState(d.id).enabled).length)
+
+function toggleDict(id: string, enabled: boolean): void {
+  if (!store.settings)
+    return
+  void store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { ...dictState(id), enabled } } })
+}
+
+async function installDict(id: string): Promise<void> {
+  if (!store.settings)
+    return
+  try {
+    await installDictionary(id)
+    await store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { installed: true, enabled: true } } })
+    success('已安装词典')
+  }
+  catch (err) {
+    error(err instanceof Error && err.message === 'NO_SOURCE' ? '该词典下载源待补充，当前可离线查询英文常用词' : '下载失败，请稍后重试')
+  }
+}
+
+async function uninstallDict(id: string): Promise<void> {
+  const item = DICTIONARIES.find(d => d.id === id)
+  if (item?.builtin) {
+    error('内置词典不可删除')
+    return
+  }
+  if (!store.settings)
+    return
+  await uninstallDictionary(id)
+  await store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { installed: false, enabled: false } } })
+  success('已删除词典')
 }
 </script>
 
@@ -320,6 +365,25 @@ function removeProvider(provider: Provider): void {
       </div>
     </section>
 
+    <!-- 词典 -->
+    <section v-else-if="active === 'dict'" class="stack">
+      <div class="m-card card">
+        <MField inline label="在线词典兜底" hint="本地未命中时联网查询">
+          <MSwitch :model-value="!!store.settings?.onlineDictionaryFallback" @update:model-value="v => store.patch({ onlineDictionaryFallback: v })" />
+        </MField>
+        <div class="m-row">
+          <span class="m-muted">已安装 {{ installedCount }} / {{ dictList.length }} · 已启用 {{ enabledCount }}</span>
+          <MButton variant="ghost" @click="dictDialogOpen = true">
+            <MIcon name="book" :size="14" />
+            管理离线词典
+          </MButton>
+        </div>
+        <p class="m-muted">
+          查询顺序：本地词典 → 在线词典 → AI。关闭在线兜底即进入纯离线模式。
+        </p>
+      </div>
+    </section>
+
     <!-- 外观 -->
     <section v-else class="stack">
       <div class="m-card card">
@@ -331,6 +395,38 @@ function removeProvider(provider: Provider): void {
         </p>
       </div>
     </section>
+
+    <MDialog v-model="dictDialogOpen" title="管理离线词典" width="540px">
+      <div class="dict-list">
+        <div v-for="dict in dictList" :key="dict.id" class="dict-item">
+          <div class="d-main">
+            <div class="d-name">
+              {{ dict.name }}
+              <MChip v-if="dict.builtin" variant="primary">
+                内置
+              </MChip>
+            </div>
+            <div class="m-muted">
+              {{ dict.langPair }} · {{ dict.size }} · {{ dict.license }}
+            </div>
+          </div>
+          <div class="d-actions">
+            <template v-if="dictState(dict.id).installed">
+              <MSwitch :model-value="dictState(dict.id).enabled" @update:model-value="v => toggleDict(dict.id, v)" />
+              <button v-if="!dict.builtin" class="icon-btn" title="删除" @click="uninstallDict(dict.id)">
+                <MIcon name="trash" :size="15" />
+              </button>
+            </template>
+            <MButton v-else variant="ghost" :disabled="!dictHasSource(dict.id)" :title="dictHasSource(dict.id) ? '下载' : '下载源待补充'" @click="installDict(dict.id)">
+              下载
+            </MButton>
+          </div>
+        </div>
+      </div>
+      <p class="m-muted license">
+        数据来源与许可见 THIRD-PARTY.md：ECDICT(MIT)、WordNet(WordNet License)、CC-CEDICT(CC BY-SA)、JMdict(EDRDG)、FreeDict(GPL)。
+      </p>
+    </MDialog>
 
     <ProviderDialog v-model="dialogOpen" :provider="editing" @save="onSaveProvider" />
     <MToastHost />
@@ -375,4 +471,10 @@ h1 { font-size: 20px; margin: 0 0 4px; }
 .t-label { font-size: 13px; color: var(--m-ink); }
 .rot90 { transform: rotate(90deg); }
 .rot270 { transform: rotate(-90deg); }
+.dict-list { display: flex; flex-direction: column; gap: 8px; }
+.dict-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--m-line); border-radius: 10px; }
+.d-main { flex: 1; min-width: 0; }
+.d-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.d-actions { display: flex; align-items: center; gap: 6px; }
+.license { margin: 12px 0 0; }
 </style>

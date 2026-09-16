@@ -42,13 +42,14 @@
 - `MIcon`（`name` + `size` + `strokeWidth`；图标见 `ICONS`）、`MChip`（`variant/removable`）、`MBadge`（`count/dot/max/variant`）、`MField`（`label/hint/inline`）、`MSelect`（`v-model` + `options: SelectOption[]`）、`MDialog`（`v-model` + `title/width`）、`MTabs`（`v-model` + `tabs: TabItem[]`）、`MStars`（`v-model` + `max/readonly`）、`MToastHost` + `useToast()`（`info/success/error`）
 
 **`@mustard/core`**
-- 子路径导出：`@mustard/core/providers`、`/session`、`/translation`、`/vocab`（**content 侧只导入 `/vocab`，避免把 AI 客户端打进每个页面**）
+- 子路径导出：`@mustard/core/dictionary`、`/providers`、`/session`、`/translation`、`/vocab`（**content 侧只导入 `/vocab`，避免把 AI 客户端打进每个页面**）
 - `session`：`createSession`、`sessionTitle(messages)`、`upsertSession`、`removeSession`、`sortSessions`
 - `chatStream(provider, model, messages, signal?)`：OpenAI 兼容**流式**，未配 Key 抛 `ProviderError('MISSING_API_KEY')`
 - `chatOnce(provider, model, messages, signal?)`：非流式单次调用；`testConnection(provider, model, signal?)`
 - `parseSseDelta(line)`、`buildChatBody(model, messages, stream?)`、`toContentParts(message)`（**多模态：图片附件转 `image_url` content 数组**）、`ProviderError`、`errorCode(error)`
 - `translation`：`translateWord(word, srcLang, tgtLang, { online, ai? })`（本地→在线→AI，LRU 缓存）、`translateSentence(text, srcLang, tgtLang, ai?)`、`lookupWord(word, targetLang)`、`parseWordCard(raw, fallback)`、`translateImage(dataUrl, targetLang, ai)`（多模态截图翻译）
-- `dictionary`：`lookupOnline(word, targetLang?)`（Free Dictionary API，≤900ms 超时，无需 Key）
+- `dictionary`：`lookupOnline(word, targetLang?)`（Free Dictionary API，≤900ms 超时，无需 Key）；`LocalEntry`、`ECDICT_SAMPLE`（内置样例）、`lemmaCandidates(word)`（规则词形还原）、`createLocalLookup(entries)`
+- `translateWord` 选项新增 `local?: (word) => DictResult | null`（链路：本地→在线→AI）
 - `vocab`：`normalizeWord`、`wordKey`、`upsertWord`、`removeWord`、`mergeVocab`、`vocabStats`、`cardToEntry`
 
 **`@mustard/utils`**
@@ -138,6 +139,17 @@
 - **未完成 / TODO**：历史列表未分页/虚拟滚动（M10）；删除当前会话后未自动落到相邻会话（需手动选择）；会话消息未做大小上限/清理；翻译卡片（`ChatMessage.card`）在历史中仍按文本渲染。
 - **下一步依赖**：M8 离线词典与 sidepanel 词典管理弹窗；M10 对会话列表做虚拟滚动与清理策略。
 
+## M8 · 离线词典 — 完成（数据源待补）
+- **做了什么**：
+  1. `@mustard/core`：新增 `dictionary/local`（`LocalEntry`、`ECDICT_SAMPLE` 内置样例、`lemmaCandidates` 规则词形还原、`createLocalLookup`）；`dictionary/index` 聚合 online+local；新增子路径 `./dictionary`；`translateWord` 链路改为**本地→在线→AI**（新增 `options.local`）。
+  2. `apps/extension`：`lib/dictionaryStore`（内置数据 + IndexedDB 存取可下载词典；`getLocalLookup` 合并已启用词典；`install/uninstall`）。
+  3. background：`TRANSLATE_TEXT(mode=word)` 按 `settings.dictionaries` 的 installed+enabled 构造本地查询并传入。
+  4. options：新增「词典」tab（在线兜底开关、已安装/启用统计、「管理离线词典」弹窗：启用开关、删除、下载、许可署名）。
+- **对外暴露（新增，未改名）**：见上；extension 内 `lib/dictionaryStore`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 493.51 kB + 落地页 2 页）。
+- **未完成 / TODO（数据源，见 PROBLEMS）**：内置 ECDICT 仅样例、非全量；可下载词典 `DICT_SOURCES` 为空，下载按钮禁用提示「下载源待补充」；词形还原为规则版。
+- **下一步依赖**：M9 记词复用 `streak` 与生词本；数据源补齐后无需改链路（填 `DICT_SOURCES` / 替换 `ECDICT_SAMPLE`）。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -157,4 +169,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M7 · 会话历史 + 侧边栏完善**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M9 · 记词（听音默写）**。

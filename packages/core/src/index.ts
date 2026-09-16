@@ -1,4 +1,4 @@
-export * from './dictionary/online'
+export * from './dictionary'
 export * from './providers/client'
 export * from './session'
 export * from './translation'

@@ -71,3 +71,9 @@
 - 解决（代码侧）：三个 Pages 相关 action 升到 Node 24 运行时版本 —— `actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`；release.yml 的 `actions/upload-artifact@v7`、`softprops/action-gh-release@v3` 一并升级。
 - 解决（一次性手动，必须由仓库管理员执行）：**Settings → Pages → Build and deployment → Source 选 `GitHub Actions`**。完成后再重跑 pages.yml 即可部署。若想免手动，需新建 PAT secret 并把 `enablement: true` + `token: ${{ secrets.PAGES_TOKEN }}` 传给 configure-pages。
 - 影响/备注：`astro.config.mjs` 已设 `site: https://daosrc.github.io` + `base: /mustard`，与仓库名一致，无需改动。
+
+### 2026-09-16 · M8 离线词典缺少真实数据源
+- 现象：M8 要求内置 ECDICT（裁剪常用 3–6 万词）并支持下载 WordNet/CC-CEDICT/JMdict/FreeDict；但真实词典数据（ECDICT 完整 76 万条 CSV、Wiktionary 预解析包等）体积达数十–数百 MB，需按词频裁剪、压缩、打包，无法在开发会话内产出并直接内置进仓库。
+- 原因：属**数据资产获取/预处理**问题，非代码问题；仓库不宜直接提交大体积词典二进制。
+- 解决（当前）：把机制做完整，数据留接口 —— `core/dictionary/local`（`LocalEntry`、`lemmaCandidates` 规则词形还原、`createLocalLookup` 查询）；`translateWord` 链路改为**本地→在线→AI**；`lib/dictionaryStore` 用 IndexedDB 存取可下载词典；设置页新增「词典」管理（启用/删除/在线兜底/许可署名）。内置 `ECDICT_SAMPLE`（约 45 个常用词）保证离线查词链可用；可下载词典 `DICT_SOURCES` 暂为空，下载按钮禁用并提示「下载源待补充」。
+- 影响/备注：离线查词当前只覆盖内置样例，未达全量 ECDICT；补齐时只需：① 用裁剪后的数据集替换/扩充 `ECDICT_SAMPLE`（或作为资源懒加载）；② 填 `DICT_SOURCES` 的 URL（指向预处理的 JSON/gzip），链路与 UI 无需改动。词形还原为规则版，M10 可换 ECDICT `exchange/lemma`。

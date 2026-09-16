@@ -6,6 +6,7 @@ import { CHAT_PORT_NAME, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shar
 import { parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
 import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
+import { getLocalLookup } from '../lib/dictionaryStore'
 import { deleteSession, getSessions, saveSession } from '../lib/sessionStore'
 import { addVocab, getVocab, importVocab, removeVocabById } from '../lib/vocabStore'
 
@@ -53,7 +54,11 @@ export default defineBackground({
             const settings = await getSettings()
             const ai = resolveAi(settings)
             if (mode === 'word') {
-              const result = await translateWord(text, sourceLang, targetLang, { online: settings.onlineDictionaryFallback, ai })
+              const enabledDicts = Object.entries(settings.dictionaries)
+                .filter(([, state]) => state.installed && state.enabled)
+                .map(([id]) => id)
+              const local = await getLocalLookup(enabledDicts)
+              const result = await translateWord(text, sourceLang, targetLang, { online: settings.onlineDictionaryFallback, ai, local })
               if (result.card && settings.vocab.autoAdd) {
                 await addVocab(cardToEntry({
                   ...result.card,
