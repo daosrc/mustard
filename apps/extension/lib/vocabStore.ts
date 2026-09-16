@@ -17,6 +17,13 @@ export async function addVocab(entry: WordEntry): Promise<WordEntry> {
   return entries.find(e => e.word === entry.word && e.sourceLang === entry.sourceLang) ?? entry
 }
 
+/** 按 id 覆盖更新（记词改变 streak 用，不走 upsert 的取大逻辑） */
+export async function updateVocab(entry: WordEntry): Promise<WordEntry> {
+  const entries = (await getVocab()).map(e => e.id === entry.id ? entry : e)
+  await saveVocab(entries)
+  return entry
+}
+
 export async function removeVocabById(id: string): Promise<void> {
   await saveVocab(removeWord(await getVocab(), id))
 }

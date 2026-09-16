@@ -26,6 +26,7 @@
 - 消息协议：`Message` 联合类型 + `ResponseMap`（`PING/GET_SETTINGS/UPDATE_SETTINGS/TRANSLATE_TEXT/CHAT/TRANSLATE_IMAGE/LOOKUP_WORD/ADD_VOCAB/GET_VOCAB/REMOVE_VOCAB/EXPORT_VOCAB/IMPORT_VOCAB/OPEN_SIDEBAR/CAPTURE_TAB`）
 - 流式协议：`CHAT_PORT_NAME`、`ChatStartPayload`、`ChatPortClientMessage`、`ChatPortServerMessage`、`ERR_MISSING_API_KEY`
 - 会话消息：`GET_SESSIONS`（→`Session[]`）、`SAVE_SESSION`（`{ session }`→`Session`）、`DELETE_SESSION`（`{ id }`→`{ id }`）
+- 生词本消息：`UPDATE_VOCAB`（按 id 覆盖，记词改 `streak` 用；不走 `ADD_VOCAB` 的取大逻辑）
 
 **`@mustard/platform`**
 - `send<T>(msg)` / `onMessage(handler)` / `openSidePanel(tabId?)` / `getSettings()` / `updateSettings(patch)` / `getStored` / `setStored` / `browser`
@@ -150,6 +151,17 @@
 - **未完成 / TODO（数据源，见 PROBLEMS）**：内置 ECDICT 仅样例、非全量；可下载词典 `DICT_SOURCES` 为空，下载按钮禁用提示「下载源待补充」；词形还原为规则版。
 - **下一步依赖**：M9 记词复用 `streak` 与生词本；数据源补齐后无需改链路（填 `DICT_SOURCES` / 替换 `ECDICT_SAMPLE`）。
 
+## M9 · 记词（听音默写）— 完成
+- **做了什么**：
+  1. `@mustard/shared`：新增 `UPDATE_VOCAB`（按 id 覆盖）消息 + `ResponseMap`。
+  2. `apps/extension`：`lib/vocabStore` 新增 `updateVocab`；background 新增 `UPDATE_VOCAB`。
+  3. sidepanel：新增 `QuizDialog`（看词→默写→验证状态机）：队列优先未掌握词（`streak` 升序），全部掌握则整轮复习（不计分）；看词阶段显示单词+释义并自动朗读，默写阶段隐藏单词+输入框，验证正确 `streak+1`（封顶 3）并自动下一词、错误清零并显示正确拼写；◀/▶ 自由跳转（队首/队尾禁用）；完成页仅在本轮全对或复习模式出现；关闭后刷新词表与统计。
+  4. `VocabView`：新增「记词 N」按钮（N=待记词数）、已掌握徽标（`streak ≥ 3` 显示「已掌握」，否则星级）。
+- **对外暴露（新增，未改名）**：`UPDATE_VOCAB`；`updateVocab`；sidepanel `QuizDialog`。
+- **验证**：`pnpm lint && pnpm typecheck && pnpm build` 全绿（扩展 499.18 kB + 落地页 2 页）。
+- **未完成 / TODO**：发音用 Web Speech（未接词典音频，M10 可换 Free Dictionary 音标音频）；未做艾宾浩斯/间隔复习（DESIGN 标为可选二期）；默写未做大小写以外的容错（如忽略连字符）。
+- **下一步依赖**：M10 打磨（缓存/性能/快捷键/i18n/无障碍/错误空态）与数据源补齐。
+
 ---
 
 ## 跨会话注意事项（踩过的坑）
@@ -169,4 +181,4 @@ cd ~/self/mustard && git pull
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build   # 开工前自检
 ```
-然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M9 · 记词（听音默写）**。
+然后阅读：`AGENTS.md` → `design/PLAN.md` → `docs/HANDOFF.md`（本节）。下一个里程碑：**M10 · 打磨**。

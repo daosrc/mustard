@@ -10,6 +10,7 @@ export type Message
     | { type: 'TRANSLATE_IMAGE', payload: { dataUrl: string, targetLang: LangCode } }
     | { type: 'LOOKUP_WORD', payload: { word: string, sourceLang: SourceLang, targetLang: LangCode } }
     | { type: 'ADD_VOCAB', payload: WordEntry }
+    | { type: 'UPDATE_VOCAB', payload: WordEntry }
     | { type: 'GET_VOCAB' }
     | { type: 'REMOVE_VOCAB', payload: { id: string } }
     | { type: 'EXPORT_VOCAB', payload: { format: 'json' | 'csv' } }
@@ -31,6 +32,7 @@ export interface ResponseMap {
   TRANSLATE_IMAGE: { content: string }
   LOOKUP_WORD: DictResult | null
   ADD_VOCAB: WordEntry
+  UPDATE_VOCAB: WordEntry
   GET_VOCAB: WordEntry[]
   REMOVE_VOCAB: { id: string }
   EXPORT_VOCAB: { data: string, filename: string }

@@ -8,7 +8,7 @@ import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
 import { getLocalLookup } from '../lib/dictionaryStore'
 import { deleteSession, getSessions, saveSession } from '../lib/sessionStore'
-import { addVocab, getVocab, importVocab, removeVocabById } from '../lib/vocabStore'
+import { addVocab, getVocab, importVocab, removeVocabById, updateVocab } from '../lib/vocabStore'
 
 function resolveAi(settings: Settings): AiTarget | undefined {
   const provider = settings.providers.find(p => p.id === settings.activeProviderId)
@@ -97,6 +97,8 @@ export default defineBackground({
           return getVocab()
         case 'ADD_VOCAB':
           return addVocab(message.payload)
+        case 'UPDATE_VOCAB':
+          return updateVocab(message.payload)
         case 'REMOVE_VOCAB':
           return (async () => {
             await removeVocabById(message.payload.id)

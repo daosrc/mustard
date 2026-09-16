@@ -2,9 +2,10 @@
 import type { WordEntry } from '@mustard/shared'
 import { send } from '@mustard/platform'
 import { MASTERED_STREAK } from '@mustard/shared'
-import { MButton, MIcon, MSelect, MStars, useToast } from '@mustard/ui'
+import { MButton, MChip, MIcon, MSelect, MStars, useToast } from '@mustard/ui'
 import { computed, onMounted, ref } from 'vue'
 import { speak } from '../../lib/speech'
+import QuizDialog from './QuizDialog.vue'
 
 const emit = defineEmits<{ changed: [] }>()
 const { success, error } = useToast()
@@ -13,6 +14,8 @@ const entries = ref<WordEntry[]>([])
 const query = ref('')
 const filter = ref<string>('all')
 const fileEl = ref<HTMLInputElement>()
+const quizOpen = ref(false)
+const pendingCount = computed(() => entries.value.filter(e => e.streak < MASTERED_STREAK).length)
 
 const filterOptions = [
   { label: '全部', value: 'all' },
@@ -89,6 +92,10 @@ async function onImportFile(event: Event): Promise<void> {
     </div>
 
     <div class="v-actions">
+      <MButton :disabled="!entries.length" @click="quizOpen = true">
+        <MIcon name="sparkles" :size="14" />
+        记词 {{ pendingCount }}
+      </MButton>
       <MButton variant="ghost" @click="exportVocab('json')">
         <MIcon name="download" :size="14" />
         JSON
@@ -123,7 +130,10 @@ async function onImportFile(event: Event): Promise<void> {
           </div>
         </div>
         <div class="v-meta">
-          <MStars :max="3" :model-value="entry.streak" :size="13" />
+          <MChip v-if="entry.streak >= MASTERED_STREAK" variant="primary">
+            已掌握
+          </MChip>
+          <MStars v-else :max="3" :model-value="entry.streak" :size="13" />
           <button class="icon-btn danger" title="删除" @click="remove(entry)">
             <MIcon name="trash" :size="14" />
           </button>
@@ -134,6 +144,8 @@ async function onImportFile(event: Event): Promise<void> {
     <footer class="v-foot">
       共 {{ stats.total }} 词 · 已掌握 {{ stats.mastered }} · 练习中 {{ stats.learning }}
     </footer>
+
+    <QuizDialog v-model="quizOpen" :entries="entries" @done="load" />
   </div>
 </template>
 
