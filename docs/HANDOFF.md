@@ -236,7 +236,15 @@
     9. 网页翻译：开启 → 顶部浮条出现（无 Key 显示「未翻译任何内容」）；还原 → 浮条移除
     10. 悬浮翻译：hover `abandon` → `.hover-tip` 显示 Wordset 释义
     11. sidepanel 渲染（5 个头部按钮）
-- **仍需人工验证**（需可用模型 / 交互）：侧边栏流式对话、截图粘贴翻译、记词完整流程、Provider 增删改与「测试连接」、词典下载进度条视觉、网页翻译在有 Key 时的双语对照。
+- **AI E2E（真实扩展 + OpenRouter）**：默认提供商为 OpenRouter（默认模型 `z-ai/glm-5.2:free`，备用免费多模态 `inclusionai/ling-3.0-flash-vl:free`）。11/11 PASS：
+  1. 默认 provider/model 正确；备用多模态在列
+  2. 句子翻译 → `早起的鸟儿有虫吃。`（glm 429 时自动回退到 ling-vl）
+  3. 单词 AI 词条（禁用词典后）→ `defenestration` → `抛出窗外（尤指将人从窗户扔出）；罢免，驱逐`（glm-5.2:free 命中）
+  4. 流式对话（端口）→ `"Hello to you."`
+  5. 多模态图片翻译 → 画布生成的 `HELLO WORLD` → `你好世界`
+  - 注：免费模型走 OpenRouter 共享池，偶发 429；测试脚本内置重试 + 模型回退。
+- **本轮修到的真 bug**：全新 profile（无存储）时 `getSettings` 解引用 `stored!.activeModel` 抛错 → background 无法响应 `GET_SETTINGS`（CDP E2E 发现并修复，见 PROBLEMS）。
+- **仍需人工验证**（交互/视觉）：Provider 增删改与「测试连接」弹窗、截图 `⌘V` 粘贴、记词完整流程、词典下载进度条视觉。
 - **AI 模型可用性（重要）**：OpenCode Zen 预设已改为**真实模型 ID**（`deepseek-v4-flash` 文本、`gemini-3.1-pro` 多模态），`getSettings` 会补齐内置提供商模型并回退失效的 `activeModel`。但测试用 Key 只能访问**付费模型**（需在 OpenCode 工作区绑定付款方式）；免费模型被限制为「仅可在 OpenCode 客户端使用」，扩展无法调用。因此 AI 端到端测试需账号可用模型或换其他 OpenAI 兼容服务（设置页「添加提供商」填 baseUrl/apiKey/模型即可）。
 
 ---

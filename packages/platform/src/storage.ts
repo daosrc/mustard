@@ -27,15 +27,17 @@ export async function getSettings(): Promise<Settings> {
     return { ...provider, models: [...provider.models, ...preset.models.filter(m => !names.has(m.name))] }
   })
 
-  const activeProvider = providers.find(p => p.id === (stored?.activeProviderId ?? DEFAULT_SETTINGS.activeProviderId))
-  const activeModelValid = activeProvider?.models.some(m => m.name === (stored?.activeModel ?? DEFAULT_SETTINGS.activeModel))
+  const activeProviderId = stored?.activeProviderId ?? DEFAULT_SETTINGS.activeProviderId
+  const activeModelName = stored?.activeModel ?? DEFAULT_SETTINGS.activeModel
+  const activeProvider = providers.find(p => p.id === activeProviderId)
+  const activeModelValid = activeProvider?.models.some(m => m.name === activeModelName)
 
   return {
     ...DEFAULT_SETTINGS,
     ...stored,
     providers,
     activeProviderId: activeProvider?.id ?? DEFAULT_SETTINGS.activeProviderId,
-    activeModel: activeModelValid ? stored!.activeModel! : DEFAULT_SETTINGS.activeModel,
+    activeModel: activeModelValid ? activeModelName : DEFAULT_SETTINGS.activeModel,
     features: { ...DEFAULT_SETTINGS.features, ...stored?.features },
     hover: { ...DEFAULT_SETTINGS.hover, ...stored?.hover },
     floatingBall: { ...DEFAULT_SETTINGS.floatingBall, ...stored?.floatingBall, tools: stored?.floatingBall?.tools ?? DEFAULT_SETTINGS.floatingBall.tools },

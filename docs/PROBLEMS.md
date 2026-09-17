@@ -96,3 +96,9 @@
 - 原因：① `OPENCODE_ZEN_PRESET` 的模型 ID 是占位/过期，真实列表应以 `GET /models` 为准（当前含 `deepseek-v4-flash`、`gemini-3.1-pro`、`claude-sonnet-5`、`gpt-5.x` 等）；② OpenCode Zen 免费额度仅限其自家客户端，第三方（含本扩展）需用付费模型并先绑定付款方式。
 - 解决：把预设改为**真实模型 ID**（`deepseek-v4-flash` 文本、`gemini-3.1-pro` 多模态）；`getSettings` 对内置提供商**补齐预设模型**、并在 `activeModel` 失效时回退默认，避免旧存储里的占位名导致 `MODEL_NOT_FOUND`。AI 端到端测试必须用账号可用的模型（绑定付款 / 换其他 OpenAI 兼容服务）。
 - 影响/备注：扩展本地功能（划词/词典/生词本等）不受影响；AI 相关（对话流式、句子/网页翻译、截图翻译）需可用模型。测试用 Key 请勿写入仓库，测完建议轮换。
+
+### 2026-09-16 · 全新 profile 下 `getSettings` 抛错，background 无法响应 `GET_SETTINGS`
+- 现象：CDP E2E 在全新 profile 上：`GET_SETTINGS` 无响应（返回 undefined），content 悬浮球渲染但工具数为 0，options/sidepanel 读设置失败。
+- 原因：`getSettings` 里 `activeModel: activeModelValid ? stored!.activeModel! : DEFAULT` —— 无存储时 `stored` 为 `undefined`，而 `activeModelValid` 因回退默认值被判定为 `true`，于是访问 `stored!.activeModel` 抛 `TypeError`，整个消息处理器失败。
+- 解决：改用回退后的局部变量 `activeModelName = stored?.activeModel ?? DEFAULT_SETTINGS.activeModel` 参与比较与返回，不再解引用 `stored!`。
+- 备注：由真实扩展的 CDP E2E 发现（单元测试不易覆盖）；修复后全新 profile 正常。
