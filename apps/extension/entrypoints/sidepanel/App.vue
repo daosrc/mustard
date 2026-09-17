@@ -3,7 +3,7 @@ import type { Attachment, ChatMessage, Session, Settings } from '@mustard/shared
 import { createSession, sessionTitle } from '@mustard/core/session'
 import { getStored, send, setStored, startChat } from '@mustard/platform'
 import { LANGS, STORAGE_KEYS } from '@mustard/shared'
-import { MChip, MDialog, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
+import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from '../../lib/i18n'
@@ -19,8 +19,7 @@ const store = useSettingsStore()
 const { error } = useToast()
 const { t } = useI18n()
 
-const view = ref<'chat' | 'vocab' | 'history'>('chat')
-const settingsOpen = ref(false)
+const view = ref<'chat' | 'vocab' | 'history' | 'settings'>('chat')
 
 function welcomeMessage(): ChatMessage {
   return {
@@ -46,10 +45,8 @@ onMounted(async () => {
   await store.load()
   try {
     const pending = await getStored<'chat' | 'vocab' | 'history' | 'settings'>(STORAGE_KEYS.pendingView)
-    if (pending === 'vocab' || pending === 'history')
+    if (pending === 'vocab' || pending === 'history' || pending === 'settings')
       view.value = pending
-    else if (pending === 'settings')
-      settingsOpen.value = true
     if (pending)
       await setStored(STORAGE_KEYS.pendingView, '')
   }
@@ -83,7 +80,7 @@ function setTarget(value?: string): void {
 }
 
 function openSettings(): void {
-  settingsOpen.value = true
+  view.value = 'settings'
 }
 
 function closePanel(): void {
@@ -302,7 +299,7 @@ function sendMessage(): void {
       <button v-if="view !== 'chat'" class="icon-btn" :title="t('nav.back')" @click="view = 'chat'">
         <MIcon name="chevron-left" :size="16" />
       </button>
-      <span v-if="view !== 'chat'" class="name">{{ view === 'vocab' ? t('nav.vocab') : t('nav.history') }}</span>
+      <span v-if="view !== 'chat'" class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : t('nav.settings') }}</span>
       <span class="spacer" />
       <template v-if="view === 'chat'">
         <button class="icon-btn" :title="t('nav.newChat')" @click="newChat">
@@ -315,7 +312,7 @@ function sendMessage(): void {
       <button class="icon-btn" :class="{ active: view === 'vocab' }" :title="t('nav.vocab')" @click="view = 'vocab'">
         <MIcon name="star" :size="16" />
       </button>
-      <button class="icon-btn" :class="{ active: settingsOpen }" :title="t('nav.settings')" @click="openSettings">
+      <button class="icon-btn" :class="{ active: view === 'settings' }" :title="t('nav.settings')" @click="openSettings">
         <MIcon name="settings" :size="16" />
       </button>
       <button class="icon-btn" :title="t('nav.close')" @click="closePanel">
@@ -325,6 +322,9 @@ function sendMessage(): void {
 
     <VocabView v-if="view === 'vocab'" />
     <HistoryView v-else-if="view === 'history'" :current-id="currentSession?.id ?? null" @open="openSession" />
+    <div v-else-if="view === 'settings'" class="panel-body">
+      <SettingsPanel />
+    </div>
 
     <template v-else>
       <main ref="bodyEl" class="panel-body">
@@ -373,6 +373,7 @@ function sendMessage(): void {
             <MSelect
               class="lang-select"
               size="sm"
+              variant="chip"
               :model-value="store.settings?.targetLang"
               :options="langOptions"
               @update:model-value="setTarget"
@@ -385,7 +386,6 @@ function sendMessage(): void {
               :placeholder="t('chat.modelPlaceholder')"
               @update:model-value="setActiveModel"
             />
-            <span class="spacer" />
             <button v-if="streaming" class="send stop" :title="t('chat.stop')" @click="stop">
               <MIcon name="close" :size="13" :stroke-width="2.4" />
             </button>
@@ -397,10 +397,6 @@ function sendMessage(): void {
         <input ref="fileEl" class="hidden-file" type="file" accept="image/*,application/pdf,.txt,.md,.doc,.docx" multiple @change="onPickFile">
       </footer>
     </template>
-
-    <MDialog v-model="settingsOpen" :title="t('nav.settings')" width="100%">
-      <SettingsPanel />
-    </MDialog>
 
     <MToastHost />
   </div>
@@ -475,7 +471,7 @@ function sendMessage(): void {
 }
 .att-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .tools-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-.lang-select { width: 68px; flex: none; }
+.lang-select { flex: none; }
 .model-select { flex: 1; min-width: 0; }
 .send {
   width: 24px; height: 24px; border: 0; border-radius: 7px;

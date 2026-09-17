@@ -33,6 +33,15 @@ async function localLookupFn(targetLang?: string): Promise<(word: string) => Pro
   return (word: string) => lookupLocal(enabled, word, targetLang ?? settings.targetLang)
 }
 
+/** 不按目标语言筛选的本地查询（AI 未命中时的兜底） */
+async function localFallbackFn(): Promise<(word: string) => Promise<DictResult | null>> {
+  const settings = await getSettings()
+  const enabled = Object.entries(settings.dictionaries)
+    .filter(([, state]) => state.enabled)
+    .map(([id]) => id)
+  return (word: string) => lookupLocal(enabled, word)
+}
+
 /** 下载完成后把 installed 状态写回 settings（设置页据此展示） */
 async function syncDictSettings(): Promise<void> {
   const installedIds = getInstalledIds()
@@ -125,6 +134,7 @@ export default defineBackground({
                 online: settings.onlineDictionaryFallback,
                 ai,
                 local: await localLookupFn(targetLang),
+                localFallback: await localFallbackFn(),
               })
               void syncDictSettings()
               if (result.card && settings.vocab.autoAdd) {

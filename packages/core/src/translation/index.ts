@@ -17,8 +17,10 @@ export interface TranslateOptions {
   /** 是否允许在线词典兜底（settings.onlineDictionaryFallback） */
   online?: boolean
   ai?: AiTarget
-  /** 本地离线词典查询（首次使用时下载；可为异步） */
+  /** 本地离线词典查询（按目标语言筛选；首次使用时下载；可为异步） */
   local?: (word: string) => DictResult | null | Promise<DictResult | null>
+  /** 兜底本地查询（不按目标语言筛选；AI 未命中时使用） */
+  localFallback?: (word: string) => DictResult | null | Promise<DictResult | null>
 }
 
 export const WORD_CARD_SYSTEM_PROMPT
@@ -75,17 +77,20 @@ export async function translateWord(
   if (!term)
     return { text: '' }
 
-  const key = cacheKey('w', term.toLowerCase(), sourceLang, targetLang, options.online === false ? 'off' : 'on', options.ai ? 'ai' : 'noai', options.local ? 'local' : 'nolocal')
+  const key = cacheKey('w', term.toLowerCase(), sourceLang, targetLang, options.online === false ? 'off' : 'on', options.ai ? 'ai' : 'noai', options.local ? 'local' : 'nolocal', options.localFallback ? 'lf' : 'nolf')
   const cached = cache.get(key)
   if (cached)
     return cached
 
-  // ① 本地离线词典（按目标语言筛选）→ ② 目标非英文时优先 AI（保证英译中）→ ③ 在线词典兜底 → ④ AI
+  // 目标英文：本地 → 在线 → AI
+  // 目标非英文：本地（目标语言）→ AI（保证英译中）→ 本地兜底（任意语言）→ 在线兜底
   let card: DictResult | null = (await options.local?.(term)) ?? null
   if (!card && targetLang === 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
   if (!card && options.ai)
     card = await aiWordCard(term, sourceLang, targetLang, options.ai)
+  if (!card && targetLang !== 'en' && options.localFallback)
+    card = (await options.localFallback(term)) ?? null
   if (!card && targetLang !== 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
 

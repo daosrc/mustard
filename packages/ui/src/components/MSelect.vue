@@ -8,10 +8,12 @@ const props = withDefaults(defineProps<{
   placeholder?: string
   disabled?: boolean
   size?: 'sm' | 'md'
+  variant?: 'default' | 'chip'
 }>(), {
   placeholder: '请选择',
   disabled: false,
   size: 'md',
+  variant: 'default',
 })
 
 const model = defineModel<string>()
@@ -67,7 +69,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="root" class="m-select" :class="[`is-${size}`, { open, disabled, 'drop-up': dropUp }]">
+  <div ref="root" class="m-select" :class="[`is-${size}`, `is-${variant}`, { open, disabled, 'drop-up': dropUp }]">
     <button class="trigger" type="button" :disabled="disabled" @click="toggle">
       <span class="value" :class="{ placeholder: !current }">{{ current?.label ?? placeholder }}</span>
       <MIcon name="chevron-down" :size="14" class="caret" />
@@ -111,6 +113,20 @@ onBeforeUnmount(() => {
   transition: border-color .15s;
 }
 .m-select.is-sm .trigger { padding: 4px 8px; font-size: 12px; border-radius: 8px; }
+/* chip 变体：无边框、药丸样式（用于目标语言） */
+.m-select.is-chip .trigger {
+  width: auto;
+  border-color: transparent;
+  background: var(--m-primary-soft);
+  color: var(--m-primary);
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 2px;
+}
+.m-select.is-chip .caret { width: 12px; height: 12px; }
+.m-select.is-chip .menu { left: 0; right: auto; }
 .trigger:hover { border-color: var(--m-primary); }
 .m-select.open .trigger { border-color: var(--m-primary); }
 .m-select.disabled .trigger { opacity: .5; cursor: not-allowed; }
@@ -122,9 +138,10 @@ onBeforeUnmount(() => {
   position: absolute;
   z-index: 30;
   top: calc(100% + 4px);
-  left: 0;
+  left: auto;
   right: 0;
-  min-width: 120px;
+  min-width: 200px;
+  max-width: min(320px, 82vw);
   margin: 0;
   padding: 4px;
   list-style: none;
@@ -149,5 +166,6 @@ onBeforeUnmount(() => {
 .m-select.drop-up .menu { top: auto; bottom: calc(100% + 4px); }
 .option:hover { background: var(--m-surface-2); }
 .option.active { color: var(--m-primary); font-weight: 600; }
+.opt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .option.disabled { opacity: .45; cursor: not-allowed; }
 </style>
