@@ -25,11 +25,13 @@ export const OPENROUTER_PRESET: Provider = {
   apiKey: '',
   builtin: true,
   models: [
+    // 默认模型：文本输入输出
     {
-      id: 'openrouter:nvidia/nemotron-3-super-120b-a12b:free',
-      name: 'nvidia/nemotron-3-super-120b-a12b:free',
+      id: 'openrouter:z-ai/glm-5.2:free',
+      name: 'z-ai/glm-5.2:free',
       inputs: { text: true, image: false, file: false },
     },
+    // 备用：多模态（图片输入）
     {
       id: 'openrouter:inclusionai/ling-3.0-flash-vl:free',
       name: 'inclusionai/ling-3.0-flash-vl:free',
@@ -109,7 +111,7 @@ export const DICTIONARIES: DictionaryItem[] = [
 export const DEFAULT_SETTINGS: Settings = {
   providers: [OPENROUTER_PRESET, OPENCODE_ZEN_PRESET],
   activeProviderId: OPENROUTER_PRESET.id,
-  activeModel: OPENROUTER_PRESET.models[1]!.name, // 默认选多模态（免费）模型
+  activeModel: OPENROUTER_PRESET.models[0]!.name, // 默认 glm-5.2:free（文本输入输出）
   sourceLang: 'auto',
   targetLang: DEFAULT_TARGET_LANG,
   features: { pageTranslate: false, selectionTranslate: true, hoverTranslate: false },
