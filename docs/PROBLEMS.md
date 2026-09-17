@@ -102,3 +102,9 @@
 - 原因：`getSettings` 里 `activeModel: activeModelValid ? stored!.activeModel! : DEFAULT` —— 无存储时 `stored` 为 `undefined`，而 `activeModelValid` 因回退默认值被判定为 `true`，于是访问 `stored!.activeModel` 抛 `TypeError`，整个消息处理器失败。
 - 解决：改用回退后的局部变量 `activeModelName = stored?.activeModel ?? DEFAULT_SETTINGS.activeModel` 参与比较与返回，不再解引用 `stored!`。
 - 备注：由真实扩展的 CDP E2E 发现（单元测试不易覆盖）；修复后全新 profile 正常。
+
+### 2026-09-16 · 持久翻译缓存命中旧结果，划词未按目标语言（英译中）
+- 现象：把「目标非英文时优先 AI」改好后，划词 `will` 仍返回离线英英（`source=local:wordset`），没走 AI。
+- 原因：`lib/translationCache`（IndexedDB）缓存 key 未随翻译链路/词典策略变化，旧版本写入的 `will→wordset` 被命中并直接返回（且 key 不含模型与回退信息）。
+- 解决：缓存 key 加版本号（`translate-cache-v2`），策略变更即整体失效；同时 AI 单词查询失败时按**同提供商其他文本模型**依次回退（`aiFallbacks`），并捕获 AI 异常不阻断。
+- 备注：今后调整翻译链路/词典策略时需递增该版本号；验证：`will`(中)→AI 中文、`will`(英)→本地英英、`defenestration`/生僻词→AI。

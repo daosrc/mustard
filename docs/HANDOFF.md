@@ -245,6 +245,7 @@
   - 注：免费模型走 OpenRouter 共享池，偶发 429；测试脚本内置重试 + 模型回退。
 - **本轮修到的真 bug**：全新 profile（无存储）时 `getSettings` 解引用 `stored!.activeModel` 抛错 → background 无法响应 `GET_SETTINGS`（CDP E2E 发现并修复，见 PROBLEMS）。
 - **仍需人工验证**（交互/视觉）：Provider 增删改与「测试连接」弹窗、截图 `⌘V` 粘贴、记词完整流程、词典下载进度条视觉。
+- **本轮修复（按用户反馈）**：① 默认提供商改为 OpenRouter 且移除 OpenCode Zen（含旧存储迁移）；② 英译中：本地(按目标语言筛选)→AI→本地兜底→在线，AI 失败自动换同提供商其他文本模型；③ 持久翻译缓存加版本号避免命中旧结果；④ 底部语言改可点选 chip、模型下拉加宽并向上弹；⑤ 提供商编辑弹窗修复（reactive 代理 structuredClone 报错）；⑥ 悬浮球工具可点选（380ms 宽限）并移除红点；⑦ 头部生词本图标统一为 book；⑧ 设置改为侧边栏内视图（分组卡片，按原型）。
 - **AI 模型可用性（重要）**：OpenCode Zen 预设已改为**真实模型 ID**（`deepseek-v4-flash` 文本、`gemini-3.1-pro` 多模态），`getSettings` 会补齐内置提供商模型并回退失效的 `activeModel`。但测试用 Key 只能访问**付费模型**（需在 OpenCode 工作区绑定付款方式）；免费模型被限制为「仅可在 OpenCode 客户端使用」，扩展无法调用。因此 AI 端到端测试需账号可用模型或换其他 OpenAI 兼容服务（设置页「添加提供商」填 baseUrl/apiKey/模型即可）。
 
 ---
