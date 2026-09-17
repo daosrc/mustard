@@ -14,9 +14,34 @@ export const STORAGE_KEYS = {
 } as const
 
 /**
- * 默认模型提供商：OpenCode Zen（OpenAI 兼容）。
+ * 默认模型提供商：OpenRouter（OpenAI 兼容，默认包含两个免费模型）。
+ * baseUrl：`https://openrouter.ai/api/v1`；用户需在设置页填入自己的 API Key。
+ * 免费模型走 OpenRouter 共享池，偶发 429 属正常，可切换其他免费模型。
+ */
+export const OPENROUTER_PRESET: Provider = {
+  id: 'openrouter',
+  name: 'OpenRouter',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  apiKey: '',
+  builtin: true,
+  models: [
+    {
+      id: 'openrouter:nvidia/nemotron-3-super-120b-a12b:free',
+      name: 'nvidia/nemotron-3-super-120b-a12b:free',
+      inputs: { text: true, image: false, file: false },
+    },
+    {
+      id: 'openrouter:inclusionai/ling-3.0-flash-vl:free',
+      name: 'inclusionai/ling-3.0-flash-vl:free',
+      inputs: { text: true, image: true, file: false },
+    },
+  ],
+}
+
+/**
+ * 备用内置提供商：OpenCode Zen（OpenAI 兼容）。
  * baseUrl：`https://opencode.ai/zen/v1`；模型 ID 为 `GET /models` 的真实返回值。
- * 用户需在设置页填入 API Key（付费模型需在 OpenCode 工作区绑定付款方式）。
+ * 付费模型需在 OpenCode 工作区绑定付款方式；免费额度仅限其官方客户端。
  */
 export const OPENCODE_ZEN_PRESET: Provider = {
   id: 'opencode-zen',
@@ -82,9 +107,9 @@ export const DICTIONARIES: DictionaryItem[] = [
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
-  providers: [OPENCODE_ZEN_PRESET],
-  activeProviderId: OPENCODE_ZEN_PRESET.id,
-  activeModel: OPENCODE_ZEN_PRESET.models[1]!.name, // 默认选多模态模型
+  providers: [OPENROUTER_PRESET, OPENCODE_ZEN_PRESET],
+  activeProviderId: OPENROUTER_PRESET.id,
+  activeModel: OPENROUTER_PRESET.models[1]!.name, // 默认选多模态（免费）模型
   sourceLang: 'auto',
   targetLang: DEFAULT_TARGET_LANG,
   features: { pageTranslate: false, selectionTranslate: true, hoverTranslate: false },
