@@ -19,6 +19,18 @@ function resolveAi(settings: Settings): AiTarget | undefined {
   return { provider, model }
 }
 
+/** 主模型 + 同提供商其他支持文本的模型（主模型 429 时依次回退） */
+function resolveAiList(settings: Settings): AiTarget[] {
+  const provider = settings.providers.find(p => p.id === settings.activeProviderId)
+  if (!provider?.apiKey)
+    return []
+  const active = provider.models.find(m => m.name === settings.activeModel)
+  const others = provider.models.filter(m => m.name !== settings.activeModel && m.inputs.text)
+  return [active, ...others]
+    .filter((m): m is NonNullable<typeof m> => !!m)
+    .map(model => ({ provider, model }))
+}
+
 function resolveSourceLang(sourceLang: SourceLang, word: string, targetLang: LangCode): LangCode {
   if (sourceLang !== 'auto')
     return sourceLang
@@ -130,9 +142,11 @@ export default defineBackground({
 
             let result
             if (mode === 'word') {
+              const aiList = resolveAiList(settings)
               result = await translateWord(text, sourceLang, targetLang, {
                 online: settings.onlineDictionaryFallback,
-                ai,
+                ai: aiList[0],
+                aiFallbacks: aiList.slice(1),
                 local: await localLookupFn(targetLang),
                 localFallback: await localFallbackFn(),
               })

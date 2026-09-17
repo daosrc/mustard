@@ -21,6 +21,8 @@ export interface TranslateOptions {
   local?: (word: string) => DictResult | null | Promise<DictResult | null>
   /** 兜底本地查询（不按目标语言筛选；AI 未命中时使用） */
   localFallback?: (word: string) => DictResult | null | Promise<DictResult | null>
+  /** 主模型失败（如 429）时依次尝试的其他模型 */
+  aiFallbacks?: AiTarget[]
 }
 
 export const WORD_CARD_SYSTEM_PROMPT
@@ -87,12 +89,17 @@ export async function translateWord(
   let card: DictResult | null = (await options.local?.(term)) ?? null
   if (!card && targetLang === 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
-  if (!card && options.ai) {
-    try {
-      card = await aiWordCard(term, sourceLang, targetLang, options.ai)
-    }
-    catch {
-      card = null // AI 失败（如 429/网络）时继续走本地兜底
+  if (!card) {
+    const targets = [options.ai, ...(options.aiFallbacks ?? [])].filter((t): t is AiTarget => !!t)
+    for (const target of targets) {
+      try {
+        card = await aiWordCard(term, sourceLang, targetLang, target)
+        if (card)
+          break
+      }
+      catch {
+        // 该模型失败（如 429/网络）→ 尝试下一个
+      }
     }
   }
   if (!card && targetLang !== 'en' && options.localFallback)
