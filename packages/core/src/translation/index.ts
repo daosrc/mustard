@@ -80,12 +80,14 @@ export async function translateWord(
   if (cached)
     return cached
 
-  // ① 本地离线词典 → ② 在线词典 → ③ AI
+  // ① 本地离线词典（按目标语言筛选）→ ② 目标非英文时优先 AI（保证英译中）→ ③ 在线词典兜底 → ④ AI
   let card: DictResult | null = (await options.local?.(term)) ?? null
-  if (!card && options.online !== false)
+  if (!card && targetLang === 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
   if (!card && options.ai)
     card = await aiWordCard(term, sourceLang, targetLang, options.ai)
+  if (!card && targetLang !== 'en' && options.online !== false)
+    card = await lookupOnline(term, targetLang)
 
   const result: TranslateResult = card ? { text: card.translation, card } : { text: '' }
   if (result.text)

@@ -25,12 +25,12 @@ function resolveSourceLang(sourceLang: SourceLang, word: string, targetLang: Lan
   return /^[\x20-\x7E]+$/.test(word) ? 'en' : targetLang
 }
 
-async function localLookupFn(): Promise<(word: string) => Promise<DictResult | null>> {
+async function localLookupFn(targetLang?: string): Promise<(word: string) => Promise<DictResult | null>> {
   const settings = await getSettings()
   const enabled = Object.entries(settings.dictionaries)
     .filter(([, state]) => state.enabled)
     .map(([id]) => id)
-  return (word: string) => lookupLocal(enabled, word)
+  return (word: string) => lookupLocal(enabled, word, targetLang ?? settings.targetLang)
 }
 
 /** 下载完成后把 installed 状态写回 settings（设置页据此展示） */
@@ -54,7 +54,7 @@ async function syncDictSettings(): Promise<void> {
 
 async function addSelectionToVocab(text: string, url?: string): Promise<void> {
   const settings = await getSettings()
-  const local = await localLookupFn()
+  const local = await localLookupFn(settings.targetLang)
   const result = await translateWord(text, 'auto', settings.targetLang, {
     online: settings.onlineDictionaryFallback,
     ai: resolveAi(settings),
@@ -102,12 +102,12 @@ export default defineBackground({
           return updateSettings(message.payload)
         case 'OPEN_SIDEBAR': {
           const view = message.payload?.view
-          return (async () => {
-            if (view)
-              await setStored(STORAGE_KEYS.pendingView, view)
-            await openSidePanel((sender as any)?.tab?.id)
-            return { ok: true }
-          })()
+          // 必须**先**调用 sidePanel.open（保留用户手势上下文），再写 pendingView；
+          // 若先 await 存储会丢失手势，导致 sidePanel.open 被 Chrome 拒绝。
+          const opened = openSidePanel((sender as any)?.tab?.id)
+          if (view)
+            void setStored(STORAGE_KEYS.pendingView, view)
+          return opened.then(() => ({ ok: true }))
         }
         case 'TRANSLATE_TEXT': {
           const { text, sourceLang, targetLang, mode } = message.payload
@@ -124,7 +124,7 @@ export default defineBackground({
               result = await translateWord(text, sourceLang, targetLang, {
                 online: settings.onlineDictionaryFallback,
                 ai,
-                local: await localLookupFn(),
+                local: await localLookupFn(targetLang),
               })
               void syncDictSettings()
               if (result.card && settings.vocab.autoAdd) {

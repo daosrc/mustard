@@ -65,6 +65,8 @@ export interface DictionaryItem {
   url?: string
   /** 按字母懒加载（wordset） */
   perLetter?: boolean
+  /** 该词典输出的目标语言（用于按目标语言筛选；缺省视为任意） */
+  targetLang?: string
   /** 数据来源与署名 */
   attribution?: string
 }

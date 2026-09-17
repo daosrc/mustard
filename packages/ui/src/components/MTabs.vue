@@ -36,11 +36,17 @@ const model = defineModel<string>()
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.m-tabs::-webkit-scrollbar { display: none; }
 .tab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
   border: 0;
   background: transparent;
   color: var(--m-muted);

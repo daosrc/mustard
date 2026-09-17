@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SelectOption } from '../types'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import MIcon from './MIcon.vue'
 
 const props = withDefaults(defineProps<{
@@ -16,13 +16,26 @@ const props = withDefaults(defineProps<{
 
 const model = defineModel<string>()
 const open = ref(false)
+const dropUp = ref(false)
 const root = ref<HTMLElement>()
 
 const current = computed(() => props.options.find(o => o.value === model.value))
 
+function measureDirection(): void {
+  const el = root.value
+  if (!el)
+    return
+  const rect = el.getBoundingClientRect()
+  // 下方空间不足则向上弹（侧边栏底部输入区常见）
+  dropUp.value = window.innerHeight - rect.bottom < 260
+}
+
 function toggle() {
-  if (!props.disabled)
-    open.value = !open.value
+  if (props.disabled)
+    return
+  open.value = !open.value
+  if (open.value)
+    void nextTick(measureDirection)
 }
 
 function select(option: SelectOption) {
@@ -54,7 +67,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="root" class="m-select" :class="[`is-${size}`, { open, disabled }]">
+  <div ref="root" class="m-select" :class="[`is-${size}`, { open, disabled, 'drop-up': dropUp }]">
     <button class="trigger" type="button" :disabled="disabled" @click="toggle">
       <span class="value" :class="{ placeholder: !current }">{{ current?.label ?? placeholder }}</span>
       <MIcon name="chevron-down" :size="14" class="caret" />
@@ -111,6 +124,7 @@ onBeforeUnmount(() => {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
+  min-width: 120px;
   margin: 0;
   padding: 4px;
   list-style: none;
@@ -132,6 +146,7 @@ onBeforeUnmount(() => {
   color: var(--m-ink);
   cursor: pointer;
 }
+.m-select.drop-up .menu { top: auto; bottom: calc(100% + 4px); }
 .option:hover { background: var(--m-surface-2); }
 .option.active { color: var(--m-primary); font-weight: 600; }
 .option.disabled { opacity: .45; cursor: not-allowed; }

@@ -170,12 +170,15 @@ export function dictStatus(id: string, enabled: boolean, installedFlag: boolean)
  * 本地查询（异步）：命中已缓存分片即返回；未缓存时按需下载。
  * 单词链路：本地（离线词典）→ 在线 → AI。
  */
-export async function lookupLocal(enabledIds: string[], word: string): Promise<DictResult | null> {
+export async function lookupLocal(enabledIds: string[], word: string, targetLang?: string): Promise<DictResult | null> {
   for (const candidate of lemmaCandidates(word)) {
     const letter = shardLetter(candidate)
     for (const id of enabledIds) {
       const pack = DICT_PACKS[id]
       if (!pack)
+        continue
+      // 按目标语言筛选：wordset 只提供英文释义，目标非英文时跳过，交给 AI
+      if (pack.targetLang && targetLang && pack.targetLang !== targetLang)
         continue
       let shard = await loadShard(id, letter)
       if (!shard) {

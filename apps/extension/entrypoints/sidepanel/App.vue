@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import type { Attachment, ChatMessage, Session } from '@mustard/shared'
+import type { Attachment, ChatMessage, Session, Settings } from '@mustard/shared'
 import { createSession, sessionTitle } from '@mustard/core/session'
-import { browser, getStored, send, setStored, startChat } from '@mustard/platform'
-import { langShort, STORAGE_KEYS } from '@mustard/shared'
-import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
+import { getStored, send, setStored, startChat } from '@mustard/platform'
+import { LANGS, STORAGE_KEYS } from '@mustard/shared'
+import { MChip, MDialog, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from '../../lib/i18n'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
+import SettingsPanel from '../options/SettingsPanel.vue'
 import HistoryView from './HistoryView.vue'
 import VocabView from './VocabView.vue'
 
@@ -19,6 +20,7 @@ const { error } = useToast()
 const { t } = useI18n()
 
 const view = ref<'chat' | 'vocab' | 'history'>('chat')
+const settingsOpen = ref(false)
 
 function welcomeMessage(): ChatMessage {
   return {
@@ -47,7 +49,7 @@ onMounted(async () => {
     if (pending === 'vocab' || pending === 'history')
       view.value = pending
     else if (pending === 'settings')
-      void browser.runtime.openOptionsPage()
+      settingsOpen.value = true
     if (pending)
       await setStored(STORAGE_KEYS.pendingView, '')
   }
@@ -73,10 +75,19 @@ const modelOptions = computed(() => (store.settings?.providers ?? []).flatMap(p 
   value: `${p.id}::${m.name}`,
 }))))
 const activeModelValue = computed(() => store.settings ? `${store.settings.activeProviderId}::${store.settings.activeModel}` : undefined)
-const target = computed(() => store.settings ? langShort(store.settings.targetLang) : '中')
+const langOptions = LANGS.map(l => ({ label: l.short, value: l.code }))
+
+function setTarget(value?: string): void {
+  if (value)
+    void store.patch({ targetLang: value as Settings['targetLang'] })
+}
 
 function openSettings(): void {
-  void browser.runtime.openOptionsPage()
+  settingsOpen.value = true
+}
+
+function closePanel(): void {
+  window.close()
 }
 
 function setActiveModel(value?: string): void {
@@ -291,8 +302,7 @@ function sendMessage(): void {
       <button v-if="view !== 'chat'" class="icon-btn" :title="t('nav.back')" @click="view = 'chat'">
         <MIcon name="chevron-left" :size="16" />
       </button>
-      <img v-else class="mark" :src="BALL_ICON" alt="Mustard">
-      <span class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : t('app.name') }}</span>
+      <span v-if="view !== 'chat'" class="name">{{ view === 'vocab' ? t('nav.vocab') : t('nav.history') }}</span>
       <span class="spacer" />
       <template v-if="view === 'chat'">
         <button class="icon-btn" :title="t('nav.newChat')" @click="newChat">
@@ -302,14 +312,14 @@ function sendMessage(): void {
           <MIcon name="history" :size="16" />
         </button>
       </template>
-      <button class="icon-btn" :class="{ active: view === 'chat' }" :title="t('nav.chat')" @click="view = 'chat'">
-        <MIcon name="message" :size="16" />
-      </button>
       <button class="icon-btn" :class="{ active: view === 'vocab' }" :title="t('nav.vocab')" @click="view = 'vocab'">
-        <MIcon name="book" :size="16" />
+        <MIcon name="star" :size="16" />
       </button>
-      <button class="icon-btn" :title="t('nav.settings')" @click="openSettings">
+      <button class="icon-btn" :class="{ active: settingsOpen }" :title="t('nav.settings')" @click="openSettings">
         <MIcon name="settings" :size="16" />
+      </button>
+      <button class="icon-btn" :title="t('nav.close')" @click="closePanel">
+        <MIcon name="close" :size="16" />
       </button>
     </header>
 
@@ -360,9 +370,13 @@ function sendMessage(): void {
             <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? t('chat.attach') : t('chat.attachUnsupported')" @click="onAttachClick">
               <MIcon name="paperclip" :size="16" />
             </button>
-            <MChip variant="primary">
-              {{ target }}
-            </MChip>
+            <MSelect
+              class="lang-select"
+              size="sm"
+              :model-value="store.settings?.targetLang"
+              :options="langOptions"
+              @update:model-value="setTarget"
+            />
             <MSelect
               class="model-select"
               size="sm"
@@ -383,6 +397,10 @@ function sendMessage(): void {
         <input ref="fileEl" class="hidden-file" type="file" accept="image/*,application/pdf,.txt,.md,.doc,.docx" multiple @change="onPickFile">
       </footer>
     </template>
+
+    <MDialog v-model="settingsOpen" :title="t('nav.settings')" width="100%">
+      <SettingsPanel />
+    </MDialog>
 
     <MToastHost />
   </div>
@@ -457,7 +475,8 @@ function sendMessage(): void {
 }
 .att-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .tools-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-.model-select { flex: 1; min-width: 0; max-width: 55%; }
+.lang-select { width: 68px; flex: none; }
+.model-select { flex: 1; min-width: 0; }
 .send {
   width: 24px; height: 24px; border: 0; border-radius: 7px;
   background: var(--m-primary); color: var(--m-primary-ink);

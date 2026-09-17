@@ -90,6 +90,7 @@ export const DICTIONARIES: DictionaryItem[] = [
     format: 'ecdict-csv',
     url: 'https://cdn.jsdelivr.net/gh/skywind3000/ECDICT@master/ecdict.mini.csv',
     attribution: 'ECDICT © skywind3000 (MIT)',
+    targetLang: 'zh-CN',
   },
   {
     id: 'wordset',
@@ -102,6 +103,7 @@ export const DICTIONARIES: DictionaryItem[] = [
     format: 'wordset-letters',
     perLetter: true,
     attribution: 'Wordset (CC BY-SA 4.0) + WordNet 3.0',
+    targetLang: 'en',
   },
   { id: 'cc-cedict', name: 'CC-CEDICT 汉英', langPair: '中 → 英', license: 'CC BY-SA', size: '待补充数据源', installed: false, enabled: false },
   { id: 'jmdict', name: 'JMdict 日英', langPair: '日 → 英', license: 'EDRDG', size: '待补充数据源', installed: false, enabled: false },
