@@ -25,17 +25,29 @@ export const OPENROUTER_PRESET: Provider = {
   apiKey: '',
   builtin: true,
   models: [
-    // 默认模型：文本输入输出
+    // 默认：稳定免费文本模型
     {
-      id: 'openrouter:z-ai/glm-5.2:free',
-      name: 'z-ai/glm-5.2:free',
+      id: 'openrouter:nvidia/nemotron-3-super-120b-a12b:free',
+      name: 'nvidia/nemotron-3-super-120b-a12b:free',
       inputs: { text: true, image: false, file: false },
     },
-    // 备用：多模态（图片输入）
+    // 多模态（图片输入）
     {
       id: 'openrouter:inclusionai/ling-3.0-flash-vl:free',
       name: 'inclusionai/ling-3.0-flash-vl:free',
       inputs: { text: true, image: true, file: false },
+    },
+    // 备用文本模型
+    {
+      id: 'openrouter:nvidia/nemotron-3-ultra-550b-a55b:free',
+      name: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+      inputs: { text: true, image: false, file: false },
+    },
+    // 备用文本模型（共享池偶发限流）
+    {
+      id: 'openrouter:z-ai/glm-5.2:free',
+      name: 'z-ai/glm-5.2:free',
+      inputs: { text: true, image: false, file: false },
     },
   ],
 }
