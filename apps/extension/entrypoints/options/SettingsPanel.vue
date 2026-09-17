@@ -134,7 +134,8 @@ const dialogOpen = ref(false)
 const editing = ref<Provider | null>(null)
 
 function openEdit(provider: Provider): void {
-  editing.value = structuredClone(provider)
+  // 用纯对象深拷贝（store 里是 reactive 代理，structuredClone 会抛 DataCloneError）
+  editing.value = JSON.parse(JSON.stringify(provider)) as Provider
   dialogOpen.value = true
 }
 

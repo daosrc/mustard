@@ -37,13 +37,6 @@
   justify-content: center;
 }
 
-.fab-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  box-shadow: 0 0 0 2px var(--m-surface);
-}
-
 .fab-logo {
   width: 56px;
   height: 56px;

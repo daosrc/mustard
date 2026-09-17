@@ -87,8 +87,14 @@ export async function translateWord(
   let card: DictResult | null = (await options.local?.(term)) ?? null
   if (!card && targetLang === 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
-  if (!card && options.ai)
-    card = await aiWordCard(term, sourceLang, targetLang, options.ai)
+  if (!card && options.ai) {
+    try {
+      card = await aiWordCard(term, sourceLang, targetLang, options.ai)
+    }
+    catch {
+      card = null // AI 失败（如 429/网络）时继续走本地兜底
+    }
+  }
   if (!card && targetLang !== 'en' && options.localFallback)
     card = (await options.localFallback(term)) ?? null
   if (!card && targetLang !== 'en' && options.online !== false)

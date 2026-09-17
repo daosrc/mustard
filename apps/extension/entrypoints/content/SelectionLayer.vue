@@ -13,6 +13,16 @@ function t(key: string): string {
   return translateKey(props.settings?.uiLang ?? 'zh', key)
 }
 
+function sourceLabel(source: string): string {
+  if (source.startsWith('local'))
+    return t('content.sourceLocal')
+  if (source === 'online')
+    return t('content.sourceOnline')
+  if (source === 'ai')
+    return t('content.sourceAi')
+  return ''
+}
+
 const icon = ref<{ x: number, y: number } | null>(null)
 const popover = ref<{ x: number, y: number } | null>(null)
 const text = ref('')
@@ -136,9 +146,10 @@ onBeforeUnmount(() => {
       {{ t('content.notFound') }}
     </div>
     <template v-else>
-      <div v-if="result.card?.phonetic || result.card?.partOfSpeech" class="pop-meta">
+      <div v-if="result.card?.phonetic || result.card?.partOfSpeech || result.card?.source" class="pop-meta">
         <span v-if="result.card?.phonetic" class="pop-phonetic">{{ result.card.phonetic }}</span>
         <span v-if="result.card?.partOfSpeech" class="pop-pos">{{ result.card.partOfSpeech }}</span>
+        <span v-if="result.card?.source" class="pop-src">{{ sourceLabel(result.card.source) }}</span>
       </div>
       <div class="pop-trans">
         {{ result.card?.translation ?? result.text }}
@@ -195,6 +206,7 @@ onBeforeUnmount(() => {
 .pop-btn:hover { background: var(--m-surface-2); color: var(--m-ink); }
 .pop-loading, .pop-empty { color: var(--m-muted); padding: 8px 0; }
 .pop-meta { display: flex; align-items: baseline; gap: 8px; color: var(--m-muted); font-size: 12px; margin-top: 4px; }
+.pop-src { margin-left: auto; font-size: 10px; color: var(--m-faint); border: 1px solid var(--m-line); border-radius: 6px; padding: 0 4px; }
 .pop-trans { margin-top: 6px; line-height: 1.6; }
 .pop-examples { margin: 6px 0 0; padding-left: 18px; color: var(--m-muted); font-size: 12px; }
 .pop-foot { display: flex; justify-content: flex-end; margin-top: 8px; }

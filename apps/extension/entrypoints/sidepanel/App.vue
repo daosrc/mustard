@@ -310,7 +310,7 @@ function sendMessage(): void {
         </button>
       </template>
       <button class="icon-btn" :class="{ active: view === 'vocab' }" :title="t('nav.vocab')" @click="view = 'vocab'">
-        <MIcon name="star" :size="16" />
+        <MIcon name="book" :size="16" />
       </button>
       <button class="icon-btn" :class="{ active: view === 'settings' }" :title="t('nav.settings')" @click="openSettings">
         <MIcon name="settings" :size="16" />

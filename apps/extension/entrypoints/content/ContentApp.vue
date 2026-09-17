@@ -2,7 +2,7 @@
 import type { Settings, ToolItem } from '@mustard/shared'
 import { browser, send } from '@mustard/platform'
 import { STORAGE_KEYS, t as translate } from '@mustard/shared'
-import { MBadge, MIcon } from '@mustard/ui'
+import { MIcon } from '@mustard/ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from './ball'
@@ -30,14 +30,30 @@ const STEP_DEG = 26
 
 const rootEl = ref<HTMLElement>()
 const settings = ref<Settings | null>(null)
-const vocabCount = ref(0)
 const open = ref(false)
+let closeTimer: ReturnType<typeof setTimeout> | undefined
+
+function onPointerEnter(): void {
+  clearTimeout(closeTimer)
+  open.value = true
+}
+
+function onPointerLeave(): void {
+  // 宽限期：从球移向工具（两者间有空隙）时不闪退
+  clearTimeout(closeTimer)
+  closeTimer = setTimeout(() => {
+    open.value = false
+  }, 380)
+}
 
 onMounted(() => {
   void refresh()
   browser.storage.onChanged.addListener(onStorage)
 })
-onBeforeUnmount(() => browser.storage.onChanged.removeListener(onStorage))
+onBeforeUnmount(() => {
+  browser.storage.onChanged.removeListener(onStorage)
+  clearTimeout(closeTimer)
+})
 
 function onStorage(changes: Record<string, unknown>): void {
   if (changes[STORAGE_KEYS.settings] || changes[STORAGE_KEYS.vocab])
@@ -47,7 +63,6 @@ function onStorage(changes: Record<string, unknown>): void {
 async function refresh(): Promise<void> {
   try {
     settings.value = await send({ type: 'GET_SETTINGS' })
-    vocabCount.value = (await send({ type: 'GET_VOCAB' })).length
   }
   catch {
     settings.value = null
@@ -132,7 +147,7 @@ function onBallClick(): void {
 
 <template>
   <div v-if="enabled" ref="rootEl" class="mustard-wrap" :class="ball?.position === 'left' ? 'left' : 'right'">
-    <div class="fab-root" :class="{ open, stack: isStack }" @pointerenter="open = true" @pointerleave="open = false">
+    <div class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
       <div class="tools">
         <button
           v-for="(tool, index) in tools"
@@ -149,7 +164,6 @@ function onBallClick(): void {
       </div>
       <button class="fab" :title="tr('app.name')" @click="onBallClick">
         <img class="fab-logo" :src="BALL_ICON" alt="Mustard">
-        <MBadge v-if="vocabCount" dot class="fab-dot" />
       </button>
     </div>
 

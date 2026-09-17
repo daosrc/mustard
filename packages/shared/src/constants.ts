@@ -111,7 +111,7 @@ export const DICTIONARIES: DictionaryItem[] = [
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
-  providers: [OPENROUTER_PRESET, OPENCODE_ZEN_PRESET],
+  providers: [OPENROUTER_PRESET],
   activeProviderId: OPENROUTER_PRESET.id,
   activeModel: OPENROUTER_PRESET.models[0]!.name, // 默认 glm-5.2:free（文本输入输出）
   sourceLang: 'auto',
