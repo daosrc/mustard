@@ -1,7 +1,8 @@
 import type { TranslateResult } from '@mustard/core/translation'
 import { idbGet, idbSet } from '@mustard/platform'
 
-const KEY = 'translate-cache'
+// 版本号：翻译链路/词典策略变更时递增，避免命中旧逻辑写入的缓存
+const KEY = 'translate-cache-v2'
 const MAX = 300
 
 type CacheStore = Record<string, TranslateResult>
