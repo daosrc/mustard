@@ -19,16 +19,24 @@ async function write<T>(key: string, value: T): Promise<void> {
 export async function getSettings(): Promise<Settings> {
   const stored = await read<Partial<Settings>>(STORAGE_KEYS.settings)
 
-  const providers = (stored?.providers ?? DEFAULT_SETTINGS.providers)
+  const storedProviders = (stored?.providers ?? DEFAULT_SETTINGS.providers)
     // 移除默认清单中已不存在的内置提供商（如历史遗留的 OpenCode Zen）
     .filter(provider => !provider.builtin || DEFAULT_SETTINGS.providers.some(p => p.id === provider.id))
-    .map((provider) => {
-      const preset = DEFAULT_SETTINGS.providers.find(p => p.id === provider.id && p.builtin)
-      if (!preset)
-        return provider
-      const names = new Set(provider.models.map(m => m.name))
-      return { ...provider, models: [...provider.models, ...preset.models.filter(m => !names.has(m.name))] }
-    })
+
+  // 补齐默认中新增、而存储里缺失的内置提供商（如 Agnes AI）
+  const providerMap = new Map(storedProviders.map(p => [p.id, p]))
+  for (const preset of DEFAULT_SETTINGS.providers) {
+    if (!providerMap.has(preset.id))
+      providerMap.set(preset.id, preset)
+  }
+
+  const providers = [...providerMap.values()].map((provider) => {
+    const preset = DEFAULT_SETTINGS.providers.find(p => p.id === provider.id && p.builtin)
+    if (!preset)
+      return provider
+    const names = new Set(provider.models.map(m => m.name))
+    return { ...provider, models: [...provider.models, ...preset.models.filter(m => !names.has(m.name))] }
+  })
 
   const activeProviderId = stored?.activeProviderId ?? DEFAULT_SETTINGS.activeProviderId
   const activeModelName = stored?.activeModel ?? DEFAULT_SETTINGS.activeModel
