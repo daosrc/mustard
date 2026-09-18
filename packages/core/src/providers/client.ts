@@ -27,6 +27,22 @@ function textMessage(role: ChatRole, content: string): ChatMessage {
   return { id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role, content, createdAt: Date.now() }
 }
 
+/**
+ * 对话系统提示：限定为翻译/语言助手，简洁作答，且**不透露模型/供应商/实现细节**。
+ */
+export const CHAT_SYSTEM_PROMPT
+  = '你是 Mustard，一个专注翻译与语言解释的助手。规则：'
+    + '1) 只处理翻译、词典、语言相关问题，其他话题礼貌拒绝并引导回翻译；'
+    + '2) 不要提及或透露你使用的模型、供应商、版本或任何实现细节；'
+    + '3) 回答简洁直接，翻译任务只输出译文，不要解释过程。'
+
+/** 若消息中没有 system，则前置系统提示 */
+export function withSystemPrompt(messages: ChatMessage[]): ChatMessage[] {
+  if (messages.some(m => m.role === 'system'))
+    return messages
+  return [{ id: 'system', role: 'system', content: CHAT_SYSTEM_PROMPT, createdAt: Date.now() }, ...messages]
+}
+
 /** 从 SSE 数据行解析出增量文本（OpenAI 兼容格式） */
 export function parseSseDelta(line: string): string | null {
   const trimmed = line.trim()

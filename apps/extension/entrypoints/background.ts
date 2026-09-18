@@ -1,6 +1,6 @@
 import type { AiTarget } from '@mustard/core'
 import type { ChatPortClientMessage, DictResult, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
-import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateImage, translateSentence, translateWord } from '@mustard/core'
+import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateImage, translateSentence, translateWord, withSystemPrompt } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
 import { CHAT_PORT_NAME, DICTIONARIES, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
 import { cacheKey, parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
@@ -262,7 +262,7 @@ export default defineBackground({
             const modelDef = provider?.models.find(m => m.name === model)
             if (!provider || !modelDef)
               throw new Error('MODEL_NOT_FOUND')
-            return { content: await chatOnce(provider, modelDef, messages) }
+            return { content: await chatOnce(provider, modelDef, withSystemPrompt(messages)) }
           })()
         }
         default:
@@ -301,7 +301,7 @@ export default defineBackground({
           controller = new AbortController()
           let content = ''
           try {
-            for await (const chunk of chatStream(provider, modelDef, messages, controller.signal)) {
+            for await (const chunk of chatStream(provider, modelDef, withSystemPrompt(messages), controller.signal)) {
               content += chunk.delta
               port.postMessage({ type: 'CHAT_DELTA', delta: chunk.delta })
             }
