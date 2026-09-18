@@ -108,3 +108,9 @@
 - 原因：`lib/translationCache`（IndexedDB）缓存 key 未随翻译链路/词典策略变化，旧版本写入的 `will→wordset` 被命中并直接返回（且 key 不含模型与回退信息）。
 - 解决：缓存 key 加版本号（`translate-cache-v2`），策略变更即整体失效；同时 AI 单词查询失败时按**同提供商其他文本模型**依次回退（`aiFallbacks`），并捕获 AI 异常不阻断。
 - 备注：今后调整翻译链路/词典策略时需递增该版本号；验证：`will`(中)→AI 中文、`will`(英)→本地英英、`defenestration`/生僻词→AI。
+
+### 2026-09-16 · 网页翻译段落重复/遗漏 + 译文样式 + AI 角色
+- 现象：网页翻译提示段数虚高（如 869），实际大段落少；译文重复追加；译文与原文样式无区别；AI 对话暴露模型/公司（"developed by NVIDIA research team"）。
+- 原因：① `pageTranslator` 未去重、`total` 跨 MutationObserver 累加、未纳入 `div` 叶子块；② 译文节点样式写在 `content.css`（Shadow DOM 专用），页面上不生效；③ 对话未加系统提示，模型自由发挥。
+- 解决：① `WeakSet` + 即时 `MARK` 去重、`total` 改为唯一计数、纳入 `div` 叶子块、跳过已翻译节点；② 由 content script 向页面 `head` 注入 `.mustard-translation` 样式（带明显左边框/底色）；③ 新增 `CHAT_SYSTEM_PROMPT`（限定翻译/语言助手、简洁、不透露模型/供应商/实现），对话与流式均前置；翻译 prompt 强调「只输出译文，不要多余内容」。
+- 备注：另为句子/网页翻译与 CHAT 增加**同提供商多模型回退**，缓解免费模型偶发 429 导致整段漏译。**当前 OpenRouter 免费模型集体 429**（共享池限流），页面 AI 验证需重试或为账号充值/换付费模型。
