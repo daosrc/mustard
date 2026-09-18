@@ -1,6 +1,6 @@
 import type { AiTarget } from '@mustard/core'
 import type { ChatPortClientMessage, DictResult, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
-import { IDENTITY_REPLY, cardToEntry, chatOnce, chatStream, errorCode, isIdentityQuery, lookupWord, translateImage, translateSentence, translateWord, withSystemPrompt } from '@mustard/core'
+import { cardToEntry, chatOnce, chatStream, errorCode, IDENTITY_REPLY, isIdentityQuery, lookupWord, translateImage, translateSentence, translateWord, withSystemPrompt } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
 import { CHAT_PORT_NAME, DICTIONARIES, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
 import { cacheKey, parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'

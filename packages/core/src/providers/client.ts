@@ -41,7 +41,7 @@ export const CHAT_SYSTEM_PROMPT
 export const IDENTITY_REPLY = '我是 Mustard，一个翻译与语言助手。请把需要翻译的内容发给我。'
 
 export function isIdentityQuery(text: string): boolean {
-  return /(?:who are you|what model|which model|your model|model name|are you (?:gpt|claude|gemini|agnes|qwen|glm)|你是谁|你是什么|什么模型|哪家公司|什么公司|哪家的|什么大模型|基于什么|版本|version)/i.test(text)
+  return /who are you|what model|which model|your model|model name|are you (?:gpt|claude|gemini|agnes|qwen|glm)|你是谁|你是什么|什么模型|哪家公司|什么公司|哪家的|什么大模型|基于什么|版本|version/i.test(text)
 }
 
 /** 若消息中没有 system，则前置系统提示 */
