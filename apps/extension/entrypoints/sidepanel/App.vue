@@ -425,8 +425,9 @@ function sendMessage(): void {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid color-mix(in srgb, var(--m-line) 55%, transparent);
   background: var(--m-surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--m-line) 85%, transparent);
+  z-index: 1;
 }
 .mark { width: 24px; height: 24px; border-radius: 7px; }
 .name { font-weight: 650; font-size: 13.5px; }
@@ -473,7 +474,12 @@ function sendMessage(): void {
 @keyframes blink { 50% { opacity: 0; } }
 .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .msg-thumb { max-width: 160px; max-height: 120px; border-radius: 8px; display: block; }
-.composer { padding: 8px; background: var(--m-surface); }
+.composer {
+  padding: 8px;
+  background: var(--m-surface);
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--m-line) 85%, transparent);
+  z-index: 1;
+}
 .input-box { border: 1px solid var(--m-line); border-radius: 12px; padding: 8px 8px 6px; background: var(--m-surface); }
 .input-box textarea {
   width: 100%;
