@@ -16,7 +16,7 @@
 | **Side-panel chat** | Pick a model grouped by provider; attach files (image / PDF / TXT / Word / Markdown) or screenshots |
 | **Vocabulary** | Auto-saved words, pronunciation, delete, import/export (JSON / CSV) |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
-| **Offline dictionaries** | Local → online → AI fallback; dictionary data is **not bundled** but **downloaded on first use** (ECDICT MIT sample, Wordset English per-letter), then works offline |
+| **Offline dictionaries** | Local → online → AI fallback; dictionary data is **not bundled** but **downloaded on first use** (English→Chinese built in by default, plus ECDICT MIT sample and Wordset English), then works offline |
 | **Model providers** | OpenRouter by default (OpenAI-compatible, free models included), custom providers supported; models added one by one with declared input capabilities |
 | **Chat history** | Create / switch / delete sessions and reload past conversations |
 | **Target language** | Simplified Chinese by default, 14 languages supported |
@@ -91,7 +91,7 @@ See [THIRD-PARTY.md](./THIRD-PARTY.md).
 
 ## Known limitations
 
-- **Offline dictionaries**: data is not bundled and is **downloaded on first use**. Current sources: ECDICT (MIT; the jsDelivr copy is a small sample) and Wordset English (CC BY-SA, lazy per first letter, good coverage). The full ECDICT (~66 MB, GitHub raw) and Chinese/Japanese sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
+- **Offline dictionaries**: data is not bundled and is **downloaded on first use**. An English→Chinese dictionary (现代英汉, ~2.8 MB) is the default, plus ECDICT (MIT sample) and Wordset English (CC BY-SA, lazy per letter). The 现代英汉 data comes from open-ecdict and its license is unconfirmed (see THIRD-PARTY.md). The full ECDICT and Chinese/Japanese sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
 - **UI language**: the extension UI supports **Simplified Chinese / English** (Settings → Appearance → UI language); strings live in `shared/i18n`. Please open an issue for any hard-coded text we missed.
 - **Landing screenshots**: feature sections currently use CSS mock visuals; real screenshots will replace them once exported.
 

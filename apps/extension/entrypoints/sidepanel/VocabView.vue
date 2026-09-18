@@ -137,7 +137,7 @@ async function onImportFile(event: Event): Promise<void> {
               <MIcon name="speaker" :size="14" />
             </button>
           </div>
-          <div class="v-def">
+          <div class="v-def" :title="entry.translation">
             <span v-if="entry.phonetic" class="v-phonetic">{{ entry.phonetic }}</span>
             <span v-if="entry.partOfSpeech" class="v-pos">{{ entry.partOfSpeech }}</span>
             {{ entry.translation }}
@@ -168,9 +168,10 @@ async function onImportFile(event: Event): Promise<void> {
 
 <style scoped>
 .vocab { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.v-toolbar { display: flex; gap: 8px; padding: 10px 12px 0; }
+.v-toolbar { display: flex; align-items: stretch; gap: 8px; padding: 10px 12px 0; }
 .search { flex: 1; min-width: 0; }
 .filter { width: 96px; flex: none; }
+.filter :deep(.trigger) { height: 100%; }
 .v-actions { display: flex; gap: 6px; padding: 8px 12px; }
 .v-actions :deep(.m-btn) { padding: 5px 9px; font-size: 12px; }
 .v-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 8px; display: flex; flex-direction: column; gap: 8px; }
@@ -186,7 +187,17 @@ async function onImportFile(event: Event): Promise<void> {
 }
 .v-main { flex: 1; min-width: 0; }
 .v-word { display: flex; align-items: center; gap: 4px; font-weight: 650; font-size: 14px; }
-.v-def { color: var(--m-muted); font-size: 12.5px; line-height: 1.5; margin-top: 2px; word-break: break-word; }
+.v-def {
+  color: var(--m-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-top: 2px;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .v-phonetic { color: var(--m-faint); margin-right: 4px; }
 .v-pos { color: var(--m-primary); font-style: italic; margin-right: 4px; }
 .v-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }

@@ -1,6 +1,6 @@
 import type { LocalEntry } from '@mustard/core/dictionary'
 import type { DictInstallStatus, DictionaryItem, DictResult } from '@mustard/shared'
-import { createLocalLookup, lemmaCandidates, parseEcdictCsv, parseWordsetJson } from '@mustard/core/dictionary'
+import { createLocalLookup, lemmaCandidates, parseEcdictCsv, parseOpenEcdictTxt, parseWordsetJson } from '@mustard/core/dictionary'
 import { idbGet, idbSet } from '@mustard/platform'
 import { DICTIONARIES } from '@mustard/shared'
 
@@ -97,7 +97,7 @@ export async function installDict(id: string): Promise<void> {
   errors.delete(id)
   progress.set(id, 0)
   try {
-    if (pack.format === 'ecdict-csv') {
+    if (pack.format === 'ecdict-csv' || pack.format === 'open-ecdict') {
       if (!pack.url)
         throw new Error('NO_SOURCE')
       const res = await fetch(pack.url)
@@ -105,7 +105,7 @@ export async function installDict(id: string): Promise<void> {
         throw new Error(`HTTP ${res.status}`)
       const text = await res.text()
       progress.set(id, 0.7)
-      await storeShards(id, parseEcdictCsv(text))
+      await storeShards(id, pack.format === 'open-ecdict' ? parseOpenEcdictTxt(text) : parseEcdictCsv(text))
     }
     else if (pack.format === 'wordset-letters') {
       for (let i = 0; i < LETTERS.length; i++) {

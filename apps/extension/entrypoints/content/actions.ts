@@ -9,13 +9,30 @@ export function isWord(text: string): boolean {
 }
 
 export async function translate(text: string, settings: Settings | null): Promise<TranslateResult> {
+  const word = isWord(text)
+  // 单词：先只查词典（本地/在线），快速出释义；句子：直接 AI
   return send({
     type: 'TRANSLATE_TEXT',
     payload: {
       text,
       sourceLang: settings?.sourceLang ?? 'auto',
       targetLang: settings?.targetLang ?? 'zh-CN',
-      mode: isWord(text) ? 'word' : 'sentence',
+      mode: word ? 'word' : 'sentence',
+      dictionaryOnly: word,
+    },
+  })
+}
+
+/** 强制走 AI（词典命中后延迟追加 AI 翻译用） */
+export async function translateAi(text: string, settings: Settings | null): Promise<TranslateResult> {
+  return send({
+    type: 'TRANSLATE_TEXT',
+    payload: {
+      text,
+      sourceLang: settings?.sourceLang ?? 'auto',
+      targetLang: settings?.targetLang ?? 'zh-CN',
+      mode: 'word',
+      preferAi: true,
     },
   })
 }

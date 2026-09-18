@@ -116,6 +116,7 @@
   position: absolute;
   right: 44px;
   top: 50%;
+  width: max-content;
   transform: translateY(-50%) translateX(6px);
   background: var(--m-ink);
   color: var(--m-paper);
@@ -129,8 +130,19 @@
   transition: .15s;
 }
 
+.mustard-wrap.left .tool-label {
+  right: auto;
+  left: 44px;
+  transform: translateY(-50%) translateX(-6px);
+}
+
 .fab-root.open .tool:hover .tool-label,
 .fab-root:hover .tool:hover .tool-label {
   opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.mustard-wrap.left .fab-root.open .tool:hover .tool-label,
+.mustard-wrap.left .fab-root:hover .tool:hover .tool-label {
   transform: translateY(-50%) translateX(0);
 }

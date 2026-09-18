@@ -13,6 +13,11 @@ export async function getCached(key: string): Promise<TranslateResult | undefine
   return store[key]
 }
 
+/** 清空缓存（词典安装/删除/启停后调用，避免命中旧结果） */
+export async function clearCached(): Promise<void> {
+  await idbSet(KEY, {})
+}
+
 export async function setCached(key: string, value: TranslateResult): Promise<void> {
   const store = (await idbGet<CacheStore>(KEY)) ?? {}
   store[key] = value

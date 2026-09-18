@@ -112,6 +112,19 @@ export const DEFAULT_TOOLS: ToolItem[] = [
  */
 export const DICTIONARIES: DictionaryItem[] = [
   {
+    id: 'ecdict-zh',
+    name: '英汉词典（现代英汉）',
+    langPair: '英 → 中',
+    license: '见来源说明',
+    size: '~2.8 MB（首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'open-ecdict',
+    url: 'https://cdn.jsdelivr.net/gh/mahavivo/open-ecdict@master/data/%E7%8E%B0%E4%BB%A3%E8%8B%B1%E6%B1%89%E8%AF%8D%E5%85%B8.txt',
+    attribution: 'open-ecdict（数据源自《现代英汉词典》，许可待确认，见 THIRD-PARTY.md）',
+    targetLang: 'zh-CN',
+  },
+  {
     id: 'ecdict',
     name: 'ECDICT 英汉（MIT）',
     langPair: '英 → 中',

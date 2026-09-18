@@ -114,8 +114,9 @@ function restorePage(): void {
 
 function toolStyle(index: number): Record<string, string | number> {
   const angle = (180 - index * STEP_DEG) * Math.PI / 180
+  const mirror = ball.value?.position === 'left' ? -1 : 1
   return {
-    '--x': `${Math.round(RADIUS * Math.cos(angle))}px`,
+    '--x': `${Math.round(RADIUS * Math.cos(angle)) * mirror}px`,
     '--y': `${-Math.round(RADIUS * Math.sin(angle))}px`,
     '--i': index,
   }

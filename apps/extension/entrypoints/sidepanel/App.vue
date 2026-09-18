@@ -7,6 +7,7 @@ import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from '../../lib/i18n'
+import { speak } from '../../lib/speech'
 import { useTheme } from '../../lib/useTheme'
 import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
@@ -79,6 +80,12 @@ const langOptions = LANGS.map(l => ({ label: l.short, value: l.code }))
 function setTarget(value?: string): void {
   if (value)
     void store.patch({ targetLang: value as Settings['targetLang'] })
+}
+
+function speakMessage(message: ChatMessage): void {
+  const src = store.settings?.sourceLang
+  const lang = src && src !== 'auto' ? src : 'en'
+  speak(message.card?.word ?? message.content, lang)
 }
 
 function openSettings(): void {
@@ -253,7 +260,16 @@ function stop(): void {
   }
 }
 
-function sendMessage(): void {
+function isSingleWord(text: string): boolean {
+  return /^\p{L}[\p{L}'-]*$/u.test(text.trim())
+}
+
+function formatDict(card: { word: string, phonetic?: string, partOfSpeech?: string, translation: string }): string {
+  const head = [card.word, card.phonetic, card.partOfSpeech].filter(Boolean).join('  ')
+  return `${head}\n${card.translation}`
+}
+
+async function sendMessage(): Promise<void> {
   const text = input.value.trim()
   if (streaming.value || (!text && !attachments.value.length))
     return
@@ -265,6 +281,31 @@ function sendMessage(): void {
   input.value = ''
   attachments.value = []
   autoGrow()
+
+  // 单词：先给本地/在线词典卡片（不走 AI），随后再流式 AI 翻译
+  if (isSingleWord(text)) {
+    try {
+      const dict = await send({
+        type: 'TRANSLATE_TEXT',
+        payload: { text, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'word', dictionaryOnly: true },
+      })
+      if (dict.card) {
+        messages.value.push({
+          id: uid('m-'),
+          role: 'assistant',
+          content: formatDict(dict.card),
+          card: { word: dict.card.word, phonetic: dict.card.phonetic, partOfSpeech: dict.card.partOfSpeech, translation: dict.card.translation, examples: dict.card.examples },
+          status: 'done',
+          createdAt: Date.now(),
+        })
+        scrollToBottom()
+      }
+    }
+    catch {
+      // 词典失败则直接进入 AI
+    }
+  }
+
   messages.value.push({ id: uid('m-'), role: 'assistant', content: '', status: 'streaming', createdAt: Date.now() })
 
   const assistant = messages.value[messages.value.length - 1]!
@@ -366,6 +407,14 @@ function sendMessage(): void {
                 {{ att.name }}
               </MChip>
             </div>
+            <button
+              v-if="(message.role === 'user' && message.content.trim()) || message.card"
+              class="bubble-speak"
+              :title="t('content.speak')"
+              @click="speakMessage(message)"
+            >
+              <MIcon name="speaker" :size="13" />
+            </button>
           </div>
         </div>
       </main>
@@ -486,6 +535,20 @@ function sendMessage(): void {
   animation: blink 1s steps(2, start) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
+.bubble-speak {
+  border: 0;
+  padding: 2px;
+  margin-left: 6px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--m-muted);
+  display: inline-flex;
+  vertical-align: middle;
+  cursor: pointer;
+  opacity: .75;
+}
+.msg.user .bubble-speak { color: var(--m-primary-ink); }
+.bubble-speak:hover { opacity: 1; }
 .msg-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .msg-thumb { max-width: 160px; max-height: 120px; border-radius: 8px; display: block; }
 .composer {

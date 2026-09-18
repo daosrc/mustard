@@ -61,7 +61,7 @@ export interface DictionaryItem {
   installed: boolean
   enabled: boolean
   /** 下载格式与地址（首次使用时下载） */
-  format?: 'ecdict-csv' | 'wordset-letters'
+  format?: 'ecdict-csv' | 'wordset-letters' | 'open-ecdict'
   url?: string
   /** 按字母懒加载（wordset） */
   perLetter?: boolean

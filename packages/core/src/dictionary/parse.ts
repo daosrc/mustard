@@ -65,6 +65,40 @@ export function parseEcdictCsv(text: string): LocalEntry[] {
   return out
 }
 
+/**
+ * open-ecdict 英汉文本：每行 `word ⇒ /phonetic/ 释义`（`⇒` 分隔）。
+ * 用于英译中离线词典。
+ */
+export function parseOpenEcdictTxt(text: string): LocalEntry[] {
+  const index = new Map<string, LocalEntry>()
+  for (const line of text.split(/\r?\n/)) {
+    const idx = line.indexOf('⇒')
+    if (idx < 0)
+      continue
+    const word = line.slice(0, idx).trim()
+    let rest = line.slice(idx + 1).trim()
+    if (!word || !rest)
+      continue
+    const phoneticMatch = rest.match(/^\/[^/]*\/\s*/)
+    const phonetic = phoneticMatch ? phoneticMatch[0].trim() : undefined
+    if (phoneticMatch)
+      rest = rest.slice(phoneticMatch[0].length)
+
+    const key = word.toLowerCase()
+    const existing = index.get(key)
+    if (existing) {
+      // 同词多行（不同词性/释义）合并
+      existing.translation = `${existing.translation}\n${rest}`
+      if (!existing.phonetic && phonetic)
+        existing.phonetic = phonetic
+    }
+    else {
+      index.set(key, { word, phonetic, translation: rest })
+    }
+  }
+  return [...index.values()]
+}
+
 interface WordsetMeaning {
   def?: string
   example?: string

@@ -5,7 +5,7 @@ export type Message
   = | { type: 'PING' }
     | { type: 'GET_SETTINGS' }
     | { type: 'UPDATE_SETTINGS', payload: Partial<Settings> }
-    | { type: 'TRANSLATE_TEXT', payload: { text: string, sourceLang: SourceLang, targetLang: LangCode, mode: TranslateMode } }
+    | { type: 'TRANSLATE_TEXT', payload: { text: string, sourceLang: SourceLang, targetLang: LangCode, mode: TranslateMode, preferAi?: boolean, dictionaryOnly?: boolean } }
     | { type: 'CHAT', payload: { messages: ChatMessage[], providerId: string, model: string, attachments?: Attachment[] } }
     | { type: 'TRANSLATE_IMAGE', payload: { dataUrl: string, targetLang: LangCode } }
     | { type: 'LOOKUP_WORD', payload: { word: string, sourceLang: SourceLang, targetLang: LangCode } }

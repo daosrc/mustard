@@ -8,7 +8,7 @@ import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
 import { dictStatus, getInstalledIds, installDict, lookupLocal, removeDict } from '../lib/dictionaryStore'
 import { deleteSession, getSessions, saveSession } from '../lib/sessionStore'
-import { getCached, setCached } from '../lib/translationCache'
+import { clearCached, getCached, setCached } from '../lib/translationCache'
 import { addVocab, getVocab, importVocab, removeVocabById, updateVocab } from '../lib/vocabStore'
 
 function resolveAi(settings: Settings): AiTarget | undefined {
@@ -120,7 +120,12 @@ export default defineBackground({
         case 'GET_SETTINGS':
           return getSettings()
         case 'UPDATE_SETTINGS':
-          return updateSettings(message.payload)
+          return (async () => {
+            // 词典配置变化时清空翻译缓存
+            if (message.payload.dictionaries)
+              void clearCached()
+            return updateSettings(message.payload)
+          })()
         case 'OPEN_SIDEBAR': {
           const view = message.payload?.view
           // 必须**先**调用 sidePanel.open（保留用户手势上下文），再写 pendingView；
@@ -131,10 +136,10 @@ export default defineBackground({
           return opened.then(() => ({ ok: true }))
         }
         case 'TRANSLATE_TEXT': {
-          const { text, sourceLang, targetLang, mode } = message.payload
+          const { text, sourceLang, targetLang, mode, preferAi, dictionaryOnly } = message.payload
           return (async () => {
             const settings = await getSettings()
-            const key = cacheKey(mode, text, sourceLang, targetLang)
+            const key = cacheKey(mode, text, sourceLang, targetLang, preferAi ? 'ai' : dictionaryOnly ? 'dict' : 'auto')
             const cached = await getCached(key)
             if (cached)
               return cached
@@ -142,13 +147,22 @@ export default defineBackground({
             let result
             if (mode === 'word') {
               const aiList = resolveAiList(settings)
-              result = await translateWord(text, sourceLang, targetLang, {
-                online: settings.onlineDictionaryFallback,
-                ai: aiList[0],
-                aiFallbacks: aiList.slice(1),
-                local: await localLookupFn(targetLang),
-                localFallback: await localFallbackFn(),
-              })
+              // preferAi：跳过本地词典，直接 AI（用于词典命中后 3s 追加 AI 翻译）
+              result = await translateWord(text, sourceLang, targetLang, preferAi
+                ? { online: false, ai: aiList[0], aiFallbacks: aiList.slice(1) }
+                : dictionaryOnly
+                  ? {
+                      online: settings.onlineDictionaryFallback,
+                      local: await localLookupFn(targetLang),
+                      localFallback: await localFallbackFn(),
+                    }
+                  : {
+                      online: settings.onlineDictionaryFallback,
+                      ai: aiList[0],
+                      aiFallbacks: aiList.slice(1),
+                      local: await localLookupFn(targetLang),
+                      localFallback: await localFallbackFn(),
+                    })
               void syncDictSettings()
               if (result.card && settings.vocab.autoAdd) {
                 await addVocab(cardToEntry({
@@ -231,6 +245,7 @@ export default defineBackground({
             try {
               await installDict(message.payload.id)
               await syncDictSettings()
+              void clearCached()
               return { id: message.payload.id, ok: true }
             }
             catch (error) {
@@ -243,6 +258,7 @@ export default defineBackground({
             const settings = await getSettings()
             if (settings.dictionaries[message.payload.id])
               await updateSettings({ dictionaries: { ...settings.dictionaries, [message.payload.id]: { installed: false, enabled: false } } })
+            void clearCached()
             return { id: message.payload.id }
           })()
         case 'GET_SESSIONS':

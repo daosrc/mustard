@@ -114,3 +114,15 @@
 - 原因：① `pageTranslator` 未去重、`total` 跨 MutationObserver 累加、未纳入 `div` 叶子块；② 译文节点样式写在 `content.css`（Shadow DOM 专用），页面上不生效；③ 对话未加系统提示，模型自由发挥。
 - 解决：① `WeakSet` + 即时 `MARK` 去重、`total` 改为唯一计数、纳入 `div` 叶子块、跳过已翻译节点；② 由 content script 向页面 `head` 注入 `.mustard-translation` 样式（带明显左边框/底色）；③ 新增 `CHAT_SYSTEM_PROMPT`（限定翻译/语言助手、简洁、不透露模型/供应商/实现），对话与流式均前置；翻译 prompt 强调「只输出译文，不要多余内容」。
 - 备注：另为句子/网页翻译与 CHAT 增加**同提供商多模型回退**，缓解免费模型偶发 429 导致整段漏译。**当前 OpenRouter 免费模型集体 429**（共享池限流），页面 AI 验证需重试或为账号充值/换付费模型。
+
+### 2026-09-18 · 词典安装/删除/启停后仍命中旧翻译缓存
+- 现象：新增英汉词典并安装成功后，查 `will` 仍返回旧的英英结果（`local:wordset`）。
+- 原因：持久翻译缓存（IndexedDB）key 未随词典配置变化，旧结果（`dictionaryOnly` 路径）被直接命中，绕过了新词典。
+- 解决：词典**安装/删除**及 `UPDATE_SETTINGS.dictionaries` 变化时调用 `clearCached()` 清空缓存。
+- 备注：凡是影响翻译来源/结果的配置变更，都应清理翻译缓存。
+
+### 2026-09-18 · 默认英汉词典数据源与许可
+- 现象：默认离线词典为英英（Wordset），英译中需 AI，用户要求内置英译中。
+- 调研：ECDICT 完整 `ecdict.csv`（MIT）约 66 MB，jsDelivr 拒绝 >20MB；`raw.githubusercontent.com` 在本环境不可达。`mahavivo/open-ecdict` 的 `现代英汉词典.txt`（2.8 MB，jsDelivr 可达，38257 行，含常见词，格式 `word ⇒ /音标/ 词性 释义`）可作为默认英汉源。
+- 解决：新增 `ecdict-zh` 词典包（format `open-ecdict`，解析并合并同词多行），置于词典列表首位、默认启用，优先英译中；AI 未命中时回退到它。
+- 备注：**该数据源自《现代英汉词典》，许可未明确**（见 THIRD-PARTY.md）；对外正式分发前应核实许可或替换为 MIT 的 ECDICT 全量数据（自建 CDN/Release 资产）。

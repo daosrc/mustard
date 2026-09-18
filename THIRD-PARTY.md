@@ -9,6 +9,7 @@
 | [CC-CEDICT](https://cc-cedict.org/) | 中 → 英 | CC BY-SA 4.0 | 需署名 + 相同方式共享 |
 | [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) | 日 → 英 | EDRDG / CC BY-SA 4.0 | 需署名 + 相同方式共享 |
 | [FreeDict](https://freedict.org/) | 多语种双语 | GPL / 部分 CC | 注意与分发许可兼容 |
+| [open-ecdict](https://github.com/mahavivo/open-ecdict)（《现代英汉词典》） | 英 → 中（**默认离线**） | 待确认 | 数据源自《现代英汉词典》，许可未明确；对外分发前请自行核实或替换为 MIT 的 ECDICT 全量数据 |
 | Free Dictionary API / Wiktionary | 在线兜底（免 Key） | CC BY-SA / GFDL | 仅本地词典未命中时联网查询 |
 
 ## 署名要求

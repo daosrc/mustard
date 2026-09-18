@@ -2,7 +2,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import MIcon from './MIcon.vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   title?: string
   width?: string
   closeOnOverlay?: boolean
@@ -43,11 +43,51 @@ function unlockBackgroundScroll(): void {
   }
 }
 
+/** contained 时把遮罩固定到定位祖先的视口区域（避免随内容滚动跑出可视区） */
+function positionContainedOverlay(): void {
+  const el = overlayEl.value
+  if (!el || !props.contained)
+    return
+  let anc: HTMLElement | null = el.parentElement
+  while (anc && getComputedStyle(anc).position === 'static')
+    anc = anc.parentElement
+  if (!anc)
+    return
+  const r = anc.getBoundingClientRect()
+  el.style.position = 'fixed'
+  el.style.top = `${r.top}px`
+  el.style.left = `${r.left}px`
+  el.style.width = `${r.width}px`
+  el.style.height = `${r.height}px`
+}
+
+function resetOverlayPosition(): void {
+  const el = overlayEl.value
+  if (!el)
+    return
+  el.style.position = ''
+  el.style.top = ''
+  el.style.left = ''
+  el.style.width = ''
+  el.style.height = ''
+}
+
+function onViewportChange(): void {
+  if (open.value)
+    positionContainedOverlay()
+}
+
 watch(open, (isOpen) => {
-  if (isOpen)
-    void nextTick(lockBackgroundScroll)
-  else
+  if (isOpen) {
+    void nextTick(() => {
+      lockBackgroundScroll()
+      positionContainedOverlay()
+    })
+  }
+  else {
     unlockBackgroundScroll()
+    resetOverlayPosition()
+  }
 })
 
 function close() {
@@ -59,15 +99,23 @@ function onKey(event: KeyboardEvent) {
     close()
 }
 
-onMounted(() => document.addEventListener('keydown', onKey))
+onMounted(() => {
+  document.addEventListener('keydown', onKey)
+  window.addEventListener('resize', onViewportChange)
+})
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKey)
+  window.removeEventListener('resize', onViewportChange)
   unlockBackgroundScroll()
 })
 </script>
 
 <template>
-  <Transition name="m-dialog" @after-enter="lockBackgroundScroll" @after-leave="unlockBackgroundScroll">
+  <Transition
+    name="m-dialog"
+    @after-enter="lockBackgroundScroll(); positionContainedOverlay()"
+    @after-leave="unlockBackgroundScroll(); resetOverlayPosition()"
+  >
     <div v-if="open" ref="overlayEl" class="overlay" :class="{ 'is-contained': contained }" @click.self="closeOnOverlay && close()">
       <div class="panel" role="dialog" aria-modal="true" :style="{ width }">
         <header class="head">
