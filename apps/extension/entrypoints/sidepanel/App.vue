@@ -67,6 +67,8 @@ onMounted(async () => {
   }
 })
 
+/** 过滤掉「已完成但内容为空」的助手消息，避免空白气泡 */
+const visibleMessages = computed(() => messages.value.filter(m => m.role !== 'assistant' || m.status !== 'done' || !!m.content.trim()))
 const modelOptions = computed(() => (store.settings?.providers ?? []).flatMap(p => p.models.map(m => ({
   label: `${p.name} · ${m.name}`,
   value: `${p.id}::${m.name}`,
@@ -241,6 +243,14 @@ function onEnter(event: KeyboardEvent): void {
 function stop(): void {
   handle?.abort()
   streaming.value = false
+  // 收尾：中止时若还没有内容则移除该条，避免留下空白气泡
+  const last = messages.value[messages.value.length - 1]
+  if (last && last.role === 'assistant' && last.status === 'streaming') {
+    if (!last.content.trim())
+      messages.value.pop()
+    else
+      last.status = 'done'
+  }
 }
 
 function sendMessage(): void {
@@ -273,9 +283,15 @@ function sendMessage(): void {
         scrollToBottom()
       },
       onDone: (content) => {
-        if (content)
-          assistant.content = content
-        assistant.status = 'done'
+        const finalText = (content || assistant.content).trim()
+        if (finalText) {
+          assistant.content = finalText
+          assistant.status = 'done'
+        }
+        else {
+          assistant.status = 'error'
+          assistant.content = t('chat.emptyReply')
+        }
         streaming.value = false
         handle = null
         void persist()
@@ -328,10 +344,10 @@ function sendMessage(): void {
 
     <template v-else>
       <main ref="bodyEl" class="panel-body">
-        <div v-for="message in messages" :key="message.id" class="msg" :class="message.role">
+        <div v-for="message in visibleMessages" :key="message.id" class="msg" :class="message.role">
           <img v-if="message.role === 'assistant'" class="avatar" :src="BALL_ICON" alt="">
           <div class="bubble" :class="{ error: message.status === 'error' }">
-            <template v-if="message.status === 'streaming' && !message.content">
+            <template v-if="message.status === 'streaming' && !message.content.trim()">
               <span class="typing">{{ t('chat.thinking') }}</span>
             </template>
             <template v-else>
