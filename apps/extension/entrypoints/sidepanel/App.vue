@@ -312,10 +312,15 @@ function sendMessage(): void {
 <template>
   <div class="panel">
     <header class="panel-head">
-      <button v-if="view !== 'chat'" class="icon-btn" :title="t('nav.back')" @click="view = 'chat'">
-        <MIcon name="chevron-left" :size="16" />
-      </button>
-      <span v-if="view !== 'chat'" class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : t('nav.settings') }}</span>
+      <template v-if="view === 'chat'">
+        <img class="mark" :src="BALL_ICON" alt="Mustard">
+      </template>
+      <template v-else>
+        <button class="icon-btn" :title="t('nav.back')" @click="view = 'chat'">
+          <MIcon name="chevron-left" :size="16" />
+        </button>
+        <span class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : t('nav.settings') }}</span>
+      </template>
       <span class="spacer" />
       <template v-if="view === 'chat'">
         <button class="icon-btn" :title="t('nav.newChat')" @click="newChat">
@@ -426,8 +431,15 @@ function sendMessage(): void {
   gap: 8px;
   padding: 10px 12px;
   background: var(--m-surface);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--m-line) 85%, transparent);
   z-index: 1;
+}
+[data-theme='light'] .panel-head {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--m-primary) 24%, var(--m-paper)) 0%,
+    color-mix(in srgb, var(--m-primary) 24%, var(--m-paper)) 55%,
+    var(--m-paper) 100%
+  );
 }
 .mark { width: 24px; height: 24px; border-radius: 7px; }
 .name { font-weight: 650; font-size: 13.5px; }
@@ -446,6 +458,8 @@ function sendMessage(): void {
 .icon-btn.disabled { opacity: .4; cursor: not-allowed; }
 .panel-body { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
 .settings-body { position: relative; }
+/* 弹窗打开时锁定正文滚动，只允许弹窗内部滚动 */
+.settings-body:has(.overlay) { overflow: hidden; }
 .msg { display: flex; align-items: flex-start; gap: 8px; }
 .msg.user { justify-content: flex-end; }
 .avatar { width: 22px; height: 22px; border-radius: 6px; flex: none; margin-top: 2px; }
@@ -477,8 +491,15 @@ function sendMessage(): void {
 .composer {
   padding: 8px;
   background: var(--m-surface);
-  box-shadow: 0 -1px 0 color-mix(in srgb, var(--m-line) 85%, transparent);
   z-index: 1;
+}
+[data-theme='light'] .composer {
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--m-primary) 24%, var(--m-paper)) 0%,
+    color-mix(in srgb, var(--m-primary) 24%, var(--m-paper)) 55%,
+    var(--m-paper) 100%
+  );
 }
 .input-box { border: 1px solid var(--m-line); border-radius: 12px; padding: 8px 8px 6px; background: var(--m-surface); }
 .input-box textarea {

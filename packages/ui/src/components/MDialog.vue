@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import MIcon from './MIcon.vue'
 
 withDefaults(defineProps<{
@@ -15,6 +15,40 @@ withDefaults(defineProps<{
 })
 
 const open = defineModel<boolean>({ default: false })
+const overlayEl = ref<HTMLElement>()
+let scrollLockEl: HTMLElement | null = null
+
+/** 打开时锁定底层滚动（最近的滚动容器；否则 body），只允许弹窗内部滚动 */
+function lockBackgroundScroll(): void {
+  let el = overlayEl.value?.parentElement ?? null
+  while (el && el !== document.body) {
+    const overflowY = getComputedStyle(el).overflowY
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      scrollLockEl = el
+      el.style.overflowY = 'hidden'
+      return
+    }
+    el = el.parentElement
+  }
+  scrollLockEl = document.body
+  document.body.style.overflow = 'hidden'
+}
+
+function unlockBackgroundScroll(): void {
+  if (scrollLockEl) {
+    scrollLockEl.style.overflowY = ''
+    if (scrollLockEl === document.body)
+      document.body.style.overflow = ''
+    scrollLockEl = null
+  }
+}
+
+watch(open, (isOpen) => {
+  if (isOpen)
+    void nextTick(lockBackgroundScroll)
+  else
+    unlockBackgroundScroll()
+})
 
 function close() {
   open.value = false
@@ -26,12 +60,15 @@ function onKey(event: KeyboardEvent) {
 }
 
 onMounted(() => document.addEventListener('keydown', onKey))
-onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKey)
+  unlockBackgroundScroll()
+})
 </script>
 
 <template>
-  <Transition name="m-dialog">
-    <div v-if="open" class="overlay" :class="{ 'is-contained': contained }" @click.self="closeOnOverlay && close()">
+  <Transition name="m-dialog" @after-enter="lockBackgroundScroll" @after-leave="unlockBackgroundScroll">
+    <div v-if="open" ref="overlayEl" class="overlay" :class="{ 'is-contained': contained }" @click.self="closeOnOverlay && close()">
       <div class="panel" role="dialog" aria-modal="true" :style="{ width }">
         <header class="head">
           <span class="title"><slot name="title">{{ title }}</slot></span>
@@ -55,6 +92,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   position: fixed;
   inset: 0;
 }
+.overlay.is-contained .panel { max-height: calc(100% - 32px); }
 .overlay.is-contained {
   position: absolute;
   z-index: 1000;
