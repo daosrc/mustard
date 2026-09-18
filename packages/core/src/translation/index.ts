@@ -113,12 +113,13 @@ export async function translateWord(
   return result
 }
 
-/** 句子/段落：直接走 AI（词典无法胜任） */
+/** 句子/段落：直接走 AI（词典无法胜任）；主模型失败时依次回退其他模型 */
 export async function translateSentence(
   text: string,
   sourceLang: SourceLang,
   targetLang: LangCode,
   ai?: AiTarget,
+  aiFallbacks?: AiTarget[],
 ): Promise<TranslateResult> {
   const value = text.trim()
   if (!value)
@@ -128,17 +129,25 @@ export async function translateSentence(
   const cached = cache.get(key)
   if (cached)
     return cached
-  if (!ai)
-    return { text: '' }
 
-  const content = await chatOnce(ai.provider, ai.model, [
-    message('system', `你是翻译引擎。请把用户文本翻译为 ${targetLang}，只输出译文，不要解释。`),
-    message('user', value),
-  ])
-  const result: TranslateResult = { text: content.trim() }
-  if (result.text)
-    cache.set(key, result)
-  return result
+  const targets = [ai, ...(aiFallbacks ?? [])].filter((t): t is AiTarget => !!t)
+  for (const target of targets) {
+    try {
+      const content = await chatOnce(target.provider, target.model, [
+        message('system', `你是翻译引擎。请把用户文本翻译为 ${targetLang}，只输出译文，不要解释，不要输出任何多余内容。`),
+        message('user', value),
+      ])
+      const result: TranslateResult = { text: content.trim() }
+      if (result.text) {
+        cache.set(key, result)
+        return result
+      }
+    }
+    catch {
+      // 该模型失败（429/网络）→ 尝试下一个
+    }
+  }
+  return { text: '' }
 }
 
 /** 纯词典查询（LOOKUP_WORD） */

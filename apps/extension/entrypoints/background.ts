@@ -134,7 +134,6 @@ export default defineBackground({
           const { text, sourceLang, targetLang, mode } = message.payload
           return (async () => {
             const settings = await getSettings()
-            const ai = resolveAi(settings)
             const key = cacheKey(mode, text, sourceLang, targetLang)
             const cached = await getCached(key)
             if (cached)
@@ -165,7 +164,8 @@ export default defineBackground({
               }
             }
             else {
-              result = await translateSentence(text, sourceLang, targetLang, ai)
+              const aiList = resolveAiList(settings)
+              result = await translateSentence(text, sourceLang, targetLang, aiList[0], aiList.slice(1))
             }
             if (result.text)
               await setCached(key, result)
@@ -262,7 +262,17 @@ export default defineBackground({
             const modelDef = provider?.models.find(m => m.name === model)
             if (!provider || !modelDef)
               throw new Error('MODEL_NOT_FOUND')
-            return { content: await chatOnce(provider, modelDef, withSystemPrompt(messages)) }
+            const list = resolveAiList(settings)
+            let lastError: unknown
+            for (const target of (list.length ? list : [{ provider, model: modelDef }])) {
+              try {
+                return { content: await chatOnce(target.provider, target.model, withSystemPrompt(messages)) }
+              }
+              catch (error) {
+                lastError = error
+              }
+            }
+            throw lastError ?? new Error('CHAT_FAILED')
           })()
         }
         default:
