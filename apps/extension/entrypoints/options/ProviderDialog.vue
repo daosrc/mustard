@@ -14,9 +14,20 @@ const { t } = useI18n()
 const draft = reactive<Provider>({ id: '', name: '', baseUrl: '', apiKey: '', models: [], builtin: false })
 const testing = ref(false)
 
+function fillFromProvider(provider: Provider | null): void {
+  if (!provider)
+    return
+  Object.assign(draft, JSON.parse(JSON.stringify(provider)) as Provider)
+}
+
+// 随 provider 变化即时填充（避免打开时拿到旧值/空表单）
+watch(() => props.provider, (provider) => {
+  if (provider)
+    fillFromProvider(provider)
+}, { immediate: true })
 watch(open, (isOpen) => {
-  if (isOpen && props.provider)
-    Object.assign(draft, structuredClone(props.provider))
+  if (isOpen)
+    fillFromProvider(props.provider)
 })
 
 function addModel(): void {
@@ -39,7 +50,7 @@ function save(): void {
   const models = draft.models
     .filter(m => m.name.trim())
     .map(m => ({ ...m, id: m.name.trim(), name: m.name.trim() }))
-  emit('save', { ...structuredClone(draft), models })
+  emit('save', { ...JSON.parse(JSON.stringify(draft)) as Provider, models })
   open.value = false
 }
 
@@ -55,7 +66,7 @@ async function test(): Promise<void> {
   }
   testing.value = true
   try {
-    await testConnection({ ...structuredClone(draft), models: draft.models }, model)
+    await testConnection({ ...JSON.parse(JSON.stringify(draft)) as Provider, models: draft.models }, model)
     success(t('options.connected'))
   }
   catch (err) {
@@ -68,7 +79,7 @@ async function test(): Promise<void> {
 </script>
 
 <template>
-  <MDialog v-model="open" :title="provider?.builtin ? t('options.providerEditBuiltin') : t('options.providerEdit')" width="520px">
+  <MDialog v-model="open" :title="t('options.providerEdit')" width="520px">
     <div class="form">
       <MField :label="t('options.providerName')">
         <input v-model="draft.name" class="m-input" placeholder="OpenCode Zen">

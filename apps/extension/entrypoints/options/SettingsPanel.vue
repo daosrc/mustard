@@ -260,9 +260,6 @@ async function removeDictPack(id: string): Promise<void> {
         <div class="p-top">
           <span class="dot" :class="{ on: !!provider.apiKey }" />
           <span class="p-name">{{ provider.name }}</span>
-          <MChip v-if="provider.builtin" variant="primary">
-            {{ t('options.builtin') }}
-          </MChip>
           <span class="conn">{{ provider.apiKey ? t('options.connected') : t('options.keyUnset') }}</span>
           <button class="icon-btn ml-auto" :title="t('options.edit')" @click="openEdit(provider)">
             <MIcon name="chevron-right" :size="15" />
@@ -538,7 +535,7 @@ async function removeDictPack(id: string): Promise<void> {
       </p>
     </MDialog>
 
-    <ProviderDialog v-model="dialogOpen" :provider="editing" @save="onSaveProvider" />
+    <ProviderDialog :key="editing?.id ?? 'none'" v-model="dialogOpen" :provider="editing" @save="onSaveProvider" />
   </div>
 </template>
 
