@@ -53,6 +53,26 @@ export const OPENROUTER_PRESET: Provider = {
 }
 
 /**
+ * Agnes AI（OpenAI 兼容）。
+ * baseUrl：`https://apihub.agnes-ai.com/v1`；模型 `agnes-2.5-flash`（支持图像 URL 输入）。
+ * 用户需在设置页填入自己的 API Key。
+ */
+export const AGNES_PRESET: Provider = {
+  id: 'agnes',
+  name: 'Agnes AI',
+  baseUrl: 'https://apihub.agnes-ai.com/v1',
+  apiKey: '',
+  builtin: true,
+  models: [
+    {
+      id: 'agnes:agnes-2.5-flash',
+      name: 'agnes-2.5-flash',
+      inputs: { text: true, image: true, file: false },
+    },
+  ],
+}
+
+/**
  * 备用内置提供商：OpenCode Zen（OpenAI 兼容）。
  * baseUrl：`https://opencode.ai/zen/v1`；模型 ID 为 `GET /models` 的真实返回值。
  * 付费模型需在 OpenCode 工作区绑定付款方式；免费额度仅限其官方客户端。
@@ -123,7 +143,7 @@ export const DICTIONARIES: DictionaryItem[] = [
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
-  providers: [OPENROUTER_PRESET],
+  providers: [OPENROUTER_PRESET, AGNES_PRESET],
   activeProviderId: OPENROUTER_PRESET.id,
   activeModel: OPENROUTER_PRESET.models[0]!.name, // 默认 glm-5.2:free（文本输入输出）
   sourceLang: 'auto',
