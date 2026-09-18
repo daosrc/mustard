@@ -111,6 +111,18 @@ export function buildChatBody(model: ModelDef, messages: ChatMessage[], stream =
   }
 }
 
+async function providerHttpError(res: Response): Promise<ProviderError> {
+  let detail = ''
+  try {
+    detail = (await res.text()).replace(/\s+/g, ' ').trim().slice(0, 300)
+  }
+  catch {
+    detail = ''
+  }
+  const message = detail ? `HTTP ${res.status}: ${detail}` : `HTTP ${res.status}`
+  return new ProviderError(`PROVIDER_ERROR_${res.status}`, message)
+}
+
 /**
  * 调用 OpenAI 兼容接口（流式）。返回异步迭代器。
  * 未配置 apiKey 时抛出可识别的错误，供 UI 引导用户去设置页。
@@ -135,7 +147,7 @@ export async function* chatStream(
   })
 
   if (!res.ok || !res.body)
-    throw new ProviderError(`PROVIDER_ERROR_${res.status}`, `请求失败（HTTP ${res.status}）`)
+    throw await providerHttpError(res)
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -177,7 +189,7 @@ export async function chatOnce(
   })
 
   if (!res.ok)
-    throw new ProviderError(`PROVIDER_ERROR_${res.status}`, `请求失败（HTTP ${res.status}）`)
+    throw await providerHttpError(res)
 
   const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
   return json?.choices?.[0]?.message?.content ?? ''

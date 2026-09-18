@@ -17,6 +17,7 @@ const query = ref('')
 const filter = ref<string>('all')
 const fileEl = ref<HTMLInputElement>()
 const quizOpen = ref(false)
+const expanded = ref<string | null>(null)
 const pendingCount = computed(() => entries.value.filter(e => e.streak < MASTERED_STREAK).length)
 const PAGE_SIZE = 50
 
@@ -50,6 +51,10 @@ watch([query, filter, entries], () => {
 
 function loadMore(): void {
   visibleCount.value += PAGE_SIZE
+}
+
+function toggleDef(id: string): void {
+  expanded.value = expanded.value === id ? null : id
 }
 
 const stats = computed(() => {
@@ -137,7 +142,12 @@ async function onImportFile(event: Event): Promise<void> {
               <MIcon name="speaker" :size="14" />
             </button>
           </div>
-          <div class="v-def" :title="entry.translation">
+          <div
+            class="v-def"
+            :class="{ expanded: expanded === entry.id }"
+            :title="expanded === entry.id ? undefined : entry.translation"
+            @click="toggleDef(entry.id)"
+          >
             <span v-if="entry.phonetic" class="v-phonetic">{{ entry.phonetic }}</span>
             <span v-if="entry.partOfSpeech" class="v-pos">{{ entry.partOfSpeech }}</span>
             {{ entry.translation }}
@@ -197,6 +207,13 @@ async function onImportFile(event: Event): Promise<void> {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  cursor: pointer;
+}
+.v-def.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  cursor: text;
 }
 .v-phonetic { color: var(--m-faint); margin-right: 4px; }
 .v-pos { color: var(--m-primary); font-style: italic; margin-right: 4px; }

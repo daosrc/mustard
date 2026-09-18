@@ -83,9 +83,14 @@ function setTarget(value?: string): void {
 }
 
 function speakMessage(message: ChatMessage): void {
-  const src = store.settings?.sourceLang
-  const lang = src && src !== 'auto' ? src : 'en'
-  speak(message.card?.word ?? message.content, lang)
+  const settings = store.settings
+  const src = settings?.sourceLang
+  const srcLang = src && src !== 'auto' ? src : 'en'
+  if (message.card?.word)
+    return speak(message.card.word, srcLang)
+  if (message.role === 'assistant')
+    return speak(message.content, settings?.targetLang ?? 'zh-CN')
+  speak(message.content, srcLang)
 }
 
 function openSettings(): void {
@@ -408,7 +413,7 @@ async function sendMessage(): Promise<void> {
               </MChip>
             </div>
             <button
-              v-if="(message.role === 'user' && message.content.trim()) || message.card"
+              v-if="message.status === 'done' && (message.card || message.content.trim())"
               class="bubble-speak"
               :title="t('content.speak')"
               @click="speakMessage(message)"

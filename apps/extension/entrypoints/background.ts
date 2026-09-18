@@ -343,7 +343,9 @@ export default defineBackground({
             port.postMessage({ type: 'CHAT_DONE', content })
           }
           catch (error) {
-            port.postMessage({ type: 'CHAT_ERROR', code: errorCode(error), message: errorCode(error) })
+            const code = errorCode(error)
+            const message = error instanceof Error && error.message ? error.message : code
+            port.postMessage({ type: 'CHAT_ERROR', code, message })
           }
         })()
       })

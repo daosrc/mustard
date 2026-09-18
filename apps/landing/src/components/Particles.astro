@@ -1,0 +1,189 @@
+---
+/**
+ * 粒子背景（参考 vue-bits Particles 的视觉：缓慢漂浮的光点 + 鼠标视差）。
+ * 纯 Canvas 2D 实现，无额外依赖；颜色从主题 CSS 变量读取，随明暗主题变化。
+ */
+interface Props {
+  quantity?: number
+  staticity?: number
+  ease?: number
+  size?: number
+  alphaParticles?: boolean
+  moveOnHover?: boolean
+  class?: string
+}
+
+const {
+  quantity = 220,
+  staticity = 55,
+  ease = 55,
+  size = 1.2,
+  alphaParticles = true,
+  moveOnHover = true,
+  class: className = '',
+} = Astro.props
+---
+
+<canvas
+  class:list={['particles', className]}
+  data-quantity={quantity}
+  data-staticity={staticity}
+  data-ease={ease}
+  data-size={size}
+  data-alpha={alphaParticles ? '1' : '0'}
+  data-hover={moveOnHover ? '1' : '0'}
+  aria-hidden="true"
+></canvas>
+
+<style>
+  .particles {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+</style>
+
+<script>
+  interface Particle {
+    x: number
+    y: number
+    tx: number
+    ty: number
+    vx: number
+    vy: number
+    r: number
+    alpha: number
+    color: string
+  }
+
+  const canvases = document.querySelectorAll<HTMLCanvasElement>('canvas.particles')
+
+  for (const canvas of canvases) {
+    const ctx = canvas.getContext('2d')
+    if (!ctx)
+      continue
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const quantity = Number(canvas.dataset.quantity) || 200
+    const staticity = (Number(canvas.dataset.staticity) || 50) / 100
+    const ease = (Number(canvas.dataset.ease) || 50) / 100
+    const baseSize = Number(canvas.dataset.size) || 1.2
+    const alphaParticles = canvas.dataset.alpha === '1'
+    const moveOnHover = canvas.dataset.hover === '1'
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    let width = 0
+    let height = 0
+    let particles: Particle[] = []
+    let mouse = { x: -9999, y: -9999 }
+    let raf = 0
+
+    function themeColors(): string[] {
+      const cs = getComputedStyle(document.documentElement)
+      const primary = cs.getPropertyValue('--m-primary').trim() || '#8FCF4A'
+      const accent = cs.getPropertyValue('--m-accent').trim() || '#7BC043'
+      const ink = cs.getPropertyValue('--m-faint').trim() || '#6E8060'
+      return [primary, accent, primary, ink]
+    }
+
+    function makeParticle(colors: string[]): Particle {
+      const x = Math.random() * width
+      const y = Math.random() * height
+      return {
+        x,
+        y,
+        tx: x,
+        ty: y,
+        vx: 0,
+        vy: 0,
+        r: baseSize * (0.5 + Math.random()),
+        alpha: alphaParticles ? 0.15 + Math.random() * 0.55 : 0.6,
+        color: colors[Math.floor(Math.random() * colors.length)]!,
+      }
+    }
+
+    function seed(): void {
+      const colors = themeColors()
+      particles = Array.from({ length: quantity }, () => makeParticle(colors))
+    }
+
+    function resize(): void {
+      const rect = canvas.getBoundingClientRect()
+      width = rect.width
+      height = rect.height
+      canvas.width = Math.round(width * dpr)
+      canvas.height = Math.round(height * dpr)
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
+      seed()
+    }
+
+    function onMove(event: MouseEvent): void {
+      const rect = canvas.getBoundingClientRect()
+      mouse = { x: event.clientX - rect.left, y: event.clientY - rect.top }
+    }
+    function onLeave(): void {
+      mouse = { x: -9999, y: -9999 }
+    }
+
+    function frame(): void {
+      ctx!.clearRect(0, 0, width, height)
+      const drift = (1 - staticity) * 0.12
+      const hoverRadius = 130
+
+      for (const p of particles) {
+        if (!reduced) {
+          p.tx += (Math.random() - 0.5) * drift
+          p.ty += (Math.random() - 0.5) * drift
+          if (moveOnHover && mouse.x > -9000) {
+            const dx = p.x - mouse.x
+            const dy = p.y - mouse.y
+            const dist = Math.hypot(dx, dy)
+            if (dist < hoverRadius && dist > 0.01) {
+              const force = (1 - dist / hoverRadius) * 28 * ease
+              p.tx += (dx / dist) * force
+              p.ty += (dy / dist) * force
+            }
+          }
+        }
+        p.tx = Math.max(0, Math.min(width, p.tx))
+        p.ty = Math.max(0, Math.min(height, p.ty))
+
+        p.vx += (p.tx - p.x) * 0.02 * (0.4 + ease)
+        p.vy += (p.ty - p.y) * 0.02 * (0.4 + ease)
+        p.vx *= 0.92
+        p.vy *= 0.92
+        p.x += p.vx
+        p.y += p.vy
+
+        ctx!.globalAlpha = p.alpha
+        ctx!.fillStyle = p.color
+        ctx!.beginPath()
+        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx!.fill()
+      }
+      ctx!.globalAlpha = 1
+      raf = requestAnimationFrame(frame)
+    }
+
+    resize()
+    window.addEventListener('resize', resize)
+    if (moveOnHover) {
+      canvas.parentElement?.addEventListener('mousemove', onMove)
+      canvas.parentElement?.addEventListener('mouseleave', onLeave)
+    }
+    frame()
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf)
+      }
+      else {
+        cancelAnimationFrame(raf)
+        frame()
+      }
+    })
+  }
+</script>
