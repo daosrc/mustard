@@ -1,6 +1,6 @@
 import type { AiTarget } from '@mustard/core'
 import type { ChatPortClientMessage, DictResult, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
-import { cardToEntry, chatOnce, chatStream, errorCode, lookupWord, translateImage, translateSentence, translateWord, withSystemPrompt } from '@mustard/core'
+import { IDENTITY_REPLY, cardToEntry, chatOnce, chatStream, errorCode, isIdentityQuery, lookupWord, translateImage, translateSentence, translateWord, withSystemPrompt } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
 import { CHAT_PORT_NAME, DICTIONARIES, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
 import { cacheKey, parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
@@ -262,6 +262,10 @@ export default defineBackground({
             const modelDef = provider?.models.find(m => m.name === model)
             if (!provider || !modelDef)
               throw new Error('MODEL_NOT_FOUND')
+            const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content ?? ''
+            if (isIdentityQuery(lastUser))
+              return { content: IDENTITY_REPLY }
+
             const list = resolveAiList(settings)
             let lastError: unknown
             for (const target of (list.length ? list : [{ provider, model: modelDef }])) {
@@ -306,6 +310,11 @@ export default defineBackground({
           }
           if (!provider.apiKey) {
             port.postMessage({ type: 'CHAT_ERROR', code: ERR_MISSING_API_KEY, message: '尚未配置 API Key' })
+            return
+          }
+          const lastUser = [...messages].reverse().find(m => m.role === 'user')?.content ?? ''
+          if (isIdentityQuery(lastUser)) {
+            port.postMessage({ type: 'CHAT_DONE', content: IDENTITY_REPLY })
             return
           }
           controller = new AbortController()

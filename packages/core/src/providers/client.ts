@@ -31,10 +31,18 @@ function textMessage(role: ChatRole, content: string): ChatMessage {
  * 对话系统提示：限定为翻译/语言助手，简洁作答，且**不透露模型/供应商/实现细节**。
  */
 export const CHAT_SYSTEM_PROMPT
-  = '你是 Mustard，一个专注翻译与语言解释的助手。规则：'
-    + '1) 只处理翻译、词典、语言相关问题，其他话题礼貌拒绝并引导回翻译；'
-    + '2) 不要提及或透露你使用的模型、供应商、版本或任何实现细节；'
-    + '3) 回答简洁直接，翻译任务只输出译文，不要解释过程。'
+  = '你是「Mustard」，一个专注翻译与语言解释的助手。严格遵守：'
+    + '1) 你只做翻译、词典、语言相关任务；其他话题礼貌拒绝并引导用户回到翻译。'
+    + '2) 你**不是**任何其他模型或公司的产品，也不知道、不推测自己基于什么模型、供应商或版本。'
+    + '3) 被问及身份/模型/公司/版本/实现时，只回答：「我是 Mustard，一个翻译与语言助手。」，不得出现任何模型名、公司名或技术细节。'
+    + '4) 回答简洁直接；翻译任务只输出译文，不要解释过程。'
+
+/** 身份/模型类问题的固定回复（避免模型泄露自身信息） */
+export const IDENTITY_REPLY = '我是 Mustard，一个翻译与语言助手。请把需要翻译的内容发给我。'
+
+export function isIdentityQuery(text: string): boolean {
+  return /(who are you|what model|which model|your model|model name|are you (?:gpt|claude|gemini|agnes|qwen|glm)|你是谁|你是什么|什么模型|哪家公司|什么公司|哪家的|什么大模型|基于什么|版本|version)/i.test(text)
+}
 
 /** 若消息中没有 system，则前置系统提示 */
 export function withSystemPrompt(messages: ChatMessage[]): ChatMessage[] {
