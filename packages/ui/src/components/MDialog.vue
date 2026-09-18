@@ -6,9 +6,12 @@ withDefaults(defineProps<{
   title?: string
   width?: string
   closeOnOverlay?: boolean
+  /** 遮罩只覆盖最近的定位祖先（如侧边栏正文区），而非整个视口 */
+  contained?: boolean
 }>(), {
   width: '420px',
   closeOnOverlay: true,
+  contained: false,
 })
 
 const open = defineModel<boolean>({ default: false })
@@ -28,7 +31,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 
 <template>
   <Transition name="m-dialog">
-    <div v-if="open" class="overlay" @click.self="closeOnOverlay && close()">
+    <div v-if="open" class="overlay" :class="{ 'is-contained': contained }" @click.self="closeOnOverlay && close()">
       <div class="panel" role="dialog" aria-modal="true" :style="{ width }">
         <header class="head">
           <span class="title"><slot name="title">{{ title }}</slot></span>
@@ -51,6 +54,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 .overlay {
   position: fixed;
   inset: 0;
+}
+.overlay.is-contained {
+  position: absolute;
   z-index: 1000;
   display: flex;
   align-items: center;

@@ -338,8 +338,8 @@ function sendMessage(): void {
 
     <VocabView v-if="view === 'vocab'" />
     <HistoryView v-else-if="view === 'history'" :current-id="currentSession?.id ?? null" @open="openSession" />
-    <div v-else-if="view === 'settings'" class="panel-body">
-      <SettingsPanel />
+    <div v-else-if="view === 'settings'" class="panel-body settings-body">
+      <SettingsPanel contained />
     </div>
 
     <template v-else>
@@ -425,6 +425,7 @@ function sendMessage(): void {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--m-line) 55%, transparent);
   background: var(--m-surface);
 }
 .mark { width: 24px; height: 24px; border-radius: 7px; }
@@ -443,6 +444,7 @@ function sendMessage(): void {
 .icon-btn.active { color: var(--m-primary); background: var(--m-primary-soft); }
 .icon-btn.disabled { opacity: .4; cursor: not-allowed; }
 .panel-body { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+.settings-body { position: relative; }
 .msg { display: flex; align-items: flex-start; gap: 8px; }
 .msg.user { justify-content: flex-end; }
 .avatar { width: 22px; height: 22px; border-radius: 6px; flex: none; margin-top: 2px; }

@@ -9,6 +9,8 @@ import { useI18n } from '../../lib/i18n'
 import { useSettingsStore } from '../../stores/settings'
 import ProviderDialog from './ProviderDialog.vue'
 
+withDefaults(defineProps<{ contained?: boolean }>(), { contained: false })
+
 const store = useSettingsStore()
 const { success, error } = useToast()
 const { t } = useI18n()
@@ -496,7 +498,7 @@ async function removeDictPack(id: string): Promise<void> {
       </div>
     </section>
 
-    <MDialog v-model="dictDialogOpen" :title="t('options.manageDict')" width="540px">
+    <MDialog v-model="dictDialogOpen" :title="t('options.manageDict')" :contained="contained" width="540px">
       <div class="dict-list">
         <div v-for="dict in dictList" :key="dict.id" class="dict-item">
           <div class="d-main">
@@ -535,7 +537,7 @@ async function removeDictPack(id: string): Promise<void> {
       </p>
     </MDialog>
 
-    <ProviderDialog :key="editing?.id ?? 'none'" v-model="dialogOpen" :provider="editing" @save="onSaveProvider" />
+    <ProviderDialog :key="editing?.id ?? 'none'" v-model="dialogOpen" :provider="editing" :contained="contained" @save="onSaveProvider" />
   </div>
 </template>
 

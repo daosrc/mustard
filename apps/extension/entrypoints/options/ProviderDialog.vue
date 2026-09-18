@@ -5,7 +5,7 @@ import { MButton, MDialog, MField, MIcon, useToast } from '@mustard/ui'
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from '../../lib/i18n'
 
-const props = defineProps<{ provider: Provider | null }>()
+const props = defineProps<{ provider: Provider | null, contained?: boolean }>()
 const emit = defineEmits<{ save: [Provider] }>()
 const open = defineModel<boolean>({ default: false })
 const { success, error } = useToast()
@@ -79,7 +79,7 @@ async function test(): Promise<void> {
 </script>
 
 <template>
-  <MDialog v-model="open" :title="t('options.providerEdit')" width="520px">
+  <MDialog v-model="open" :title="t('options.providerEdit')" :contained="contained" width="520px">
     <div class="form">
       <MField :label="t('options.providerName')">
         <input v-model="draft.name" class="m-input" placeholder="OpenCode Zen">
