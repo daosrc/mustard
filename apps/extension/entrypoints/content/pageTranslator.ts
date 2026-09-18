@@ -24,7 +24,9 @@ let queue: HTMLElement[] = []
 let running = 0
 let totalQueued = 0
 let settingsRef: Settings | null = null
-const queued = new WeakSet<HTMLElement>()
+let queued = new WeakSet<HTMLElement>()
+/** 短文本阈值：不超过该长度时译文与原文本行内并列 */
+const INLINE_MAX = 30
 
 /** 追加译文节点的样式必须注入到页面（content.css 只作用于 Shadow DOM） */
 function ensurePageStyle(): void {
@@ -42,6 +44,15 @@ function ensurePageStyle(): void {
   font-size: .95em;
   line-height: 1.65;
   border-radius: 0 6px 6px 0;
+}
+.${CLS}.is-inline {
+  display: inline;
+  margin: 0 0 0 .5em;
+  padding: 0 .4em;
+  border-left: 2px solid #7ABE3E;
+  border-radius: 0 4px 4px 0;
+  font-size: .92em;
+  white-space: nowrap;
 }
 .mustard-skeleton {
   display: inline-block;
@@ -95,12 +106,16 @@ function collect(): HTMLElement[] {
 }
 
 async function translateBlock(el: HTMLElement): Promise<void> {
-  const node = document.createElement('div')
-  node.className = CLS
+  const text = (el.textContent ?? '').trim()
+  const inline = text.length <= INLINE_MAX
+  const node = document.createElement(inline ? 'span' : 'div')
+  node.className = inline ? `${CLS} is-inline` : CLS
   node.innerHTML = '<span class="mustard-skeleton"></span>'
-  el.after(node)
+  if (inline)
+    el.appendChild(node)
+  else
+    el.after(node)
   try {
-    const text = (el.textContent ?? '').trim()
     const result = await send({
       type: 'TRANSLATE_TEXT',
       payload: {
@@ -181,6 +196,7 @@ export function stopPageTranslate(): void {
   queue = []
   running = 0
   totalQueued = 0
+  queued = new WeakSet<HTMLElement>() // 重置去重集合，允许再次翻译
   document.querySelectorAll(`.${CLS}`).forEach(node => node.remove())
   document.querySelectorAll(`[${MARK}]`).forEach(el => el.removeAttribute(MARK))
   pageState.done = 0
