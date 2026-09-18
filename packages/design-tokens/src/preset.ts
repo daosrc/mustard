@@ -48,7 +48,7 @@ export function presetMustard(): Preset[] {
         ['m-row', 'flex items-center justify-between gap-3'],
         ['m-col', 'flex flex-col gap-3'],
         ['m-chip', 'inline-flex items-center gap-1 text-[11px] leading-none text-muted bg-surface-2 border border-line px-2 py-1 rounded-sm'],
-        ['m-input', 'w-full bg-surface text-ink rounded-md px-3 py-2 text-sm leading-5 outline-none transition ring-1 ring-inset ring-line focus:ring-primary'],
+        ['m-input', 'w-full bg-surface text-ink border border-line rounded-md px-3 py-2 text-sm leading-5 outline-none transition focus:border-primary'],
         ['m-icon-btn', 'inline-flex items-center justify-center w-7 h-7 rounded-sm text-muted cursor-pointer transition hover:text-ink hover:bg-surface-2'],
         ['m-muted', 'text-muted text-[12px] leading-relaxed'],
       ],

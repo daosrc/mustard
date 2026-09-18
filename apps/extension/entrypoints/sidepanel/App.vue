@@ -336,90 +336,104 @@ function sendMessage(): void {
       </button>
     </header>
 
-    <VocabView v-if="view === 'vocab'" />
-    <HistoryView v-else-if="view === 'history'" :current-id="currentSession?.id ?? null" @open="openSession" />
-    <div v-else-if="view === 'settings'" class="panel-body settings-body">
-      <SettingsPanel contained />
-    </div>
+    <div class="panel-main">
+      <VocabView v-if="view === 'vocab'" />
+      <HistoryView v-else-if="view === 'history'" :current-id="currentSession?.id ?? null" @open="openSession" />
+      <div v-else-if="view === 'settings'" class="panel-body settings-body">
+        <SettingsPanel contained />
+      </div>
 
-    <template v-else>
-      <main ref="bodyEl" class="panel-body">
-        <div v-for="message in visibleMessages" :key="message.id" class="msg" :class="message.role">
-          <img v-if="message.role === 'assistant'" class="avatar" :src="BALL_ICON" alt="">
-          <div class="bubble" :class="{ error: message.status === 'error' }">
-            <template v-if="message.status === 'streaming' && !message.content.trim()">
-              <span class="typing">{{ t('chat.thinking') }}</span>
-            </template>
-            <template v-else>
-              <span class="text">{{ message.content }}</span>
-              <span v-if="message.status === 'streaming'" class="caret" />
-            </template>
-            <div v-if="message.attachments?.length" class="msg-atts">
-              <img v-for="(att, i) in message.attachments.filter(a => a.type === 'image')" :key="`i-${i}`" class="msg-thumb" :src="att.dataUrl" :alt="att.name">
-              <MChip v-for="(att, i) in message.attachments.filter(a => a.type !== 'image')" :key="`f-${i}`">
-                <MIcon name="file" :size="12" />
+      <template v-else>
+        <main ref="bodyEl" class="panel-body">
+          <div v-for="message in visibleMessages" :key="message.id" class="msg" :class="message.role">
+            <img v-if="message.role === 'assistant'" class="avatar" :src="BALL_ICON" alt="">
+            <div class="bubble" :class="{ error: message.status === 'error' }">
+              <template v-if="message.status === 'streaming' && !message.content.trim()">
+                <span class="typing">{{ t('chat.thinking') }}</span>
+              </template>
+              <template v-else>
+                <span class="text">{{ message.content }}</span>
+                <span v-if="message.status === 'streaming'" class="caret" />
+              </template>
+              <div v-if="message.attachments?.length" class="msg-atts">
+                <img v-for="(att, i) in message.attachments.filter(a => a.type === 'image')" :key="`i-${i}`" class="msg-thumb" :src="att.dataUrl" :alt="att.name">
+                <MChip v-for="(att, i) in message.attachments.filter(a => a.type !== 'image')" :key="`f-${i}`">
+                  <MIcon name="file" :size="12" />
+                  {{ att.name }}
+                </MChip>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer class="composer">
+          <div class="input-box">
+            <div v-if="attachments.length" class="att-strip">
+              <MChip v-for="(att, i) in attachments" :key="i" removable @remove="attachments.splice(i, 1)">
+                <MIcon :name="att.type === 'image' ? 'image' : 'file'" :size="12" />
                 {{ att.name }}
               </MChip>
             </div>
-          </div>
-        </div>
-      </main>
-
-      <footer class="composer">
-        <div class="input-box">
-          <div v-if="attachments.length" class="att-strip">
-            <MChip v-for="(att, i) in attachments" :key="i" removable @remove="attachments.splice(i, 1)">
-              <MIcon :name="att.type === 'image' ? 'image' : 'file'" :size="12" />
-              {{ att.name }}
-            </MChip>
-          </div>
-          <textarea
-            ref="textareaEl"
-            v-model="input"
-            rows="1"
-            :placeholder="t('chat.placeholder')"
-            @input="autoGrow"
-            @paste="onPaste"
-            @keydown.enter.exact.prevent="onEnter"
-          />
-          <div class="tools-row">
-            <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? t('chat.attach') : t('chat.attachUnsupported')" @click="onAttachClick">
-              <MIcon name="paperclip" :size="16" />
-            </button>
-            <MSelect
-              class="lang-select"
-              size="sm"
-              variant="chip"
-              :model-value="store.settings?.targetLang"
-              :options="langOptions"
-              @update:model-value="setTarget"
+            <textarea
+              ref="textareaEl"
+              v-model="input"
+              rows="1"
+              :placeholder="t('chat.placeholder')"
+              @input="autoGrow"
+              @paste="onPaste"
+              @keydown.enter.exact.prevent="onEnter"
             />
-            <MSelect
-              class="model-select"
-              size="sm"
-              :model-value="activeModelValue"
-              :options="modelOptions"
-              :placeholder="t('chat.modelPlaceholder')"
-              @update:model-value="setActiveModel"
-            />
-            <button v-if="streaming" class="send stop" :title="t('chat.stop')" @click="stop">
-              <MIcon name="close" :size="13" :stroke-width="2.4" />
-            </button>
-            <button v-else class="send" :title="t('chat.send')" :disabled="!input.trim() && !attachments.length" @click="sendMessage">
-              <MIcon name="send" :size="13" :stroke-width="2" />
-            </button>
+            <div class="tools-row">
+              <button class="icon-btn" :class="{ disabled: !store.canAttachActive }" :title="store.canAttachActive ? t('chat.attach') : t('chat.attachUnsupported')" @click="onAttachClick">
+                <MIcon name="paperclip" :size="16" />
+              </button>
+              <MSelect
+                class="lang-select"
+                size="sm"
+                variant="chip"
+                :model-value="store.settings?.targetLang"
+                :options="langOptions"
+                @update:model-value="setTarget"
+              />
+              <MSelect
+                class="model-select"
+                size="sm"
+                :model-value="activeModelValue"
+                :options="modelOptions"
+                :placeholder="t('chat.modelPlaceholder')"
+                @update:model-value="setActiveModel"
+              />
+              <button v-if="streaming" class="send stop" :title="t('chat.stop')" @click="stop">
+                <MIcon name="close" :size="13" :stroke-width="2.4" />
+              </button>
+              <button v-else class="send" :title="t('chat.send')" :disabled="!input.trim() && !attachments.length" @click="sendMessage">
+                <MIcon name="send" :size="13" :stroke-width="2" />
+              </button>
+            </div>
           </div>
-        </div>
-        <input ref="fileEl" class="hidden-file" type="file" accept="image/*,application/pdf,.txt,.md,.doc,.docx" multiple @change="onPickFile">
-      </footer>
-    </template>
+          <input ref="fileEl" class="hidden-file" type="file" accept="image/*,application/pdf,.txt,.md,.doc,.docx" multiple @change="onPickFile">
+        </footer>
+      </template>
+    </div>
 
     <MToastHost />
   </div>
 </template>
 
 <style scoped>
-.panel { display: flex; flex-direction: column; height: 100%; background: var(--m-paper); }
+.panel { display: flex; flex-direction: column; height: 100%; background: var(--m-surface); }
+.panel-main {
+  flex: 1;
+  min-height: 0;
+  margin: 8px;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--m-paper);
+  border: 1px solid color-mix(in srgb, var(--m-line) 60%, transparent);
+  border-radius: 14px;
+  overflow: hidden;
+}
 .panel-head {
   display: flex;
   align-items: center;
