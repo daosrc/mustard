@@ -103,16 +103,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 8px;
   border: 1px solid var(--m-line);
-  border-radius: 10px;
-  background: var(--m-surface);
+  border-radius: 8px;
+  background: var(--m-surface-2);
   color: var(--m-ink);
   font: inherit;
-  font-size: 13px;
-  padding: 7px 10px;
+  font-size: 12.5px;
+  padding: 6px 9px;
   cursor: pointer;
   transition: border-color .15s;
 }
-.m-select.is-sm .trigger { padding: 4px 8px; font-size: 12px; border-radius: 8px; }
+.m-select.is-sm .trigger { padding: 4px 8px; font-size: 12px; }
 /* chip 变体：无边框、药丸样式（用于目标语言） */
 .m-select.is-chip .trigger {
   width: auto;
