@@ -1,37 +1,45 @@
 ---
 /**
- * 粒子背景（参考 vue-bits Particles 的视觉：缓慢漂浮的光点 + 鼠标视差）。
- * 纯 Canvas 2D 实现，无额外依赖；颜色从主题 CSS 变量读取，随明暗主题变化。
+ * 粒子背景（参数对齐 vue-bits Particles 调参面板）：
+ * Color 取当前主题色，Count/Spread/Speed/Base Size/Mouse Interaction/
+ * Particle Transparency/Disable Rotation/Pixel Ratio 与面板一致。
+ * 纯 Canvas 2D 实现，无额外依赖。
  */
 interface Props {
-  quantity?: number
-  staticity?: number
-  ease?: number
-  size?: number
-  alphaParticles?: boolean
-  moveOnHover?: boolean
+  count?: number
+  spread?: number
+  speed?: number
+  baseSize?: number
+  mouseInteraction?: boolean
+  transparency?: boolean
+  disableRotation?: boolean
+  pixelRatio?: number
   class?: string
 }
 
 const {
-  quantity = 220,
-  staticity = 55,
-  ease = 55,
-  size = 1.2,
-  alphaParticles = true,
-  moveOnHover = true,
+  count = 400,
+  spread = 10,
+  speed = 0.3,
+  baseSize = 700,
+  mouseInteraction = true,
+  transparency = false,
+  disableRotation = false,
+  pixelRatio = 1,
   class: className = '',
 } = Astro.props
 ---
 
 <canvas
   class:list={['particles', className]}
-  data-quantity={quantity}
-  data-staticity={staticity}
-  data-ease={ease}
-  data-size={size}
-  data-alpha={alphaParticles ? '1' : '0'}
-  data-hover={moveOnHover ? '1' : '0'}
+  data-count={count}
+  data-spread={spread}
+  data-speed={speed}
+  data-base-size={baseSize}
+  data-mouse={mouseInteraction ? '1' : '0'}
+  data-transparency={transparency ? '1' : '0'}
+  data-disable-rotation={disableRotation ? '1' : '0'}
+  data-pixel-ratio={pixelRatio}
   aria-hidden="true"
 ></canvas>
 
@@ -48,15 +56,13 @@ const {
 
 <script>
   interface Particle {
-    x: number
-    y: number
-    tx: number
-    ty: number
-    vx: number
-    vy: number
+    ang: number
+    rad: number
+    vr: number
     r: number
     alpha: number
-    color: string
+    ox: number
+    oy: number
   }
 
   const canvases = document.querySelectorAll<HTMLCanvasElement>('canvas.particles')
@@ -66,48 +72,46 @@ const {
     if (!ctx)
       continue
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    const quantity = Number(canvas.dataset.quantity) || 200
-    const staticity = (Number(canvas.dataset.staticity) || 50) / 100
-    const ease = (Number(canvas.dataset.ease) || 50) / 100
-    const baseSize = Number(canvas.dataset.size) || 1.2
-    const alphaParticles = canvas.dataset.alpha === '1'
-    const moveOnHover = canvas.dataset.hover === '1'
+    const dpr = Number(canvas.dataset.pixelRatio) || 1
+    const count = Number(canvas.dataset.count) || 400
+    const spread = Number(canvas.dataset.spread) || 10
+    const speed = Number(canvas.dataset.speed) || 0.3
+    const baseSize = Number(canvas.dataset.baseSize) || 700
+    const mouseInteraction = canvas.dataset.mouse === '1'
+    const transparency = canvas.dataset.transparency === '1'
+    const disableRotation = canvas.dataset.disableRotation === '1'
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // Base Size 700 ≈ 1.75px 半径；speed 0.3 时旋转非常缓慢
+    const radius = Math.max(0.6, baseSize / 400)
+    const rotSpeed = disableRotation || reduced ? 0 : speed * 0.0009
+    const driftSpeed = speed * 0.02
 
     let width = 0
     let height = 0
+    let cx = 0
+    let cy = 0
+    let maxR = 0
     let particles: Particle[] = []
+    let color = '#8FCF4A'
     let mouse = { x: -9999, y: -9999 }
     let raf = 0
 
-    function themeColors(): string[] {
-      const cs = getComputedStyle(document.documentElement)
-      const primary = cs.getPropertyValue('--m-primary').trim() || '#8FCF4A'
-      const accent = cs.getPropertyValue('--m-accent').trim() || '#7BC043'
-      const ink = cs.getPropertyValue('--m-faint').trim() || '#6E8060'
-      return [primary, accent, primary, ink]
-    }
-
-    function makeParticle(colors: string[]): Particle {
-      const x = Math.random() * width
-      const y = Math.random() * height
-      return {
-        x,
-        y,
-        tx: x,
-        ty: y,
-        vx: 0,
-        vy: 0,
-        r: baseSize * (0.5 + Math.random()),
-        alpha: alphaParticles ? 0.15 + Math.random() * 0.55 : 0.6,
-        color: colors[Math.floor(Math.random() * colors.length)]!,
-      }
+    function themeColor(): string {
+      return getComputedStyle(document.documentElement).getPropertyValue('--m-primary').trim() || '#8FCF4A'
     }
 
     function seed(): void {
-      const colors = themeColors()
-      particles = Array.from({ length: quantity }, () => makeParticle(colors))
+      particles = Array.from({ length: count }, () => ({
+        ang: Math.random() * Math.PI * 2,
+        // sqrt 保证面积上均匀分布
+        rad: Math.sqrt(Math.random()) * maxR,
+        vr: (Math.random() - 0.5) * driftSpeed,
+        r: radius * (0.7 + Math.random() * 0.6),
+        alpha: transparency ? 0.15 + Math.random() * 0.55 : 0.85,
+        ox: 0,
+        oy: 0,
+      }))
     }
 
     function resize(): void {
@@ -117,6 +121,10 @@ const {
       canvas.width = Math.round(width * dpr)
       canvas.height = Math.round(height * dpr)
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
+      cx = width / 2
+      cy = height / 2
+      maxR = Math.hypot(width, height) / 2
+      color = themeColor()
       seed()
     }
 
@@ -130,38 +138,35 @@ const {
 
     function frame(): void {
       ctx!.clearRect(0, 0, width, height)
-      const drift = (1 - staticity) * 0.12
+      ctx!.fillStyle = color
       const hoverRadius = 130
 
       for (const p of particles) {
         if (!reduced) {
-          p.tx += (Math.random() - 0.5) * drift
-          p.ty += (Math.random() - 0.5) * drift
-          if (moveOnHover && mouse.x > -9000) {
-            const dx = p.x - mouse.x
-            const dy = p.y - mouse.y
-            const dist = Math.hypot(dx, dy)
-            if (dist < hoverRadius && dist > 0.01) {
-              const force = (1 - dist / hoverRadius) * 28 * ease
-              p.tx += (dx / dist) * force
-              p.ty += (dy / dist) * force
-            }
+          p.ang += rotSpeed
+          p.rad += p.vr
+          if (p.rad > maxR + spread || p.rad < spread * 0.5)
+            p.vr *= -1
+        }
+        const x = cx + Math.cos(p.ang) * p.rad
+        const y = cy + Math.sin(p.ang) * p.rad
+
+        if (mouseInteraction && mouse.x > -9000) {
+          const dx = x - mouse.x
+          const dy = y - mouse.y
+          const dist = Math.hypot(dx, dy)
+          if (dist < hoverRadius && dist > 0.01) {
+            const force = (1 - dist / hoverRadius) * 26
+            p.ox += (dx / dist) * force
+            p.oy += (dy / dist) * force
           }
         }
-        p.tx = Math.max(0, Math.min(width, p.tx))
-        p.ty = Math.max(0, Math.min(height, p.ty))
-
-        p.vx += (p.tx - p.x) * 0.02 * (0.4 + ease)
-        p.vy += (p.ty - p.y) * 0.02 * (0.4 + ease)
-        p.vx *= 0.92
-        p.vy *= 0.92
-        p.x += p.vx
-        p.y += p.vy
+        p.ox *= 0.9
+        p.oy *= 0.9
 
         ctx!.globalAlpha = p.alpha
-        ctx!.fillStyle = p.color
         ctx!.beginPath()
-        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx!.arc(x + p.ox, y + p.oy, p.r, 0, Math.PI * 2)
         ctx!.fill()
       }
       ctx!.globalAlpha = 1
@@ -170,20 +175,16 @@ const {
 
     resize()
     window.addEventListener('resize', resize)
-    if (moveOnHover) {
+    if (mouseInteraction) {
       canvas.parentElement?.addEventListener('mousemove', onMove)
       canvas.parentElement?.addEventListener('mouseleave', onLeave)
     }
     frame()
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        cancelAnimationFrame(raf)
-      }
-      else {
-        cancelAnimationFrame(raf)
+      cancelAnimationFrame(raf)
+      if (!document.hidden)
         frame()
-      }
     })
   }
 </script>

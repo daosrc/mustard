@@ -45,7 +45,7 @@ const zh: Content = {
   description: '划词 / 悬浮 / 网页 / 截图翻译 + 侧边栏 AI 对话、生词本与记词、离线词典。开源（MIT），仅通过 GitHub 分发。',
   nav: { features: '功能', steps: '使用', install: '安装', github: 'GitHub', altLabel: 'English', altHref: './en/' },
   hero: {
-    badge: '开源 Chrome 划词翻译插件 · MIT',
+    badge: '开源浏览器翻译插件',
     title: 'Mustard 芥末',
     slogan: '流畅阅读',
     tagline: '划词 / 悬浮 / 网页 / 截图翻译，侧边栏 AI 对话，生词本与记词，离线词典。',
@@ -94,7 +94,7 @@ const en: Content = {
   description: 'Select, hover, page and screenshot translation with a side-panel AI chat, vocabulary and dictation, and offline dictionaries. MIT, distributed on GitHub only.',
   nav: { features: 'Features', steps: 'Get started', install: 'Install', github: 'GitHub', altLabel: '中文', altHref: '../' },
   hero: {
-    badge: 'Open-source Chrome translation extension · MIT',
+    badge: 'Open-source browser translation extension',
     title: 'Mustard',
     slogan: 'Read fluently',
     tagline: 'Select, hover, page and screenshot translation, a side-panel AI chat, vocabulary with dictation, and offline dictionaries.',
