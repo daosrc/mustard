@@ -199,7 +199,8 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
 .hero-inner { position: relative; z-index: 1; }
 .hero-particles { position: absolute; inset: 0; z-index: 0; }
 .hero .mock-window { background: var(--m-surface); }
-.hero-window { max-width: 720px; }
+/* 主图铺满页面主体宽度（与 max-w-5xl 内容区等宽） */
+.hero .hero-window { max-width: none; }
 .mock-shot { display: block; width: 100%; height: auto; }
 
 .feature-visual { display: flex; justify-content: center; }
