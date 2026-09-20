@@ -1,3 +1,7 @@
+/** 站点基础路径：始终以 `/` 结尾，便于直接拼接资源路径 */
+const rawBase = import.meta.env.BASE_URL
+export const BASE = rawBase.endsWith('/') ? rawBase : `${rawBase}/`
+
 /** 全站链接集中管理：开发完成后的真实 GitHub 地址 */
 export const LINKS = {
   repo: 'https://github.com/daosrc/mustard',

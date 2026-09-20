@@ -1,5 +1,6 @@
 ---
 import '@mustard/design-tokens/theme.css'
+import { BASE } from '../config/links'
 
 interface Props {
   title: string
@@ -8,7 +9,7 @@ interface Props {
 }
 
 const { title, description, lang = 'zh-CN' } = Astro.props
-const base = import.meta.env.BASE_URL
+const base = BASE
 ---
 
 <!doctype html>
