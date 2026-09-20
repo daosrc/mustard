@@ -46,10 +46,22 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
   <main>
     <!-- Hero -->
     <section class="hero">
-      <Particles class="hero-particles" />
+      <Particles
+        class="hero-particles"
+        particleCount={400}
+        particleSpread={10}
+        speed={0.2}
+        particleBaseSize={600}
+        sizeRandomness={1}
+        cameraDistance={20}
+        alphaParticles={false}
+        disableRotation={false}
+        moveParticlesOnHover={false}
+        pixelRatio={1}
+      />
       <div class="hero-inner max-w-5xl mx-auto px-5 pt-16 pb-12 text-center">
         <img class="w-20 h-20 mx-auto rounded-2xl shadow-md" src={`${base}icon.svg`} alt="Mustard">
-        <p class="mt-5 chip">{c.hero.badge}</p>
+        <p class="hero-badge">{c.hero.badge}</p>
         <h1 class="mt-4 text-4xl sm:text-5xl font-800 tracking-tight">
           {c.hero.title}<span class="hero-slogan">{c.hero.slogan}</span>
         </h1>
@@ -59,7 +71,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
           <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">{c.hero.source}</a>
         </div>
 
-        <div class="mt-20 mock-window hero-window text-left">
+        <div class="mt-10 mock-window hero-window text-left">
           <div class="mock-bar">
             <span class="mock-dots"><i /><i /><i /></span>
             <span class="mock-url">en.wikipedia.org</span>
@@ -166,6 +178,12 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
 .nav-link { font-size: .875rem; color: var(--m-muted); text-decoration: none; transition: color .15s; }
 .nav-link:hover { color: var(--m-primary); }
 .section-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+.hero-badge {
+  margin: 1.25rem 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--m-primary);
+}
 .hero-slogan {
   margin-left: .35em;
   font-size: 1em;
@@ -179,7 +197,14 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
 .hero .mock-window { background: var(--m-surface); }
 /* 主图铺满页面主体宽度（与 max-w-5xl 内容区等宽） */
 .hero .hero-window { max-width: none; }
-.mock-shot { display: block; width: 100%; height: auto; }
+.mock-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 固定比例 + cover，保证图片始终铺满窗口（不出现留白） */
+  aspect-ratio: 2000 / 1172;
+  object-fit: cover;
+}
 
 .feature-visual { display: flex; justify-content: center; }
 .shot {

@@ -1,30 +1,37 @@
 ---
 /**
- * 粒子背景（对齐 vue-bits Particles 调参面板的效果）：
- * 3D 透视星场 —— 圆点有大有小、近大远小、缓慢漂浮，颜色取当前主题色。
- * Color 取主题色；Count/Spread/Speed/Base Size/Mouse Interaction/
- * Particle Transparency/Disable Rotation/Pixel Ratio 与面板一致。
- * 纯 Canvas 2D 实现，无额外依赖。
+ * 粒子背景 —— 按 vue-bits Particles 的 props 语义实现：
+ * 3D 粒子系统（cameraDistance 透视 + particleSpread 分布 + particleBaseSize 尺寸），
+ * 圆点为实心（alphaParticles=false）、近大远小、缓慢自转与漂浮。
+ * 颜色取当前主题色；纯 Canvas 2D，无额外依赖。
  */
 interface Props {
-  count?: number
-  spread?: number
+  particleCount?: number
+  particleSpread?: number
   speed?: number
-  baseSize?: number
-  mouseInteraction?: boolean
-  transparency?: boolean
+  particleColors?: string[]
+  moveParticlesOnHover?: boolean
+  particleHoverFactor?: number
+  alphaParticles?: boolean
+  particleBaseSize?: number
+  sizeRandomness?: number
+  cameraDistance?: number
   disableRotation?: boolean
   pixelRatio?: number
   class?: string
 }
 
 const {
-  count = 400,
-  spread = 10,
-  speed = 0.3,
-  baseSize = 700,
-  mouseInteraction = true,
-  transparency = false,
+  particleCount = 400,
+  particleSpread = 10,
+  speed = 0.2,
+  particleColors,
+  moveParticlesOnHover = false,
+  particleHoverFactor = 1,
+  alphaParticles = false,
+  particleBaseSize = 600,
+  sizeRandomness = 1,
+  cameraDistance = 20,
   disableRotation = false,
   pixelRatio = 1,
   class: className = '',
@@ -33,12 +40,16 @@ const {
 
 <canvas
   class:list={['particles', className]}
-  data-count={count}
-  data-spread={spread}
+  data-count={particleCount}
+  data-spread={particleSpread}
   data-speed={speed}
-  data-base-size={baseSize}
-  data-mouse={mouseInteraction ? '1' : '0'}
-  data-transparency={transparency ? '1' : '0'}
+  data-colors={particleColors?.join(',') ?? ''}
+  data-hover={moveParticlesOnHover ? '1' : '0'}
+  data-hover-factor={particleHoverFactor}
+  data-alpha={alphaParticles ? '1' : '0'}
+  data-base-size={particleBaseSize}
+  data-size-randomness={sizeRandomness}
+  data-camera-distance={cameraDistance}
   data-disable-rotation={disableRotation ? '1' : '0'}
   data-pixel-ratio={pixelRatio}
   aria-hidden="true"
@@ -62,7 +73,9 @@ const {
     z: number
     vx: number
     vy: number
-    size: number
+    vz: number
+    scale: number
+    color: string
     ox: number
     oy: number
   }
@@ -74,44 +87,50 @@ const {
     if (!ctx)
       continue
 
-    const dpr = Number(canvas.dataset.pixelRatio) || 1
     const count = Number(canvas.dataset.count) || 400
     const spread = Number(canvas.dataset.spread) || 10
-    const speed = Number(canvas.dataset.speed) || 0.3
-    const baseSize = Number(canvas.dataset.baseSize) || 700
-    const mouseInteraction = canvas.dataset.mouse === '1'
-    const transparency = canvas.dataset.transparency === '1'
+    const speed = Number(canvas.dataset.speed) || 0.2
+    const hover = canvas.dataset.hover === '1'
+    const hoverFactor = Number(canvas.dataset.hoverFactor) || 1
+    const alphaParticles = canvas.dataset.alpha === '1'
+    const baseSize = Number(canvas.dataset.baseSize) || 600
+    const sizeRandomness = Number(canvas.dataset.sizeRandomness) || 0
+    const camDistance = Number(canvas.dataset.cameraDistance) || 20
     const disableRotation = canvas.dataset.disableRotation === '1'
+    const dpr = Number(canvas.dataset.pixelRatio) || 1
+    const customColors = (canvas.dataset.colors || '').split(',').map(s => s.trim()).filter(Boolean)
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const Z_NEAR = 1.5
-    const Z_FAR = 22
-    const FOCAL = 10
-    const BASE_R = baseSize / 350
-    const ROT = disableRotation || reduced ? 0 : speed * 0.0012
+    const half = spread / 2
+    const rotSpeed = disableRotation || reduced ? 0 : speed * 0.003
 
     let width = 0
     let height = 0
     let cx = 0
     let cy = 0
-    let unit = 40
+    let focal = 2000
+    let colors: string[] = ['#8FCF4A']
     let particles: Particle[] = []
-    let color = '#8FCF4A'
     let mouse = { x: -9999, y: -9999 }
     let raf = 0
 
-    function themeColor(): string {
-      return getComputedStyle(document.documentElement).getPropertyValue('--m-primary').trim() || '#8FCF4A'
+    function themeColors(): string[] {
+      const primary = getComputedStyle(document.documentElement).getPropertyValue('--m-primary').trim() || '#8FCF4A'
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--m-accent').trim() || primary
+      return [primary, primary, primary, accent]
     }
 
     function seed(): void {
       particles = Array.from({ length: count }, () => ({
-        x: (Math.random() * 2 - 1) * spread,
-        y: (Math.random() * 2 - 1) * spread,
-        z: Z_NEAR + Math.random() * (Z_FAR - Z_NEAR),
-        vx: (Math.random() - 0.5) * speed * 0.05,
-        vy: (Math.random() - 0.5) * speed * 0.05,
-        size: 0.6 + Math.random() * 0.9,
+        x: (Math.random() * 2 - 1) * half,
+        y: (Math.random() * 2 - 1) * half,
+        z: (Math.random() * 2 - 1) * half,
+        vx: (Math.random() - 0.5) * speed * 0.02,
+        vy: (Math.random() - 0.5) * speed * 0.02,
+        vz: (Math.random() - 0.5) * speed * 0.02,
+        // sizeRandomness=0 → 尺寸一致；=1 → 偏小的随机分布（大圆点更少）
+        scale: (1 - sizeRandomness) + sizeRandomness * Math.random() ** 1.6,
+        color: customColors.length ? customColors[Math.floor(Math.random() * customColors.length)]! : colors[Math.floor(Math.random() * colors.length)]!,
         ox: 0,
         oy: 0,
       }))
@@ -126,8 +145,9 @@ const {
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
       cx = width / 2
       cy = height / 2
-      unit = (Math.min(width, height) / (2 * spread)) * 1.6
-      color = themeColor()
+      // 让 ±spread/2 的分布铺满画布长边
+      focal = 2 * Math.max(width, height)
+      colors = themeColors()
       seed()
     }
 
@@ -141,40 +161,50 @@ const {
 
     function frame(): void {
       ctx!.clearRect(0, 0, width, height)
-      ctx!.fillStyle = color
-      const hoverRadius = 130
-      const cos = Math.cos(ROT)
-      const sin = Math.sin(ROT)
+      const cos = Math.cos(rotSpeed)
+      const sin = Math.sin(rotSpeed)
+      const hoverRadius = 140
 
       for (const p of particles) {
         if (!reduced) {
+          // 缓慢漂浮（在 spread 盒内环绕）
           p.x += p.vx
           p.y += p.vy
-          // 速度缓慢转向，形成柔和漂浮
-          const nvx = p.vx * cos - p.vy * sin
-          const nvy = p.vx * sin + p.vy * cos
-          p.vx = nvx
-          p.vy = nvy
-          if (p.x > spread) p.x = -spread
-          else if (p.x < -spread) p.x = spread
-          if (p.y > spread) p.y = -spread
-          else if (p.y < -spread) p.y = spread
+          p.z += p.vz
+          if (p.x > half) p.x = -half
+          else if (p.x < -half) p.x = half
+          if (p.y > half) p.y = -half
+          else if (p.y < -half) p.y = half
+          if (p.z > half) p.z = -half
+          else if (p.z < -half) p.z = half
+          // 绕 y 轴缓慢自转（disableRotation=false）
+          if (rotSpeed) {
+            const nx = p.x * cos - p.z * sin
+            const nz = p.x * sin + p.z * cos
+            p.x = nx
+            p.z = nz
+          }
         }
 
-        const persp = FOCAL / p.z
-        const x = cx + p.x * persp * unit
-        const y = cy + p.y * persp * unit
-        const r = Math.max(0.4, BASE_R * p.size * persp)
+        const depth = camDistance - p.z
+        if (depth <= 0.5)
+          continue
+        const persp = focal / depth
+        const x = cx + p.x * persp
+        const y = cy + p.y * persp
+        // gl_PointSize ≈ particleBaseSize * scale / depth
+        const diameter = Math.max(1.2, (baseSize * p.scale / depth) * 1.2)
+        const r = diameter / 2
 
         if (x < -r || x > width + r || y < -r || y > height + r)
           continue
 
-        if (mouseInteraction && mouse.x > -9000) {
+        if (hover && mouse.x > -9000) {
           const dx = x - mouse.x
           const dy = y - mouse.y
           const dist = Math.hypot(dx, dy)
           if (dist < hoverRadius && dist > 0.01) {
-            const force = (1 - dist / hoverRadius) * 22
+            const force = (1 - dist / hoverRadius) * 24 * hoverFactor
             p.ox += (dx / dist) * force
             p.oy += (dy / dist) * force
           }
@@ -182,9 +212,12 @@ const {
         p.ox *= 0.9
         p.oy *= 0.9
 
-        // 近实远淡，形成层次
-        const depth = (p.z - Z_NEAR) / (Z_FAR - Z_NEAR)
-        ctx!.globalAlpha = transparency ? 0.15 + (1 - depth) * 0.5 : 1 - depth * 0.72
+        // 近实远淡，形成层次（实心圆）
+        const depthRatio = (depth - (camDistance - half)) / spread
+        ctx!.globalAlpha = alphaParticles
+          ? 0.15 + (1 - depthRatio) * 0.6
+          : 1 - depthRatio * 0.55
+        ctx!.fillStyle = p.color
         ctx!.beginPath()
         ctx!.arc(x + p.ox, y + p.oy, r, 0, Math.PI * 2)
         ctx!.fill()
@@ -195,7 +228,7 @@ const {
 
     resize()
     window.addEventListener('resize', resize)
-    if (mouseInteraction) {
+    if (hover) {
       canvas.parentElement?.addEventListener('mousemove', onMove)
       canvas.parentElement?.addEventListener('mouseleave', onLeave)
     }
