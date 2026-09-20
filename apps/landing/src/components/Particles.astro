@@ -1,7 +1,8 @@
 ---
 /**
- * 粒子背景（参数对齐 vue-bits Particles 调参面板）：
- * Color 取当前主题色，Count/Spread/Speed/Base Size/Mouse Interaction/
+ * 粒子背景（对齐 vue-bits Particles 调参面板的效果）：
+ * 3D 透视星场 —— 圆点有大有小、近大远小、缓慢漂浮，颜色取当前主题色。
+ * Color 取主题色；Count/Spread/Speed/Base Size/Mouse Interaction/
  * Particle Transparency/Disable Rotation/Pixel Ratio 与面板一致。
  * 纯 Canvas 2D 实现，无额外依赖。
  */
@@ -56,11 +57,12 @@ const {
 
 <script>
   interface Particle {
-    ang: number
-    rad: number
-    vr: number
-    r: number
-    alpha: number
+    x: number
+    y: number
+    z: number
+    vx: number
+    vy: number
+    size: number
     ox: number
     oy: number
   }
@@ -82,16 +84,17 @@ const {
     const disableRotation = canvas.dataset.disableRotation === '1'
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    // Base Size 700 ≈ 1.75px 半径；speed 0.3 时旋转非常缓慢
-    const radius = Math.max(0.6, baseSize / 400)
-    const rotSpeed = disableRotation || reduced ? 0 : speed * 0.0009
-    const driftSpeed = speed * 0.02
+    const Z_NEAR = 1.5
+    const Z_FAR = 22
+    const FOCAL = 10
+    const BASE_R = baseSize / 350
+    const ROT = disableRotation || reduced ? 0 : speed * 0.0012
 
     let width = 0
     let height = 0
     let cx = 0
     let cy = 0
-    let maxR = 0
+    let unit = 40
     let particles: Particle[] = []
     let color = '#8FCF4A'
     let mouse = { x: -9999, y: -9999 }
@@ -103,12 +106,12 @@ const {
 
     function seed(): void {
       particles = Array.from({ length: count }, () => ({
-        ang: Math.random() * Math.PI * 2,
-        // sqrt 保证面积上均匀分布
-        rad: Math.sqrt(Math.random()) * maxR,
-        vr: (Math.random() - 0.5) * driftSpeed,
-        r: radius * (0.7 + Math.random() * 0.6),
-        alpha: transparency ? 0.15 + Math.random() * 0.55 : 0.85,
+        x: (Math.random() * 2 - 1) * spread,
+        y: (Math.random() * 2 - 1) * spread,
+        z: Z_NEAR + Math.random() * (Z_FAR - Z_NEAR),
+        vx: (Math.random() - 0.5) * speed * 0.05,
+        vy: (Math.random() - 0.5) * speed * 0.05,
+        size: 0.6 + Math.random() * 0.9,
         ox: 0,
         oy: 0,
       }))
@@ -123,7 +126,7 @@ const {
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
       cx = width / 2
       cy = height / 2
-      maxR = Math.hypot(width, height) / 2
+      unit = (Math.min(width, height) / (2 * spread)) * 1.6
       color = themeColor()
       seed()
     }
@@ -140,23 +143,38 @@ const {
       ctx!.clearRect(0, 0, width, height)
       ctx!.fillStyle = color
       const hoverRadius = 130
+      const cos = Math.cos(ROT)
+      const sin = Math.sin(ROT)
 
       for (const p of particles) {
         if (!reduced) {
-          p.ang += rotSpeed
-          p.rad += p.vr
-          if (p.rad > maxR + spread || p.rad < spread * 0.5)
-            p.vr *= -1
+          p.x += p.vx
+          p.y += p.vy
+          // 速度缓慢转向，形成柔和漂浮
+          const nvx = p.vx * cos - p.vy * sin
+          const nvy = p.vx * sin + p.vy * cos
+          p.vx = nvx
+          p.vy = nvy
+          if (p.x > spread) p.x = -spread
+          else if (p.x < -spread) p.x = spread
+          if (p.y > spread) p.y = -spread
+          else if (p.y < -spread) p.y = spread
         }
-        const x = cx + Math.cos(p.ang) * p.rad
-        const y = cy + Math.sin(p.ang) * p.rad
+
+        const persp = FOCAL / p.z
+        const x = cx + p.x * persp * unit
+        const y = cy + p.y * persp * unit
+        const r = Math.max(0.4, BASE_R * p.size * persp)
+
+        if (x < -r || x > width + r || y < -r || y > height + r)
+          continue
 
         if (mouseInteraction && mouse.x > -9000) {
           const dx = x - mouse.x
           const dy = y - mouse.y
           const dist = Math.hypot(dx, dy)
           if (dist < hoverRadius && dist > 0.01) {
-            const force = (1 - dist / hoverRadius) * 26
+            const force = (1 - dist / hoverRadius) * 22
             p.ox += (dx / dist) * force
             p.oy += (dy / dist) * force
           }
@@ -164,9 +182,11 @@ const {
         p.ox *= 0.9
         p.oy *= 0.9
 
-        ctx!.globalAlpha = p.alpha
+        // 近实远淡，形成层次
+        const depth = (p.z - Z_NEAR) / (Z_FAR - Z_NEAR)
+        ctx!.globalAlpha = transparency ? 0.15 + (1 - depth) * 0.5 : 1 - depth * 0.72
         ctx!.beginPath()
-        ctx!.arc(x + p.ox, y + p.oy, p.r, 0, Math.PI * 2)
+        ctx!.arc(x + p.ox, y + p.oy, r, 0, Math.PI * 2)
         ctx!.fill()
       }
       ctx!.globalAlpha = 1
