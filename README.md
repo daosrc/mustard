@@ -3,7 +3,7 @@
 > 开源 Chrome 划词翻译扩展：划词 / 悬浮 / 网页翻译，侧边栏 AI 对话，生词本与记词，离线词典。
 > 仅通过 GitHub 开源分发，**不提供 Chrome 应用商店下载**。
 
-[English](./README.en.md) · [宣传页](https://daosrc.github.io/mustard/) · [Releases](https://github.com/daosrc/mustard/releases)
+[English](./README.en.md) · [主页](https://daosrc.github.io/mustard/) · [Releases](https://github.com/daosrc/mustard/releases)
 
 ## 功能
 
@@ -57,7 +57,7 @@ pnpm build:ext          # 产物在 apps/extension/.output/chrome-mv3
 ```bash
 pnpm install
 pnpm dev:ext        # 扩展开发（WXT HMR）
-pnpm dev:landing    # 宣传页开发（Astro）
+pnpm dev:landing    # 主页开发（Astro）
 pnpm lint           # ESLint
 pnpm typecheck      # 类型检查
 pnpm build          # 构建全部
@@ -67,7 +67,7 @@ pnpm build          # 构建全部
 
 ```
 apps/extension   扩展（WXT + Vue 3 + TS）
-apps/landing     宣传页（Astro）
+apps/landing     主页（Astro）
 packages/ui            组件库
 packages/core          providers / translation / dictionary / vocab / session
 packages/platform      浏览器能力（messaging / storage / sidePanel …）
@@ -93,7 +93,7 @@ design/                设计资料（原型、设计文档、图标、截图）
 
 - **离线词典**：词典数据不随扩展打包，**首次使用时下载**。默认使用**英汉词典《现代英汉》**（约 2.8 MB，优先英译中），另有 ECDICT（MIT 样例）与 Wordset 英英（CC BY-SA，按首字母懒加载）。《现代英汉》数据源自 open-ecdict，许可待确认（见 THIRD-PARTY.md）；完整 ECDICT（约 66 MB）与中日等多语源待补充；分级查询链路（本地 → 在线 → AI）与词典管理已完成。
 - **界面语言**：扩展界面支持**简体中文 / English**（设置 → 外观 → 界面语言），文案集中在 `shared/i18n`；若发现遗漏的硬编码文案，欢迎提 Issue。
-- **宣传页截图**：功能区当前使用 CSS 示意图，正式截图待导出后替换。
+- **主页截图**：功能区使用扩展实拍截图（`apps/landing/public/shots/`），随扩展 UI 变更需同步重拍。
 
 ## 许可
 

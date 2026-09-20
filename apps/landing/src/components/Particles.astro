@@ -1,8 +1,9 @@
 ---
 /**
- * 粒子背景 —— 按 vue-bits Particles 的 props 语义实现：
- * 3D 粒子系统（cameraDistance 透视 + particleSpread 分布 + particleBaseSize 尺寸），
- * 圆点为实心（alphaParticles=false）、近大远小、缓慢自转与漂浮。
+ * 粒子背景 —— 3D 星系式旋转：
+ * 粒子分布在一个球体内（3D 全方位包围），整体绕一条倾斜轴缓慢自转；
+ * 该轴自身再沿一个 360° 圆锥缓慢进动（轨迹为圆）。
+ * 鼠标移入后，轴朝鼠标方向的**反方向**轻微偏移。
  * 颜色取当前主题色；纯 Canvas 2D，无额外依赖。
  */
 interface Props {
@@ -67,18 +68,31 @@ const {
 </style>
 
 <script>
-  interface Particle {
-    x: number
-    y: number
-    z: number
-    vx: number
-    vy: number
-    vz: number
+  interface Vec3 { x: number, y: number, z: number }
+  interface Particle extends Vec3 {
     scale: number
     alpha: number
     color: string
     ox: number
     oy: number
+  }
+
+  /** 绕单位轴 axis 旋转 ang 弧度（Rodrigues） */
+  function rotate(v: Vec3, axis: Vec3, ang: number): void {
+    const c = Math.cos(ang)
+    const s = Math.sin(ang)
+    const dot = v.x * axis.x + v.y * axis.y + v.z * axis.z
+    const cx = axis.y * v.z - axis.z * v.y
+    const cy = axis.z * v.x - axis.x * v.z
+    const cz = axis.x * v.y - axis.y * v.x
+    v.x = v.x * c + cx * s + axis.x * dot * (1 - c)
+    v.y = v.y * c + cy * s + axis.y * dot * (1 - c)
+    v.z = v.z * c + cz * s + axis.z * dot * (1 - c)
+  }
+
+  function norm(v: Vec3): Vec3 {
+    const l = Math.hypot(v.x, v.y, v.z) || 1
+    return { x: v.x / l, y: v.y / l, z: v.z / l }
   }
 
   const canvases = document.querySelectorAll<HTMLCanvasElement>('canvas.particles')
@@ -88,13 +102,13 @@ const {
     if (!ctx)
       continue
 
-    const count = Number(canvas.dataset.count) || 400
+    const count = Number(canvas.dataset.count) || 700
     const spread = Number(canvas.dataset.spread) || 10
-    const speed = Number(canvas.dataset.speed) || 0.2
+    const speed = Number(canvas.dataset.speed) || 0.1
     const hover = canvas.dataset.hover === '1'
     const hoverFactor = Number(canvas.dataset.hoverFactor) || 1
     const alphaParticles = canvas.dataset.alpha === '1'
-    const baseSize = Number(canvas.dataset.baseSize) || 600
+    const baseSize = Number(canvas.dataset.baseSize) || 100
     const sizeRandomness = Number(canvas.dataset.sizeRandomness) || 0
     const camDistance = Number(canvas.dataset.cameraDistance) || 20
     const disableRotation = canvas.dataset.disableRotation === '1'
@@ -102,8 +116,14 @@ const {
     const customColors = (canvas.dataset.colors || '').split(',').map(s => s.trim()).filter(Boolean)
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const half = spread / 2
-    const rotSpeed = disableRotation || reduced ? 0 : speed * 0.003
+    const R = spread / 2
+    const spinSpeed = disableRotation || reduced ? 0 : speed * 0.012
+    const precessSpeed = disableRotation || reduced ? 0 : speed * 0.004
+
+    // 倾斜的自转轴（呈 3D 视角），并沿圆锥缓慢进动
+    const axis0 = norm({ x: 0.55, y: 1, z: 0.3 })
+    let axis: Vec3 = { ...axis0 }
+    let precess = 0
 
     let width = 0
     let height = 0
@@ -113,6 +133,7 @@ const {
     let colors: string[] = ['#8FCF4A']
     let particles: Particle[] = []
     let mouse = { x: -9999, y: -9999 }
+    let tilt = { x: 0, y: 0 }
     let raf = 0
 
     function themeColors(): string[] {
@@ -122,21 +143,24 @@ const {
     }
 
     function seed(): void {
-      particles = Array.from({ length: count }, () => ({
-        x: (Math.random() * 2 - 1) * half,
-        y: (Math.random() * 2 - 1) * half,
-        z: (Math.random() * 2 - 1) * half,
-        vx: (Math.random() - 0.5) * speed * 0.02,
-        vy: (Math.random() - 0.5) * speed * 0.02,
-        vz: (Math.random() - 0.5) * speed * 0.02,
-        // sizeRandomness=0 → 尺寸一致；=1 → 随机尺寸
-        scale: (1 - sizeRandomness) + sizeRandomness * Math.random(),
-        // alphaParticles：每个粒子随机透明度
-        alpha: alphaParticles ? 0.2 + Math.random() * 0.6 : 1,
-        color: customColors.length ? customColors[Math.floor(Math.random() * customColors.length)]! : colors[Math.floor(Math.random() * colors.length)]!,
-        ox: 0,
-        oy: 0,
-      }))
+      particles = Array.from({ length: count }, () => {
+        // 球体内均匀分布（cbrt 保证体积均匀）
+        const r = R * Math.cbrt(Math.random())
+        const theta = Math.random() * Math.PI * 2
+        const phi = Math.acos(2 * Math.random() - 1)
+        return {
+          x: r * Math.sin(phi) * Math.cos(theta),
+          y: r * Math.cos(phi),
+          z: r * Math.sin(phi) * Math.sin(theta),
+          scale: (1 - sizeRandomness) + sizeRandomness * Math.random(),
+          alpha: alphaParticles ? 0.2 + Math.random() * 0.6 : 1,
+          color: customColors.length
+            ? customColors[Math.floor(Math.random() * customColors.length)]!
+            : colors[Math.floor(Math.random() * colors.length)]!,
+          ox: 0,
+          oy: 0,
+        }
+      })
     }
 
     function resize(): void {
@@ -148,7 +172,6 @@ const {
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
       cx = width / 2
       cy = height / 2
-      // 让 ±spread/2 的分布铺满画布长边
       focal = 2 * Math.max(width, height)
       colors = themeColors()
       seed()
@@ -164,30 +187,30 @@ const {
 
     function frame(): void {
       ctx!.clearRect(0, 0, width, height)
-      const cos = Math.cos(rotSpeed)
-      const sin = Math.sin(rotSpeed)
+
+      // 自转轴缓慢进动：轴端点绕 Y 轴画一个圆
+      if (precessSpeed) {
+        precess += precessSpeed
+        const a = { ...axis0 }
+        rotate(a, { x: 0, y: 1, z: 0 }, precess)
+        axis = norm(a)
+      }
+
+      // 鼠标：轴朝鼠标反方向轻微偏移
+      const targetTilt = { x: 0, y: 0 }
+      if (hover && mouse.x > -9000) {
+        targetTilt.x = -((mouse.x - cx) / width) * 0.8 * hoverFactor
+        targetTilt.y = -((mouse.y - cy) / height) * 0.8 * hoverFactor
+      }
+      tilt.x += (targetTilt.x - tilt.x) * 0.06
+      tilt.y += (targetTilt.y - tilt.y) * 0.06
+      const spinAxis = norm({ x: axis.x + tilt.x, y: axis.y + tilt.y, z: axis.z })
+
       const hoverRadius = 140
 
       for (const p of particles) {
-        if (!reduced) {
-          // 缓慢漂浮（在 spread 盒内环绕）
-          p.x += p.vx
-          p.y += p.vy
-          p.z += p.vz
-          if (p.x > half) p.x = -half
-          else if (p.x < -half) p.x = half
-          if (p.y > half) p.y = -half
-          else if (p.y < -half) p.y = half
-          if (p.z > half) p.z = -half
-          else if (p.z < -half) p.z = half
-          // 绕 y 轴缓慢自转（disableRotation=false）
-          if (rotSpeed) {
-            const nx = p.x * cos - p.z * sin
-            const nz = p.x * sin + p.z * cos
-            p.x = nx
-            p.z = nz
-          }
-        }
+        if (spinSpeed)
+          rotate(p, spinAxis, spinSpeed)
 
         const depth = camDistance - p.z
         if (depth <= 0.5)
@@ -195,7 +218,6 @@ const {
         const persp = focal / depth
         const x = cx + p.x * persp
         const y = cy + p.y * persp
-        // gl_PointSize ≈ particleBaseSize * scale / depth
         const diameter = Math.max(1, baseSize * p.scale / depth)
         const r = diameter / 2
 
@@ -207,7 +229,7 @@ const {
           const dy = y - mouse.y
           const dist = Math.hypot(dx, dy)
           if (dist < hoverRadius && dist > 0.01) {
-            const force = (1 - dist / hoverRadius) * 24 * hoverFactor
+            const force = (1 - dist / hoverRadius) * 14 * hoverFactor
             p.ox += (dx / dist) * force
             p.oy += (dy / dist) * force
           }
@@ -215,8 +237,8 @@ const {
         p.ox *= 0.9
         p.oy *= 0.9
 
-        // alphaParticles：随机透明度；否则实心 + 近实远淡
-        const depthRatio = (depth - (camDistance - half)) / spread
+        // 近实远淡，增强 3D 层次
+        const depthRatio = (depth - (camDistance - R)) / spread
         ctx!.globalAlpha = alphaParticles ? p.alpha : 1 - depthRatio * 0.55
         ctx!.fillStyle = p.color
         ctx!.beginPath()

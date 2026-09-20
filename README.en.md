@@ -3,7 +3,7 @@
 > An open-source Chrome translation extension: select / hover / full-page translation, side-panel AI chat, vocabulary with dictation, and offline dictionaries.
 > Distributed on GitHub only — **no Chrome Web Store listing**.
 
-[中文](./README.md) · [Landing page](https://daosrc.github.io/mustard/en/) · [Releases](https://github.com/daosrc/mustard/releases)
+[中文](./README.md) · [Homepage](https://daosrc.github.io/mustard/en/) · [Releases](https://github.com/daosrc/mustard/releases)
 
 ## Features
 
@@ -57,7 +57,7 @@ Then load `apps/extension/.output/chrome-mv3` via **Load unpacked**.
 ```bash
 pnpm install
 pnpm dev:ext        # extension dev (WXT + HMR)
-pnpm dev:landing    # landing page dev (Astro)
+pnpm dev:landing    # homepage dev (Astro)
 pnpm lint           # ESLint
 pnpm typecheck      # TypeScript
 pnpm build          # build everything
@@ -67,7 +67,7 @@ Monorepo layout:
 
 ```
 apps/extension   Extension (WXT + Vue 3 + TS)
-apps/landing     Landing page (Astro)
+apps/landing     Homepage (Astro)
 packages/ui            Component library
 packages/core          providers / translation / dictionary / vocab / session
 packages/platform      Browser APIs (messaging / storage / sidePanel …)
@@ -93,7 +93,7 @@ See [THIRD-PARTY.md](./THIRD-PARTY.md).
 
 - **Offline dictionaries**: data is not bundled and is **downloaded on first use**. An English→Chinese dictionary (现代英汉, ~2.8 MB) is the default, plus ECDICT (MIT sample) and Wordset English (CC BY-SA, lazy per letter). The 现代英汉 data comes from open-ecdict and its license is unconfirmed (see THIRD-PARTY.md). The full ECDICT and Chinese/Japanese sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
 - **UI language**: the extension UI supports **Simplified Chinese / English** (Settings → Appearance → UI language); strings live in `shared/i18n`. Please open an issue for any hard-coded text we missed.
-- **Landing screenshots**: feature sections currently use CSS mock visuals; real screenshots will replace them once exported.
+- **Homepage screenshots**: feature sections use real extension screenshots (`apps/landing/public/shots/`); re-shoot when the UI changes.
 
 ## License
 

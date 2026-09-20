@@ -34,7 +34,6 @@ export interface Content {
   installTitle: string
   installDesc: string
   installOptions: Array<{ title: string, steps: string[] }>
-  footerNote: string
 }
 
 const repo = LINKS.repo
@@ -85,7 +84,6 @@ const zh: Content = {
     { title: '使用 Release 包', steps: ['打开 GitHub Releases 下载 mustard-*.zip', '解压到任意目录', '在 chrome://extensions 开启开发者模式', '「加载已解压的扩展程序」选择解压目录'] },
     { title: '从源码构建', steps: [`git clone ${repo}`, 'pnpm install', 'pnpm build:ext', '加载 apps/extension/.output/chrome-mv3'] },
   ],
-  footerNote: 'Mustard 芥末 · MIT 许可',
 }
 
 const en: Content = {
@@ -134,7 +132,6 @@ const en: Content = {
     { title: 'Use a release zip', steps: ['Open GitHub Releases and download mustard-*.zip', 'Unzip it anywhere', 'Enable Developer mode at chrome://extensions', 'Click "Load unpacked" and pick the folder'] },
     { title: 'Build from source', steps: [`git clone ${repo}`, 'pnpm install', 'pnpm build:ext', 'Load apps/extension/.output/chrome-mv3'] },
   ],
-  footerNote: 'Mustard · MIT License',
 }
 
 export const CONTENT: Record<Locale, Content> = { zh, en }
