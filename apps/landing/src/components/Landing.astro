@@ -21,6 +21,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
   page: { src: 'shots/page.png', w: 1520, h: 1240 },
   chat: { src: 'shots/chat.png', w: 840, h: 1800 },
   vocab: { src: 'shots/vocab.png', w: 840, h: 1800 },
+  image: { src: 'shots/image.png', w: 840, h: 1800 },
 }
 ---
 
@@ -56,12 +57,12 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
           <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">{c.hero.source}</a>
         </div>
 
-        <div class="mt-20 mock-window text-left">
+        <div class="mt-20 mock-window hero-window text-left">
           <div class="mock-bar">
             <span class="mock-dots"><i /><i /><i /></span>
-            <span class="mock-url">example.com</span>
+            <span class="mock-url">en.wikipedia.org</span>
           </div>
-          <img class="mock-shot" src={`${base}shots/selection.png`} width="788" height="444" alt="划词翻译：选中即译，含音标、词性、释义与发音">
+          <img class="mock-shot" src={`${base}shots/page-hero.png`} width="2800" height="1640" alt="网页翻译：整页双语对照，含导航、正文与信息框">
         </div>
       </div>
     </section>
@@ -90,16 +91,6 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
                   )
                 : (
                     <>
-                      {f.visual === 'image' && (
-                        <div class="mock-window sm">
-                          <div class="mock-body">
-                            <div class="mock-img">
-                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="1.6" /><path d="m21 15-4.5-4.5L7 20" /></svg>
-                            </div>
-                            <p class="mock-tr">图片中的文字译文……</p>
-                          </div>
-                        </div>
-                      )}
                       {f.visual === 'dict' && (
                         <div class="mock-window sm">
                           <div class="mock-body mock-dict">
@@ -208,6 +199,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
 .hero-inner { position: relative; z-index: 1; }
 .hero-particles { position: absolute; inset: 0; z-index: 0; }
 .hero .mock-window { background: var(--m-surface); }
+.hero-window { max-width: 720px; }
 .mock-shot { display: block; width: 100%; height: auto; }
 
 .feature-visual { display: flex; justify-content: center; }

@@ -150,3 +150,9 @@
 - 原因：① `sendMessage` 对单词先 push 一条词典消息、再 push 一条流式 AI 消息；② `chatOnce` 未设超时，供应商挂起时页面翻译的批次请求永不返回，`busy` 一直为 true，队列卡死；③ 上一版为降低段落数加了 `nav/aside/footer/header` 跳过规则，把导航/侧栏也排除了。
 - 解决：① 单词只 push 一条助手消息，先放词典卡片文本，AI 流式内容用 `\n\n` 追加到同一条（`compose()`），失败时错误也追加在同一条；② `chatOnce` 默认加 `AbortSignal.timeout(60s)`，批量请求 `requestBatch` 另加 45s 超时，超时按普通失败走重试/二分拆分；③ 移除 `nav/aside/footer/header` 跳过规则，导航/侧栏/标题恢复翻译（保留含 `style/script` 块的跳过）。
 - 备注：Wikipedia 长条目含导航后约 1300 段，会分多次请求、耗时较长但持续前进（实测 380→700 稳步增长）；若希望更快可重新加回区域跳过规则。
+
+### 2026-09-20 · 侧边栏发送图片时模型收不到图片（附带的附件被丢弃）
+- 现象：侧边栏附带截图后提问，模型答非所问/礼貌拒绝，像是没看到图片。
+- 原因：`sendMessage` 组装 `history` 时只映射了 `{id, role, content, createdAt}`，把 `attachments`（图片 dataUrl）丢掉了，`buildChatBody → toContentParts` 自然拿不到图片。
+- 解决：`history` 映射时带上 `attachments`。验证：附带芥末信息框截图 + 「翻译图片中的文字」，模型正确输出「菜肴 / 调味品 / 地区或州 / 全球分布 / 主要成分 / 芥末籽、水、醋、盐」。
+- 备注：附件 dataUrl 会随多轮历史重复发送，长会话下请求体会变大；后续可考虑只在最近若干轮携带图片。

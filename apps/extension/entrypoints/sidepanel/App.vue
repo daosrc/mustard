@@ -312,7 +312,7 @@ async function sendMessage(): Promise<void> {
   const assistant = messages.value[messages.value.length - 1]!
   const history = messages.value
     .filter(m => m.id !== assistant.id)
-    .map(m => ({ id: m.id, role: m.role, content: m.content, createdAt: m.createdAt }))
+    .map(m => ({ id: m.id, role: m.role, content: m.content, attachments: m.attachments, createdAt: m.createdAt }))
 
   // 词典卡片 + AI 结果拼成一条消息，AI 内容追加在卡片之后
   const compose = (ai: string): string => (prefix && ai ? `${prefix}\n\n${ai}` : prefix || ai)
