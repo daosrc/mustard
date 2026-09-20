@@ -16,10 +16,15 @@ const CLS = 'mustard-translation'
 const STYLE_ID = 'mustard-page-translation-style'
 const BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote, figcaption, dd, dt, summary, caption, div'
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'BUTTON', 'SVG', 'CANVAS', 'IFRAME'])
+/** 跳过导航/侧栏/页脚等非正文区域，避免把整站 UI 也翻译了 */
+const SKIP_REGIONS = 'nav, aside, footer, header, [role="navigation"], [role="banner"], [role="contentinfo"], [role="menu"], [aria-hidden="true"]'
 const MAX_BLOCKS = 600
-/** 每次请求合并的段落数 / 字符数上限：显著降低请求数，避免限流 */
-const BATCH_SIZE = 8
-const BATCH_CHARS = 1600
+/**
+ * 每次请求尽量带上整页文本：正常文章 1~2 次请求即可翻完；
+ * 只有超出上限或模型返回不完整时，core 才会二分拆小、最终单条重试。
+ */
+const MAX_CHARS_PER_REQUEST = 10000
+const MAX_BLOCKS_PER_REQUEST = 80
 const RETRY = 1
 
 let observer: MutationObserver | null = null
@@ -67,7 +72,7 @@ function ensurePageStyle(): void {
 function isCandidate(el: HTMLElement): boolean {
   if (SKIP_TAGS.has(el.tagName) || el.isContentEditable)
     return false
-  if (el.closest('mustard-root') || el.closest(`.${CLS}`))
+  if (el.closest('mustard-root') || el.closest(`.${CLS}`) || el.closest(SKIP_REGIONS))
     return false
   if (el.hasAttribute(MARK) || queued.has(el) || !el.getClientRects().length)
     return false
@@ -116,10 +121,10 @@ function takeBatch(): { els: HTMLElement[], texts: string[] } {
   const els: HTMLElement[] = []
   const texts: string[] = []
   let chars = 0
-  while (queue.length && els.length < BATCH_SIZE) {
+  while (queue.length && els.length < MAX_BLOCKS_PER_REQUEST) {
     const el = queue[0]!
     const text = (el.textContent ?? '').trim()
-    if (els.length && chars + text.length > BATCH_CHARS)
+    if (els.length && chars + text.length > MAX_CHARS_PER_REQUEST)
       break
     queue.shift()
     els.push(el)

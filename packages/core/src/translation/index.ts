@@ -1,7 +1,7 @@
 import type { ChatMessage, ChatRole, DictResult, LangCode, ModelDef, Provider, SourceLang } from '@mustard/shared'
 import { cacheKey, LRU } from '@mustard/utils'
 import { lookupOnline } from '../dictionary/online'
-import { chatOnce } from '../providers/client'
+import { chatOnce, errorCode, ProviderError } from '../providers/client'
 
 export interface TranslateResult {
   text: string
@@ -170,17 +170,43 @@ function parseStringArray(raw: string): string[] | null {
  * 批量段落翻译（网页翻译用）：一次请求翻译多段，显著减少请求数与限流风险。
  * 命中缓存的不再请求；模型返回数量不匹配时二分拆小重试，最终回退逐条翻译。
  */
-async function requestBatch(target: AiTarget, items: string[], targetLang: LangCode): Promise<string[] | null> {
-  const content = await chatOnce(target.provider, target.model, [
-    message('system', `你是翻译引擎。用户会给出一个 JSON 字符串数组，请逐项翻译为 ${targetLang}，只输出与输入等长的 JSON 字符串数组，顺序保持一致，不要解释，不要输出任何多余内容。`),
-    message('user', JSON.stringify(items)),
-  ])
-  const parsed = parseStringArray(content)
-  if (!parsed || parsed.length !== items.length)
-    return null
-  return parsed
+/** 不可重试/拆分的错误（缺 Key、鉴权失败等），直接放弃该分支 */
+const FATAL_ERROR = /MISSING_API_KEY|PROVIDER_ERROR_(?:401|403|404)/
+/** 限流后的全局冷却，避免继续轰炸供应商 */
+let cooldownUntil = 0
+
+async function waitCooldown(): Promise<void> {
+  const wait = cooldownUntil - Date.now()
+  if (wait > 0)
+    await new Promise(resolve => setTimeout(resolve, wait))
 }
 
+async function requestBatch(target: AiTarget, items: string[], targetLang: LangCode): Promise<string[] | null> {
+  await waitCooldown()
+  try {
+    const content = await chatOnce(target.provider, target.model, [
+      message('system', `你是翻译引擎。用户会给出一个 JSON 字符串数组，请逐项翻译为 ${targetLang}，只输出与输入等长的 JSON 字符串数组，顺序保持一致，不要解释，不要输出任何多余内容。`),
+      message('user', JSON.stringify(items)),
+    ])
+    const parsed = parseStringArray(content)
+    if (!parsed || parsed.length !== items.length)
+      return null
+    return parsed
+  }
+  catch (error) {
+    const code = errorCode(error)
+    if (FATAL_ERROR.test(code))
+      throw new ProviderError('FATAL', code)
+    if (/429/.test(code))
+      cooldownUntil = Date.now() + 4000
+    throw error
+  }
+}
+
+/**
+ * 先整批请求，失败才二分拆小，最终回退到单条 —— 正常页面只需 1~2 次请求，
+ * 只有失败的分支才会继续拆到「单独请求出错的那一段」。
+ */
 async function translateItems(
   items: string[],
   sourceLang: SourceLang,
@@ -198,8 +224,9 @@ async function translateItems(
         if (parsed)
           return parsed.map(item => item.trim())
       }
-      catch {
-        // 该模型失败（429/网络）→ 重试或换下一个
+      catch (error) {
+        if (error instanceof ProviderError && error.code === 'FATAL')
+          return items.map(() => '')
       }
       await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)))
     }
