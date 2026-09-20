@@ -22,7 +22,7 @@ export interface Content {
   title: string
   description: string
   nav: { features: string, steps: string, install: string, github: string, altLabel: string, altHref: string }
-  hero: { badge: string, title: string, tagline: string, install: string, source: string }
+  hero: { badge: string, title: string, slogan: string, tagline: string, install: string, source: string }
   featuresTitle: string
   features: Feature[]
   stepsTitle: string
@@ -47,6 +47,7 @@ const zh: Content = {
   hero: {
     badge: '开源 Chrome 划词翻译插件 · MIT',
     title: 'Mustard 芥末',
+    slogan: '流畅阅读',
     tagline: '划词 / 悬浮 / 网页 / 截图翻译，侧边栏 AI 对话，生词本与记词，离线词典。无商店版本，仅通过 GitHub 开源分发。',
     install: '安装（GitHub）',
     source: '查看源码',
@@ -95,6 +96,7 @@ const en: Content = {
   hero: {
     badge: 'Open-source Chrome translation extension · MIT',
     title: 'Mustard',
+    slogan: 'Read fluently',
     tagline: 'Select, hover, page and screenshot translation, a side-panel AI chat, vocabulary with dictation, and offline dictionaries. No store listing — GitHub only.',
     install: 'Install (GitHub)',
     source: 'Source code',

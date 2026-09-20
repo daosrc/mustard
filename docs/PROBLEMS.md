@@ -138,3 +138,9 @@
 - 规则：content 侧每次从队列取出**最多 80 段 / 10000 字符**组成一个批次（正常文章即整页），交给 core `translateBlocks`；core 先整批发一次（JSON 数组进出），若返回数组长度不匹配或请求失败，则**二分拆小**重试，最终只有长度 1 时回退单条。429 会设置 4s 全局冷却再重试；`MISSING_API_KEY`/401/403/404 视为致命错误，直接放弃该分支不再拆。
 - 另：`isCandidate` 跳过 `nav/aside/footer/header/[role=navigation]` 等区域，避免把整站 UI 也翻译（Wikipedia 段落数从 1388 降到 ~170）。
 - 备注：一次请求受「模型上下文 + 最大输出」双重限制，超长页面必然需要拆分——这是硬约束，不是实现缺陷。实测：演示页 1 次、skyandtelescope（84 段）2 次、Wikipedia 长条目 2~4 次。
+
+### 2026-09-20 · 网页翻译：窄容器译文竖排 / 混入 CSS / 落地页图标与标语
+- 现象：表格等窄容器里，短译文被塞到原文右侧压成一列竖排；Wikipedia 的 `navbox-styles`/参考文献 `<li>` 把内联 `<style>` 的 CSS 当成原文翻译，译文里出现大段 CSS；宣传页 hero 图标被 `w-20 h-20` 压扁、且用了 32px 的 `favicon.png` 放大发虚。
+- 原因：① 短文本一律行内追加并 `nowrap`，没有判断同行是否放得下；② 叶子块判定只看 `BLOCK_SELECTOR` 子元素，`<style>` 不在其中，于是含 `<style>` 的块被当作正文；③ hero 用的 `mascot.png` 是 400×739 竖图，塞进正方形被拉伸；导航图标用 32px 位图。
+- 解决：① `insertTranslation` 追加后实测 `getBoundingClientRect`，**换行或右侧溢出就改为在原文下方整行显示**（表格单元格内追加到单元格内，避免被移出表格）；② `isCandidate` 跳过含 `style/script/template/link` 子节点的块；③ hero 与导航改用 `design/icons/icon.svg`（256×256，矢量包装、高清），并删掉无用的 `mascot.png`/`ball-256.png`/`icon-128.png`；④ hero 标题后加主题色标语「流畅阅读 / Read fluently」，带 `margin-left`。
+- 备注：实测 Wikipedia 信息框「Main ingredients」译文正确落到原文下方；整页 123 段、0 处 CSS 泄漏。

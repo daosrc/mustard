@@ -72,6 +72,9 @@ function ensurePageStyle(): void {
 function isCandidate(el: HTMLElement): boolean {
   if (SKIP_TAGS.has(el.tagName) || el.isContentEditable)
     return false
+  // 内含 style/script 的块（如 Wikipedia 的 navbox-styles）：textContent 会混入 CSS
+  if (el.querySelector('style, script, noscript, template, link'))
+    return false
   if (el.closest('mustard-root') || el.closest(`.${CLS}`) || el.closest(SKIP_REGIONS))
     return false
   if (el.hasAttribute(MARK) || queued.has(el) || !el.getClientRects().length)
@@ -105,16 +108,45 @@ function collect(): HTMLElement[] {
   return out
 }
 
-/** 只在拿到译文后插入节点，避免「骨架一闪而过又被移除」 */
-function insertTranslation(el: HTMLElement, original: string, text: string): void {
-  const inline = original.length <= INLINE_MAX
-  const node = document.createElement(inline ? 'span' : 'div')
-  node.className = inline ? `${CLS} is-inline` : CLS
+/** 同行是否放得下：换行或右侧溢出即视为放不下 */
+function inlineFits(el: HTMLElement, span: HTMLElement): boolean {
+  const sr = span.getBoundingClientRect()
+  if (!sr.width && !sr.height)
+    return true
+  const display = getComputedStyle(el).display
+  const limit = (display.startsWith('inline')
+    ? el.parentElement?.getBoundingClientRect().right
+    : el.getBoundingClientRect().right) ?? sr.right
+  const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight)
+  const singleLine = !lineHeight || sr.height <= lineHeight * 1.5
+  return singleLine && sr.right <= limit + 1
+}
+
+function appendBelow(el: HTMLElement, text: string): void {
+  const node = document.createElement('div')
+  node.className = CLS
   node.textContent = text
-  if (inline)
+  // 表格单元格内不能直接 after（会被挪出表格），改为追加到单元格内部
+  if (el.tagName === 'TD' || el.tagName === 'TH')
     el.appendChild(node)
   else
     el.after(node)
+}
+
+/** 空间够就接在原文同行，放不下则追加到原文下方 */
+function insertTranslation(el: HTMLElement, original: string, text: string): void {
+  if (original.length > INLINE_MAX) {
+    appendBelow(el, text)
+    return
+  }
+  const span = document.createElement('span')
+  span.className = `${CLS} is-inline`
+  span.textContent = text
+  el.appendChild(span)
+  if (inlineFits(el, span))
+    return
+  span.remove()
+  appendBelow(el, text)
 }
 
 function takeBatch(): { els: HTMLElement[], texts: string[] } {

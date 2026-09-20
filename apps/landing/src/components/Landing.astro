@@ -28,7 +28,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
   <header class="sticky top-0 z-20 backdrop-blur bg-paper/85 border-b border-line">
     <nav class="max-w-5xl mx-auto flex items-center gap-5 px-5 h-14">
       <a class="flex items-center gap-2 no-underline text-ink font-700" href={base}>
-        <img class="w-7 h-7 rounded-lg" src={`${base}favicon.png`} alt="Mustard">
+        <img class="w-7 h-7 rounded-lg" src={`${base}icon.svg`} alt="Mustard">
         <span>{c.hero.title}</span>
       </a>
       <span class="flex-1" />
@@ -45,9 +45,11 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
     <section class="hero">
       <Particles class="hero-particles" />
       <div class="hero-inner max-w-5xl mx-auto px-5 pt-16 pb-12 text-center">
-        <img class="w-20 h-20 mx-auto rounded-2xl shadow-md" src={`${base}mascot.png`} alt="Mustard">
+        <img class="w-20 h-20 mx-auto rounded-2xl shadow-md" src={`${base}icon.svg`} alt="Mustard">
         <p class="mt-5 chip">{c.hero.badge}</p>
-        <h1 class="mt-4 text-4xl sm:text-5xl font-800 tracking-tight">{c.hero.title}</h1>
+        <h1 class="mt-4 text-4xl sm:text-5xl font-800 tracking-tight">
+          {c.hero.title}<span class="hero-slogan">{c.hero.slogan}</span>
+        </h1>
         <p class="mt-4 text-muted leading-relaxed max-w-2xl mx-auto">{c.hero.tagline}</p>
         <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
           <a class="btn-primary" href={LINKS.releases} target="_blank" rel="noreferrer">{c.hero.install}</a>
@@ -195,6 +197,14 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
 .nav-link { font-size: .875rem; color: var(--m-muted); text-decoration: none; transition: color .15s; }
 .nav-link:hover { color: var(--m-primary); }
 .section-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+.hero-slogan {
+  margin-left: .45em;
+  font-size: .52em;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--m-primary);
+  vertical-align: .08em;
+}
 
 .hero { position: relative; overflow: hidden; }
 .hero-inner { position: relative; z-index: 1; }
