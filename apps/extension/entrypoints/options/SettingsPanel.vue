@@ -503,7 +503,7 @@ async function removeDictPack(id: string): Promise<void> {
         <div v-for="dict in dictList" :key="dict.id" class="dict-item">
           <div class="d-main">
             <div class="d-name">
-              {{ dict.name }}
+              <span class="d-title">{{ dict.name }}</span>
               <MChip v-if="dict.perLetter" variant="primary">
                 {{ t('options.dictLazy') }}
               </MChip>
@@ -607,6 +607,8 @@ async function removeDictPack(id: string): Promise<void> {
 .dict-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--m-line); border-radius: 10px; }
 .d-main { flex: 1; min-width: 0; }
 .d-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.d-title { min-width: 0; }
+.d-name :deep(.m-chip) { flex: none; white-space: nowrap; }
 .d-actions { display: flex; align-items: center; gap: 6px; }
 .d-err { color: var(--m-blush); font-size: 11.5px; margin-top: 3px; }
 .d-progress { width: 84px; height: 6px; border-radius: 999px; background: var(--m-surface-2); overflow: hidden; }

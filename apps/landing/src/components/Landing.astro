@@ -14,14 +14,16 @@ const c = CONTENT[locale]
 const base = BASE
 const altHref = locale === 'zh' ? `${base}en/` : base
 
-/** 真实产品截图（由扩展在深色主题下实拍） */
-const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
+/** 真实产品截图（由扩展在深色主题下实拍）；uniform 表示与截图翻译统一宽度 */
+const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform?: boolean }>> = {
   selection: { src: 'shots/selection.png', w: 788, h: 444 },
   hover: { src: 'shots/hover.png', w: 714, h: 318 },
-  page: { src: 'shots/page.png', w: 1520, h: 1240 },
-  chat: { src: 'shots/chat.png', w: 840, h: 1800 },
-  vocab: { src: 'shots/vocab.png', w: 840, h: 1800 },
-  image: { src: 'shots/image.png', w: 840, h: 1800 },
+  page: { src: 'shots/page.png', w: 1400, h: 1040 },
+  image: { src: 'shots/image.png', w: 840, h: 1240, uniform: true },
+  chat: { src: 'shots/chat.png', w: 840, h: 1240, uniform: true },
+  vocab: { src: 'shots/vocab.png', w: 840, h: 1240, uniform: true },
+  dict: { src: 'shots/dict.png', w: 1140, h: 1222, uniform: true },
+  providers: { src: 'shots/providers.png', w: 1100, h: 1264, uniform: true },
 }
 ---
 
@@ -62,7 +64,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
             <span class="mock-dots"><i /><i /><i /></span>
             <span class="mock-url">en.wikipedia.org</span>
           </div>
-          <img class="mock-shot" src={`${base}shots/page-hero.png`} width="2800" height="1640" alt="网页翻译：整页双语对照，含导航、正文与信息框">
+          <img class="mock-shot" src={`${base}shots/page-hero.png`} width="2000" height="1172" alt="网页翻译：整页双语对照，含导航、正文与信息框">
         </div>
       </div>
     </section>
@@ -81,7 +83,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
               {SHOTS[f.visual]
                 ? (
                     <img
-                      class="shot"
+                      class:list={['shot', SHOTS[f.visual]!.uniform && 'shot-uniform']}
                       src={`${base}${SHOTS[f.visual]!.src}`}
                       width={SHOTS[f.visual]!.w}
                       height={SHOTS[f.visual]!.h}
@@ -89,31 +91,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
                       loading="lazy"
                     />
                   )
-                : (
-                    <>
-                      {f.visual === 'dict' && (
-                        <div class="mock-window sm">
-                          <div class="mock-body mock-dict">
-                            <p class="mock-p">查询：<mark>resilient</mark></p>
-                            <ol class="mock-chain">
-                              <li>本地词典 <b>✓</b></li>
-                              <li>在线词典</li>
-                              <li>AI 兜底</li>
-                            </ol>
-                          </div>
-                        </div>
-                      )}
-                      {f.visual === 'providers' && (
-                        <div class="mock-window sm">
-                          <div class="mock-body mock-prov">
-                            <div class="mock-prov-head"><i /> OpenCode Zen</div>
-                            <div class="mock-chips"><span>claude-sonnet-4.5</span><span class="on">图片</span><span class="on">附件</span></div>
-                            <div class="mock-chips"><span>deepseek-v4.1-flash</span><span>文本</span></div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
+                : null}
             </div>
           </article>
         ))}
@@ -215,6 +193,11 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
   border-radius: 14px;
   background: var(--m-surface);
   box-shadow: var(--m-shadow-md);
+}
+/* 截图翻译 ~ 模型提供商：统一宽度 */
+.shot.shot-uniform {
+  width: 300px;
+  max-height: none;
 }
 
 .feature { display: grid; gap: 22px; align-items: center; }
