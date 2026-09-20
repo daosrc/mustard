@@ -19,6 +19,7 @@ function t(key: string, vars?: Record<string, string | number>): string {
     <span class="pb-text">
       <template v-if="!pageState.total">{{ t('content.pageScanning') }}</template>
       <template v-else-if="pageState.done < pageState.total">{{ t('content.pageTranslating', { done: pageState.done, total: pageState.total }) }}</template>
+      <template v-else-if="pageState.failed">{{ t('content.pagePartial', { ok: pageState.ok, total: pageState.total }) }}</template>
       <template v-else-if="pageState.ok">{{ t('content.pageDone', { ok: pageState.ok }) }}</template>
       <template v-else>{{ t('content.pageNone') }}</template>
     </span>

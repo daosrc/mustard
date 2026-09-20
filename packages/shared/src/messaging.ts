@@ -6,6 +6,7 @@ export type Message
     | { type: 'GET_SETTINGS' }
     | { type: 'UPDATE_SETTINGS', payload: Partial<Settings> }
     | { type: 'TRANSLATE_TEXT', payload: { text: string, sourceLang: SourceLang, targetLang: LangCode, mode: TranslateMode, preferAi?: boolean, dictionaryOnly?: boolean } }
+    | { type: 'TRANSLATE_BLOCKS', payload: { texts: string[], sourceLang: SourceLang, targetLang: LangCode } }
     | { type: 'CHAT', payload: { messages: ChatMessage[], providerId: string, model: string, attachments?: Attachment[] } }
     | { type: 'TRANSLATE_IMAGE', payload: { dataUrl: string, targetLang: LangCode } }
     | { type: 'LOOKUP_WORD', payload: { word: string, sourceLang: SourceLang, targetLang: LangCode } }
@@ -31,6 +32,7 @@ export interface ResponseMap {
   GET_SETTINGS: Settings
   UPDATE_SETTINGS: Settings
   TRANSLATE_TEXT: { text: string, card?: DictResult }
+  TRANSLATE_BLOCKS: { texts: string[] }
   CHAT: { content: string }
   TRANSLATE_IMAGE: { content: string }
   LOOKUP_WORD: DictResult | null

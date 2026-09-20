@@ -150,6 +150,103 @@ export async function translateSentence(
   return { text: '' }
 }
 
+/** 从模型输出里解析字符串数组（容忍 ```json 包裹与多余文字） */
+function parseStringArray(raw: string): string[] | null {
+  const match = raw.match(/\[[\s\S]*\]/)
+  if (!match)
+    return null
+  try {
+    const json = JSON.parse(match[0]) as unknown
+    if (!Array.isArray(json))
+      return null
+    return json.map(item => (typeof item === 'string' ? item : String(item ?? '')))
+  }
+  catch {
+    return null
+  }
+}
+
+/**
+ * 批量段落翻译（网页翻译用）：一次请求翻译多段，显著减少请求数与限流风险。
+ * 命中缓存的不再请求；模型返回数量不匹配时二分拆小重试，最终回退逐条翻译。
+ */
+async function requestBatch(target: AiTarget, items: string[], targetLang: LangCode): Promise<string[] | null> {
+  const content = await chatOnce(target.provider, target.model, [
+    message('system', `你是翻译引擎。用户会给出一个 JSON 字符串数组，请逐项翻译为 ${targetLang}，只输出与输入等长的 JSON 字符串数组，顺序保持一致，不要解释，不要输出任何多余内容。`),
+    message('user', JSON.stringify(items)),
+  ])
+  const parsed = parseStringArray(content)
+  if (!parsed || parsed.length !== items.length)
+    return null
+  return parsed
+}
+
+async function translateItems(
+  items: string[],
+  sourceLang: SourceLang,
+  targetLang: LangCode,
+  ai?: AiTarget,
+  aiFallbacks?: AiTarget[],
+): Promise<string[]> {
+  if (!items.length)
+    return []
+  const targets = [ai, ...(aiFallbacks ?? [])].filter((t): t is AiTarget => !!t)
+  for (const target of targets) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const parsed = await requestBatch(target, items, targetLang)
+        if (parsed)
+          return parsed.map(item => item.trim())
+      }
+      catch {
+        // 该模型失败（429/网络）→ 重试或换下一个
+      }
+      await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)))
+    }
+  }
+  if (items.length === 1)
+    return [(await translateSentence(items[0]!, sourceLang, targetLang, ai, aiFallbacks)).text]
+  // 批量失败：二分拆小，避免逐条请求造成的请求风暴
+  const mid = Math.ceil(items.length / 2)
+  const [head, tail] = await Promise.all([
+    translateItems(items.slice(0, mid), sourceLang, targetLang, ai, aiFallbacks),
+    translateItems(items.slice(mid), sourceLang, targetLang, ai, aiFallbacks),
+  ])
+  return [...head, ...tail]
+}
+
+export async function translateBlocks(
+  texts: string[],
+  sourceLang: SourceLang,
+  targetLang: LangCode,
+  ai?: AiTarget,
+  aiFallbacks?: AiTarget[],
+): Promise<string[]> {
+  const out = texts.map(() => '')
+  const pending: number[] = []
+  texts.forEach((raw, i) => {
+    const value = raw.trim()
+    if (!value)
+      return
+    const cached = cache.get(cacheKey('t', value, sourceLang, targetLang, ai ? 'ai' : 'noai'))
+    if (cached?.text)
+      out[i] = cached.text
+    else
+      pending.push(i)
+  })
+  if (!pending.length)
+    return out
+
+  const results = await translateItems(pending.map(i => texts[i]!.trim()), sourceLang, targetLang, ai, aiFallbacks)
+  pending.forEach((i, k) => {
+    const value = results[k]?.trim() ?? ''
+    out[i] = value
+    if (value)
+      cache.set(cacheKey('t', texts[i]!.trim(), sourceLang, targetLang, ai ? 'ai' : 'noai'), { text: value })
+  })
+  return out
+}
+
 /** 纯词典查询（LOOKUP_WORD） */
 export async function lookupWord(word: string, targetLang: LangCode): Promise<DictResult | null> {
   return lookupOnline(word, targetLang)

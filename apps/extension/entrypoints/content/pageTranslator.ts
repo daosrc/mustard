@@ -8,6 +8,7 @@ export const pageState = reactive({
   done: 0,
   total: 0,
   ok: 0,
+  failed: 0,
 })
 
 const MARK = 'data-mustard-translated'
@@ -16,17 +17,22 @@ const STYLE_ID = 'mustard-page-translation-style'
 const BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote, figcaption, dd, dt, summary, caption, div'
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'BUTTON', 'SVG', 'CANVAS', 'IFRAME'])
 const MAX_BLOCKS = 600
-const CONCURRENCY = 3
+/** 每次请求合并的段落数 / 字符数上限：显著降低请求数，避免限流 */
+const BATCH_SIZE = 8
+const BATCH_CHARS = 1600
+const RETRY = 1
 
 let observer: MutationObserver | null = null
 let scanTimer: ReturnType<typeof setTimeout> | undefined
 let queue: HTMLElement[] = []
-let running = 0
+let busy = false
 let totalQueued = 0
 let settingsRef: Settings | null = null
 let queued = new WeakSet<HTMLElement>()
 /** 短文本阈值：不超过该长度时译文与原文本行内并列 */
 const INLINE_MAX = 30
+
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
 
 /** 追加译文节点的样式必须注入到页面（content.css 只作用于 Shadow DOM） */
 function ensurePageStyle(): void {
@@ -54,17 +60,6 @@ function ensurePageStyle(): void {
   font-size: .92em;
   white-space: nowrap;
 }
-.mustard-skeleton {
-  display: inline-block;
-  width: 64px;
-  height: 1em;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #eef6e6 25%, #dbe9cd 37%, #eef6e6 63%);
-  background-size: 400% 100%;
-  animation: mustard-shimmer 1.4s ease infinite;
-  vertical-align: text-bottom;
-}
-@keyframes mustard-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 `
   document.head.appendChild(style)
 }
@@ -105,48 +100,86 @@ function collect(): HTMLElement[] {
   return out
 }
 
-async function translateBlock(el: HTMLElement): Promise<void> {
-  const text = (el.textContent ?? '').trim()
-  const inline = text.length <= INLINE_MAX
+/** 只在拿到译文后插入节点，避免「骨架一闪而过又被移除」 */
+function insertTranslation(el: HTMLElement, original: string, text: string): void {
+  const inline = original.length <= INLINE_MAX
   const node = document.createElement(inline ? 'span' : 'div')
   node.className = inline ? `${CLS} is-inline` : CLS
-  node.innerHTML = '<span class="mustard-skeleton"></span>'
+  node.textContent = text
   if (inline)
     el.appendChild(node)
   else
     el.after(node)
-  try {
-    const result = await send({
-      type: 'TRANSLATE_TEXT',
-      payload: {
-        text,
-        sourceLang: settingsRef?.sourceLang ?? 'auto',
-        targetLang: settingsRef?.targetLang ?? 'zh-CN',
-        mode: 'page',
-      },
-    })
-    if (result.text) {
-      node.textContent = result.text
-      pageState.ok++
-    }
-    else {
-      node.remove()
-    }
-  }
-  catch {
-    node.remove()
-  }
 }
 
-function pump(): void {
-  while (running < CONCURRENCY && queue.length) {
-    const el = queue.shift()!
-    running++
-    void translateBlock(el).finally(() => {
-      running--
-      pageState.done++
-      pump()
-    })
+function takeBatch(): { els: HTMLElement[], texts: string[] } {
+  const els: HTMLElement[] = []
+  const texts: string[] = []
+  let chars = 0
+  while (queue.length && els.length < BATCH_SIZE) {
+    const el = queue[0]!
+    const text = (el.textContent ?? '').trim()
+    if (els.length && chars + text.length > BATCH_CHARS)
+      break
+    queue.shift()
+    els.push(el)
+    texts.push(text)
+    chars += text.length
+  }
+  return { els, texts }
+}
+
+async function translateBatch(texts: string[]): Promise<string[]> {
+  let lastError: unknown
+  for (let attempt = 0; attempt <= RETRY; attempt++) {
+    try {
+      const res = await send({
+        type: 'TRANSLATE_BLOCKS',
+        payload: {
+          texts,
+          sourceLang: settingsRef?.sourceLang ?? 'auto',
+          targetLang: settingsRef?.targetLang ?? 'zh-CN',
+        },
+      })
+      if (res.texts.some(Boolean))
+        return res.texts
+    }
+    catch (error) {
+      lastError = error
+    }
+    if (attempt < RETRY)
+      await sleep(800 * (attempt + 1))
+  }
+  if (lastError)
+    console.warn('[mustard] page translate batch failed', lastError)
+  return texts.map(() => '')
+}
+
+async function run(): Promise<void> {
+  if (busy)
+    return
+  busy = true
+  try {
+    while (pageState.active && queue.length) {
+      const { els, texts } = takeBatch()
+      const results = await translateBatch(texts)
+      els.forEach((el, i) => {
+        // 保留 MARK：避免 MutationObserver 因我们插入的节点而重扫造成重复翻译
+        pageState.done++
+        const text = results[i]?.trim()
+        if (text) {
+          insertTranslation(el, texts[i]!, text)
+          pageState.ok++
+        }
+        else {
+          pageState.failed++
+        }
+      })
+      await sleep(300)
+    }
+  }
+  finally {
+    busy = false
   }
 }
 
@@ -156,7 +189,7 @@ function enqueue(blocks: HTMLElement[]): void {
   queue.push(...blocks)
   totalQueued += blocks.length
   pageState.total = totalQueued
-  pump()
+  void run()
 }
 
 function scheduleScan(): void {
@@ -180,8 +213,9 @@ export function startPageTranslate(settings: Settings | null): void {
   pageState.done = 0
   pageState.total = 0
   pageState.ok = 0
+  pageState.failed = 0
   queue = []
-  running = 0
+  busy = false
   totalQueued = 0
   enqueue(collect())
   observer = new MutationObserver(scheduleScan)
@@ -194,7 +228,7 @@ export function stopPageTranslate(): void {
   observer = null
   clearTimeout(scanTimer)
   queue = []
-  running = 0
+  busy = false
   totalQueued = 0
   queued = new WeakSet<HTMLElement>() // 重置去重集合，允许再次翻译
   document.querySelectorAll(`.${CLS}`).forEach(node => node.remove())
@@ -202,4 +236,5 @@ export function stopPageTranslate(): void {
   pageState.done = 0
   pageState.total = 0
   pageState.ok = 0
+  pageState.failed = 0
 }

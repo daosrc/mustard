@@ -174,6 +174,7 @@ const zh: Messages = {
   'content.pageScanning': '正在扫描页面…',
   'content.pageTranslating': '翻译中 {done}/{total}',
   'content.pageDone': '翻译完成 · {ok} 段',
+  'content.pagePartial': '翻译完成 · {ok}/{total}（部分失败）',
   'content.pageNone': '未翻译任何内容（请配置模型 API Key）',
   'content.restore': '还原原文',
 }
@@ -345,6 +346,7 @@ const en: Messages = {
   'content.pageScanning': 'Scanning page…',
   'content.pageTranslating': 'Translating {done}/{total}',
   'content.pageDone': 'Done · {ok} blocks',
+  'content.pagePartial': 'Done · {ok}/{total} (some failed)',
   'content.pageNone': 'Nothing translated (configure a model API key)',
   'content.restore': 'Restore original',
 }
