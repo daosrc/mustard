@@ -287,7 +287,9 @@ async function sendMessage(): Promise<void> {
   attachments.value = []
   autoGrow()
 
-  // 单词：先给本地/在线词典卡片（不走 AI），随后再流式 AI 翻译
+  // 单词：先展示词典卡片，随后把 AI 结果追加到同一条消息里（只保留一条）
+  let prefix = ''
+  let card: ChatMessage['card']
   if (isSingleWord(text)) {
     try {
       const dict = await send({
@@ -295,15 +297,8 @@ async function sendMessage(): Promise<void> {
         payload: { text, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'word', dictionaryOnly: true },
       })
       if (dict.card) {
-        messages.value.push({
-          id: uid('m-'),
-          role: 'assistant',
-          content: formatDict(dict.card),
-          card: { word: dict.card.word, phonetic: dict.card.phonetic, partOfSpeech: dict.card.partOfSpeech, translation: dict.card.translation, examples: dict.card.examples },
-          status: 'done',
-          createdAt: Date.now(),
-        })
-        scrollToBottom()
+        prefix = formatDict(dict.card)
+        card = { word: dict.card.word, phonetic: dict.card.phonetic, partOfSpeech: dict.card.partOfSpeech, translation: dict.card.translation, examples: dict.card.examples }
       }
     }
     catch {
@@ -311,27 +306,32 @@ async function sendMessage(): Promise<void> {
     }
   }
 
-  messages.value.push({ id: uid('m-'), role: 'assistant', content: '', status: 'streaming', createdAt: Date.now() })
+  messages.value.push({ id: uid('m-'), role: 'assistant', content: prefix, card, status: 'streaming', createdAt: Date.now() })
+  scrollToBottom()
 
   const assistant = messages.value[messages.value.length - 1]!
   const history = messages.value
     .filter(m => m.id !== assistant.id)
     .map(m => ({ id: m.id, role: m.role, content: m.content, createdAt: m.createdAt }))
 
+  // 词典卡片 + AI 结果拼成一条消息，AI 内容追加在卡片之后
+  const compose = (ai: string): string => (prefix && ai ? `${prefix}\n\n${ai}` : prefix || ai)
+
+  let aiPart = ''
   streaming.value = true
-  scrollToBottom()
 
   handle = startChat(
     { messages: history, providerId: settings.activeProviderId, model: settings.activeModel },
     {
       onDelta: (delta) => {
-        assistant.content += delta
+        aiPart += delta
+        assistant.content = compose(aiPart)
         scrollToBottom()
       },
       onDone: (content) => {
-        const finalText = (content || assistant.content).trim()
-        if (finalText) {
-          assistant.content = finalText
+        const finalText = (content || aiPart).trim()
+        if (finalText || prefix) {
+          assistant.content = compose(finalText)
           assistant.status = 'done'
         }
         else {
@@ -343,10 +343,12 @@ async function sendMessage(): Promise<void> {
         void persist()
       },
       onError: (code, message) => {
-        assistant.status = 'error'
-        assistant.content = code === 'MISSING_API_KEY'
+        const errText = code === 'MISSING_API_KEY'
           ? t('chat.noKey')
           : t('chat.requestFailed', { message })
+        // 已有词典卡片时，保留卡片并把错误追加在后面
+        assistant.content = compose(errText)
+        assistant.status = prefix ? 'done' : 'error'
         streaming.value = false
         handle = null
       },

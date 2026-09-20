@@ -183,11 +183,13 @@ async function waitCooldown(): Promise<void> {
 
 async function requestBatch(target: AiTarget, items: string[], targetLang: LangCode): Promise<string[] | null> {
   await waitCooldown()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 45_000)
   try {
     const content = await chatOnce(target.provider, target.model, [
       message('system', `你是翻译引擎。用户会给出一个 JSON 字符串数组，请逐项翻译为 ${targetLang}，只输出与输入等长的 JSON 字符串数组，顺序保持一致，不要解释，不要输出任何多余内容。`),
       message('user', JSON.stringify(items)),
-    ])
+    ], controller.signal)
     const parsed = parseStringArray(content)
     if (!parsed || parsed.length !== items.length)
       return null
@@ -200,6 +202,9 @@ async function requestBatch(target: AiTarget, items: string[], targetLang: LangC
     if (/429/.test(code))
       cooldownUntil = Date.now() + 4000
     throw error
+  }
+  finally {
+    clearTimeout(timer)
   }
 }
 

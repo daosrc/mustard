@@ -185,7 +185,8 @@ export async function chatOnce(
       'Authorization': `Bearer ${provider.apiKey}`,
     },
     body: JSON.stringify(buildChatBody(model, messages, false)),
-    signal,
+    // 非流式请求加超时，避免供应商挂起时页面翻译永久卡住
+    signal: signal ?? AbortSignal.timeout(60_000),
   })
 
   if (!res.ok)

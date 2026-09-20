@@ -16,8 +16,6 @@ const CLS = 'mustard-translation'
 const STYLE_ID = 'mustard-page-translation-style'
 const BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote, figcaption, dd, dt, summary, caption, div'
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'BUTTON', 'SVG', 'CANVAS', 'IFRAME'])
-/** 跳过导航/侧栏/页脚等非正文区域，避免把整站 UI 也翻译了 */
-const SKIP_REGIONS = 'nav, aside, footer, header, [role="navigation"], [role="banner"], [role="contentinfo"], [role="menu"], [aria-hidden="true"]'
 const MAX_BLOCKS = 600
 /**
  * 每次请求尽量带上整页文本：正常文章 1~2 次请求即可翻完；
@@ -75,7 +73,7 @@ function isCandidate(el: HTMLElement): boolean {
   // 内含 style/script 的块（如 Wikipedia 的 navbox-styles）：textContent 会混入 CSS
   if (el.querySelector('style, script, noscript, template, link'))
     return false
-  if (el.closest('mustard-root') || el.closest(`.${CLS}`) || el.closest(SKIP_REGIONS))
+  if (el.closest('mustard-root') || el.closest(`.${CLS}`))
     return false
   if (el.hasAttribute(MARK) || queued.has(el) || !el.getClientRects().length)
     return false

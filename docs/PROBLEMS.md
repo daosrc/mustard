@@ -144,3 +144,9 @@
 - 原因：① 短文本一律行内追加并 `nowrap`，没有判断同行是否放得下；② 叶子块判定只看 `BLOCK_SELECTOR` 子元素，`<style>` 不在其中，于是含 `<style>` 的块被当作正文；③ hero 用的 `mascot.png` 是 400×739 竖图，塞进正方形被拉伸；导航图标用 32px 位图。
 - 解决：① `insertTranslation` 追加后实测 `getBoundingClientRect`，**换行或右侧溢出就改为在原文下方整行显示**（表格单元格内追加到单元格内，避免被移出表格）；② `isCandidate` 跳过含 `style/script/template/link` 子节点的块；③ hero 与导航改用 `design/icons/icon.svg`（256×256，矢量包装、高清），并删掉无用的 `mascot.png`/`ball-256.png`/`icon-128.png`；④ hero 标题后加主题色标语「流畅阅读 / Read fluently」，带 `margin-left`。
 - 备注：实测 Wikipedia 信息框「Main ingredients」译文正确落到原文下方；整页 123 段、0 处 CSS 泄漏。
+
+### 2026-09-20 · 对话框单词翻译出两条消息 / 网页翻译偶发卡住 / 导航侧栏未翻译
+- 现象：侧边栏发单词（如 `condiment`）时先出现词典卡片、再出现一条 AI 消息（共两条）；网页翻译偶尔长时间停在某段不再前进；导航/侧边栏/标题等区域没有被翻译。
+- 原因：① `sendMessage` 对单词先 push 一条词典消息、再 push 一条流式 AI 消息；② `chatOnce` 未设超时，供应商挂起时页面翻译的批次请求永不返回，`busy` 一直为 true，队列卡死；③ 上一版为降低段落数加了 `nav/aside/footer/header` 跳过规则，把导航/侧栏也排除了。
+- 解决：① 单词只 push 一条助手消息，先放词典卡片文本，AI 流式内容用 `\n\n` 追加到同一条（`compose()`），失败时错误也追加在同一条；② `chatOnce` 默认加 `AbortSignal.timeout(60s)`，批量请求 `requestBatch` 另加 45s 超时，超时按普通失败走重试/二分拆分；③ 移除 `nav/aside/footer/header` 跳过规则，导航/侧栏/标题恢复翻译（保留含 `style/script` 块的跳过）。
+- 备注：Wikipedia 长条目含导航后约 1300 段，会分多次请求、耗时较长但持续前进（实测 380→700 稳步增长）；若希望更快可重新加回区域跳过规则。
