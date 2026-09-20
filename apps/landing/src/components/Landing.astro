@@ -56,7 +56,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
           <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">{c.hero.source}</a>
         </div>
 
-        <div class="mt-12 mock-window text-left">
+        <div class="mt-20 mock-window text-left">
           <div class="mock-bar">
             <span class="mock-dots"><i /><i /><i /></span>
             <span class="mock-url">example.com</span>
@@ -198,12 +198,10 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
 .nav-link:hover { color: var(--m-primary); }
 .section-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
 .hero-slogan {
-  margin-left: .45em;
-  font-size: .52em;
+  margin-left: .35em;
+  font-size: 1em;
   font-weight: 800;
-  letter-spacing: .04em;
   color: var(--m-primary);
-  vertical-align: .08em;
 }
 
 .hero { position: relative; overflow: hidden; }
@@ -240,7 +238,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number }>> = {
   background: var(--m-surface);
   overflow: hidden;
   box-shadow: var(--m-shadow-md);
-  margin: 0 auto;
+  margin-inline: auto;
   max-width: 560px;
 }
 .mock-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--m-surface-2); border-bottom: 1px solid var(--m-line); }
