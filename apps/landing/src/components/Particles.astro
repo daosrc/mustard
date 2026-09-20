@@ -22,14 +22,14 @@ interface Props {
 }
 
 const {
-  particleCount = 400,
+  particleCount = 700,
   particleSpread = 10,
-  speed = 0.2,
+  speed = 0.1,
   particleColors,
-  moveParticlesOnHover = false,
+  moveParticlesOnHover = true,
   particleHoverFactor = 1,
-  alphaParticles = false,
-  particleBaseSize = 600,
+  alphaParticles = true,
+  particleBaseSize = 100,
   sizeRandomness = 1,
   cameraDistance = 20,
   disableRotation = false,
@@ -75,6 +75,7 @@ const {
     vy: number
     vz: number
     scale: number
+    alpha: number
     color: string
     ox: number
     oy: number
@@ -128,8 +129,10 @@ const {
         vx: (Math.random() - 0.5) * speed * 0.02,
         vy: (Math.random() - 0.5) * speed * 0.02,
         vz: (Math.random() - 0.5) * speed * 0.02,
-        // sizeRandomness=0 → 尺寸一致；=1 → 偏小的随机分布（大圆点更少）
-        scale: (1 - sizeRandomness) + sizeRandomness * Math.random() ** 1.6,
+        // sizeRandomness=0 → 尺寸一致；=1 → 随机尺寸
+        scale: (1 - sizeRandomness) + sizeRandomness * Math.random(),
+        // alphaParticles：每个粒子随机透明度
+        alpha: alphaParticles ? 0.2 + Math.random() * 0.6 : 1,
         color: customColors.length ? customColors[Math.floor(Math.random() * customColors.length)]! : colors[Math.floor(Math.random() * colors.length)]!,
         ox: 0,
         oy: 0,
@@ -193,7 +196,7 @@ const {
         const x = cx + p.x * persp
         const y = cy + p.y * persp
         // gl_PointSize ≈ particleBaseSize * scale / depth
-        const diameter = Math.max(1.2, (baseSize * p.scale / depth) * 1.2)
+        const diameter = Math.max(1, baseSize * p.scale / depth)
         const r = diameter / 2
 
         if (x < -r || x > width + r || y < -r || y > height + r)
@@ -212,11 +215,9 @@ const {
         p.ox *= 0.9
         p.oy *= 0.9
 
-        // 近实远淡，形成层次（实心圆）
+        // alphaParticles：随机透明度；否则实心 + 近实远淡
         const depthRatio = (depth - (camDistance - half)) / spread
-        ctx!.globalAlpha = alphaParticles
-          ? 0.15 + (1 - depthRatio) * 0.6
-          : 1 - depthRatio * 0.55
+        ctx!.globalAlpha = alphaParticles ? p.alpha : 1 - depthRatio * 0.55
         ctx!.fillStyle = p.color
         ctx!.beginPath()
         ctx!.arc(x + p.ox, y + p.oy, r, 0, Math.PI * 2)

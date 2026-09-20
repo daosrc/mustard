@@ -48,15 +48,15 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
     <section class="hero">
       <Particles
         class="hero-particles"
-        particleCount={400}
+        particleCount={700}
         particleSpread={10}
-        speed={0.2}
-        particleBaseSize={600}
+        speed={0.1}
+        particleBaseSize={100}
         sizeRandomness={1}
         cameraDistance={20}
-        alphaParticles={false}
+        alphaParticles={true}
         disableRotation={false}
-        moveParticlesOnHover={false}
+        moveParticlesOnHover={true}
         pixelRatio={1}
       />
       <div class="hero-inner max-w-5xl mx-auto px-5 pt-16 pb-12 text-center">
@@ -139,19 +139,6 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
       </div>
     </section>
 
-    <!-- Open source -->
-    <section class="bg-surface-2 border-y border-line">
-      <div class="max-w-3xl mx-auto px-5 py-14 text-center">
-        <h2 class="section-title">{c.ossTitle}</h2>
-        <p class="mt-4 text-muted leading-relaxed">{c.ossDesc}</p>
-        <div class="mt-6 flex justify-center gap-3 flex-wrap">
-          <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">GitHub</a>
-          <a class="btn-ghost" href={LINKS.issues} target="_blank" rel="noreferrer">Issues</a>
-          <a class="btn-ghost" href={LINKS.license} target="_blank" rel="noreferrer">MIT License</a>
-        </div>
-      </div>
-    </section>
-
     <!-- Install -->
     <section id="install" class="max-w-5xl mx-auto px-5 py-14">
       <h2 class="section-title">{c.installTitle}</h2>
@@ -165,6 +152,19 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
             </ol>
           </div>
         ))}
+      </div>
+    </section>
+
+    <!-- Open source -->
+    <section class="bg-surface-2 border-y border-line">
+      <div class="max-w-3xl mx-auto px-5 py-14 text-center">
+        <h2 class="section-title">{c.ossTitle}</h2>
+        <p class="mt-4 text-muted leading-relaxed">{c.ossDesc}</p>
+        <div class="mt-6 flex justify-center gap-3 flex-wrap">
+          <a class="btn-ghost" href={LINKS.repo} target="_blank" rel="noreferrer">GitHub</a>
+          <a class="btn-ghost" href={LINKS.issues} target="_blank" rel="noreferrer">Issues</a>
+          <a class="btn-ghost" href={LINKS.license} target="_blank" rel="noreferrer">MIT License</a>
+        </div>
       </div>
     </section>
   </main>
