@@ -6,6 +6,9 @@ export default defineConfig({
   vite: () => ({
     plugins: [UnoCSS()],
   }),
+  zip: {
+    artifactTemplate: 'mustard-translate-{{packageVersion}}-{{browser}}.zip',
+  },
   manifest: {
     name: 'Mustard 芥末',
     description: '开源 Chrome 划词/悬浮/网页翻译扩展：AI 对话、生词本与记词、离线词典。',

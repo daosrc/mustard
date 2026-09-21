@@ -28,7 +28,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
 ---
 
 <Layout lang={c.lang} title={c.title} description={c.description}>
-  <header class="sticky top-0 z-20 backdrop-blur bg-paper/85 border-b border-line">
+  <header class="site-header sticky top-0 z-20">
     <nav class="max-w-5xl mx-auto flex items-center gap-5 px-5 h-14">
       <a class="flex items-center gap-2 no-underline text-ink font-700" href={base}>
         <img class="w-7 h-7 rounded-lg" src={`${base}icon.svg`} alt="Mustard">
@@ -48,7 +48,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
     <section class="hero">
       <Particles
         class="hero-particles"
-        particleCount={240}
+        particleCount={400}
         particleSpread={10}
         speed={0.1}
         particleBaseSize={100}
@@ -148,14 +148,26 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
           <div class="card install-card">
             <h3 class="mt-0 mb-1 text-base font-700">{o.title}</h3>
             <p class="m-0 mb-4 text-sm text-muted">{o.desc}</p>
-            <ol class="install-steps">
-              {o.steps.map(step => (
-                <li>
-                  <code class="install-cmd">{step.cmd}</code>
-                  <span class="install-note">{step.note}</span>
-                </li>
-              ))}
-            </ol>
+            {o.kind === 'steps'
+              ? (
+                  <ol class="install-steps">
+                    {o.steps.map(step => (
+                      <li>
+                        <code class="install-cmd">{step.cmd}</code>
+                        <span class="install-note">{step.note}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )
+              : (
+                  <>
+                    <div class="install-code">
+                      <div class="code-bar"><i /><i /><i /></div>
+                      <pre class="code-body">{o.code.map(line => <span class="code-line">{line}</span>)}</pre>
+                    </div>
+                    <p class="install-note code-note">{o.note}</p>
+                  </>
+                )}
           </div>
         ))}
       </div>
@@ -177,7 +189,18 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
 </Layout>
 
 <style>
-.nav-link { font-size: .875rem; color: var(--m-muted); text-decoration: none; transition: color .15s; }
+/* 毛玻璃导航：模糊半径与底色不透明度都压得较低，
+   否则会把「小尺寸 + 低透明度」的粒子完全抹平，交界处出现硬切边 */
+.site-header {
+  background: color-mix(in srgb, var(--m-paper) 52%, transparent);
+  -webkit-backdrop-filter: blur(4px) saturate(180%);
+  backdrop-filter: blur(4px) saturate(180%);
+  border-bottom: 1px solid color-mix(in srgb, var(--m-line) 55%, transparent);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .site-header { background: var(--m-paper); }
+}
+.nav-link { font-size: .875rem; color: var(--m-muted); text-decoration: none; transition: color .15s; text-shadow: 0 1px 3px color-mix(in srgb, var(--m-paper) 75%, transparent); }
 .nav-link:hover { color: var(--m-primary); }
 .section-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
 .hero-badge {
@@ -193,7 +216,14 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
   color: var(--m-primary);
 }
 
-.hero { position: relative; overflow: hidden; }
+/* hero 上探到导航栏下方（-h-14-1px 的边框），让粒子从页面最顶端开始铺，
+   配合毛玻璃导航即可透出粒子；padding 抵消，内容位置不变 */
+.hero {
+  position: relative;
+  overflow: hidden;
+  margin-top: calc(-3.5rem - 1px);
+  padding-top: calc(3.5rem + 1px);
+}
 .hero-inner { position: relative; z-index: 1; }
 .hero-particles { position: absolute; inset: 0; z-index: 0; }
 .hero .mock-window { background: var(--m-surface); }
@@ -285,7 +315,17 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
 
 .install-card { display: flex; flex-direction: column; }
 .install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: install; }
-.install-steps li { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "code note"; column-gap: 12px; align-items: start; }
+.install-steps li { display: grid; grid-template-columns: auto auto 1fr; grid-template-areas: "n code note"; column-gap: 12px; align-items: start; }
+.install-steps li::before {
+  grid-area: n;
+  counter-increment: install;
+  content: counter(install);
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--m-faint);
+  padding-top: 4px;
+}
 .install-cmd {
   grid-area: code;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -299,4 +339,19 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
   white-space: nowrap;
 }
 .install-note { grid-area: note; font-size: .82rem; line-height: 1.5; color: var(--m-muted); }
+
+.install-code { border: 1px solid var(--m-line); border-radius: 10px; overflow: hidden; background: rgba(0, 0, 0, .3); }
+.code-bar { display: flex; gap: 5px; padding: 7px 10px; border-bottom: 1px solid var(--m-line); background: rgba(255, 255, 255, .03); }
+.code-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--m-faint); opacity: .55; display: block; }
+.code-body { margin: 0; padding: 11px 12px; display: flex; flex-direction: column; gap: 7px; }
+.code-line {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .78rem;
+  line-height: 1.5;
+  color: var(--m-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.code-note { margin: 12px 0 0; }
 </style>

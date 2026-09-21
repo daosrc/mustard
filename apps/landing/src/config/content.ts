@@ -17,6 +17,10 @@ export interface Feature {
   visual: Visual
 }
 
+export type InstallOption
+  = | { kind: 'steps', title: string, desc: string, steps: Array<{ cmd: string, note: string }> }
+    | { kind: 'code', title: string, desc: string, code: string[], note: string }
+
 export interface Content {
   lang: string
   title: string
@@ -33,7 +37,7 @@ export interface Content {
   ossDesc: string
   installTitle: string
   installDesc: string
-  installOptions: Array<{ title: string, desc: string, steps: Array<{ cmd: string, note: string }> }>
+  installOptions: InstallOption[]
 }
 
 const repo = LINKS.repo
@@ -82,23 +86,21 @@ const zh: Content = {
   installDesc: '仅通过 GitHub 分发，无 Chrome 商店版本。',
   installOptions: [
     {
+      kind: 'steps',
       title: '使用 Release 包',
       desc: '无需构建，下载即用，适合大多数用户。',
       steps: [
-        { cmd: '打开 GitHub Releases', note: '下载最新 mustard-*.zip 并解压到任意目录' },
+        { cmd: '打开 GitHub Releases', note: '下载最新 mustard-translate-*.zip 并解压到任意目录' },
         { cmd: 'chrome://extensions', note: '打开该地址并开启右上角「开发者模式」' },
         { cmd: '加载已解压的扩展程序', note: '选择刚解压出来的目录即可完成安装' },
       ],
     },
     {
+      kind: 'code',
       title: '从源码构建',
       desc: '适合开发者，可直接改源码、二次开发。',
-      steps: [
-        { cmd: `git clone ${repo}`, note: '克隆仓库到本地' },
-        { cmd: 'pnpm install', note: '安装依赖（需 pnpm）' },
-        { cmd: 'pnpm build:ext', note: '构建扩展产物' },
-        { cmd: '加载 .output/chrome-mv3', note: '在 chrome://extensions 中加载 apps/extension/.output/chrome-mv3' },
-      ],
+      code: [`git clone ${repo}`, 'pnpm install', 'pnpm build:ext'],
+      note: '构建完成后，在 chrome://extensions 中「加载已解压的扩展程序」，选择 apps/extension/.output/chrome-mv3。',
     },
   ],
 }
@@ -147,23 +149,21 @@ const en: Content = {
   installDesc: 'Distributed on GitHub only — no Chrome Web Store listing.',
   installOptions: [
     {
+      kind: 'steps',
       title: 'Use a release zip',
       desc: 'No build required — download and go, fits most users.',
       steps: [
-        { cmd: 'Open GitHub Releases', note: 'Download the latest mustard-*.zip and unzip it anywhere' },
+        { cmd: 'Open GitHub Releases', note: 'Download the latest mustard-translate-*.zip and unzip it anywhere' },
         { cmd: 'chrome://extensions', note: 'Open the URL and enable "Developer mode" (top-right)' },
         { cmd: 'Load unpacked', note: 'Click "Load unpacked" and pick the folder you just extracted' },
       ],
     },
     {
+      kind: 'code',
       title: 'Build from source',
       desc: 'For developers — hack the source and contribute.',
-      steps: [
-        { cmd: `git clone ${repo}`, note: 'Clone the repository' },
-        { cmd: 'pnpm install', note: 'Install dependencies (requires pnpm)' },
-        { cmd: 'pnpm build:ext', note: 'Build the extension' },
-        { cmd: 'Load .output/chrome-mv3', note: 'Load apps/extension/.output/chrome-mv3 at chrome://extensions' },
-      ],
+      code: [`git clone ${repo}`, 'pnpm install', 'pnpm build:ext'],
+      note: 'Then load apps/extension/.output/chrome-mv3 via "Load unpacked" at chrome://extensions.',
     },
   ],
 }
