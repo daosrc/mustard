@@ -113,7 +113,7 @@ async function onImportFile(event: Event): Promise<void> {
     <div class="v-actions">
       <MButton :disabled="!entries.length" @click="quizOpen = true">
         <MIcon name="sparkles" :size="14" />
-        {{ t('vocab.quiz', { n: pendingCount }) }}
+        {{ pendingCount ? t('vocab.quiz', { n: pendingCount }) : t('vocab.review') }}
       </MButton>
       <MButton variant="ghost" @click="exportVocab('json')">
         <MIcon name="download" :size="14" />

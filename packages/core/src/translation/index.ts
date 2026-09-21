@@ -1,7 +1,13 @@
 import type { ChatMessage, ChatRole, DictResult, LangCode, ModelDef, Provider, SourceLang } from '@mustard/shared'
+import { langOption } from '@mustard/shared'
 import { cacheKey, LRU } from '@mustard/utils'
 import { lookupOnline } from '../dictionary/online'
 import { chatOnce, errorCode, ProviderError } from '../providers/client'
+
+/** 提示词里用可读语言名（模型对 `简体中文` 的把握比 `zh-CN` 好，避免输出繁体） */
+function langName(targetLang: LangCode): string {
+  return langOption(targetLang)?.label ?? targetLang
+}
 
 export interface TranslateResult {
   text: string
@@ -58,7 +64,7 @@ const cache = new LRU<string, TranslateResult>(500)
 async function aiWordCard(word: string, sourceLang: SourceLang, targetLang: LangCode, ai: AiTarget): Promise<DictResult | null> {
   const content = await chatOnce(ai.provider, ai.model, [
     message('system', WORD_CARD_SYSTEM_PROMPT),
-    message('user', `单词：${word}\n源语言：${sourceLang}\n目标语言：${targetLang}\n请给出词条信息。`),
+    message('user', `单词：${word}\n源语言：${sourceLang}\n目标语言：${langName(targetLang)}\n请给出词条信息。`),
   ])
   return parseWordCard(content, word)
 }
@@ -131,7 +137,7 @@ export async function translateSentence(
   for (const target of targets) {
     try {
       const content = await chatOnce(target.provider, target.model, [
-        message('system', `你是翻译引擎。请把用户文本翻译为 ${targetLang}，只输出译文，不要解释，不要输出任何多余内容。`),
+        message('system', `你是翻译引擎。请把用户文本翻译为${langName(targetLang)}，只输出译文，不要解释，不要输出任何多余内容。`),
         message('user', value),
       ])
       const result: TranslateResult = { text: content.trim() }
@@ -184,7 +190,7 @@ async function requestBatch(target: AiTarget, items: string[], targetLang: LangC
   const timer = setTimeout(() => controller.abort(), 45_000)
   try {
     const content = await chatOnce(target.provider, target.model, [
-      message('system', `你是翻译引擎。用户会给出一个 JSON 字符串数组，请逐项翻译为 ${targetLang}，只输出与输入等长的 JSON 字符串数组，顺序保持一致，不要解释，不要输出任何多余内容。`),
+      message('system', `你是翻译引擎。用户会给出一个 JSON 字符串数组，请逐项翻译为${langName(targetLang)}，只输出与输入等长的 JSON 字符串数组，顺序保持一致，不要解释，不要输出任何多余内容。`),
       message('user', JSON.stringify(items)),
     ], controller.signal)
     const parsed = parseStringArray(content)
@@ -220,18 +226,27 @@ async function translateItems(
     return []
   const targets = [ai, ...(aiFallbacks ?? [])].filter((t): t is AiTarget => !!t)
   for (const target of targets) {
+    let mismatch = false
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const parsed = await requestBatch(target, items, targetLang)
         if (parsed)
           return parsed.map(item => item.trim())
+        // 返回数组长度不匹配：是这一批本身的问题（太长/条目太多），
+        // 重试同一个请求只会再失败一次，直接跳出交给二分拆分
+        mismatch = true
+        break
       }
       catch (error) {
         if (error instanceof ProviderError && error.code === 'FATAL')
           return items.map(() => '')
+        // 网络/限流等瞬时错误：换目标前重试一次
+        if (attempt === 0)
+          await new Promise(resolve => setTimeout(resolve, 600))
       }
-      await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)))
     }
+    if (mismatch)
+      break
   }
   if (items.length === 1)
     return [(await translateSentence(items[0]!, sourceLang, targetLang, ai, aiFallbacks)).text]
@@ -286,7 +301,7 @@ export async function translateImage(dataUrl: string, targetLang: LangCode, ai: 
   const message: ChatMessage = {
     id: `img-${Date.now()}`,
     role: 'user',
-    content: `请识别图片中的文字并翻译为 ${targetLang}，只输出译文，不要解释。`,
+    content: `请识别图片中的文字并翻译为${langName(targetLang)}，只输出译文，不要解释。`,
     attachments: [{ type: 'image', name: 'image.png', dataUrl }],
     createdAt: Date.now(),
   }

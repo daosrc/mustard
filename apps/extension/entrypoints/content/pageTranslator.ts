@@ -28,13 +28,20 @@ const CLS = 'mustard-translation'
 const STYLE_ID = 'mustard-page-translation-style'
 const BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote, figcaption, dd, dt, summary, caption, div'
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'BUTTON', 'SVG', 'CANVAS', 'IFRAME'])
-const MAX_BLOCKS = 600
+const MAX_BLOCKS = 2000
 /**
  * 每次请求尽量带上整页文本：正常文章 1~2 次请求即可翻完；
  * 只有超出上限或模型返回不完整时，core 才会二分拆小、最终单条重试。
+ *
+ * 段数上限给得比字符上限宽松：维基这类页面 1300+ 个可译块里 85% 是
+ * 侧边栏/锚点/标题这类十几个字符的小块，若按 80 段切会切出十几个请求，
+ * 每个只用到一成字符预算，白等模型往返。按字符预算收口即可。
  */
 const MAX_CHARS_PER_REQUEST = 10000
-const MAX_BLOCKS_PER_REQUEST = 80
+const MAX_BLOCKS_PER_REQUEST = 150
+/** 极短块（侧边栏锚点、目录项、小标题）单独成项太浪费：连续若干条合成一个请求项 */
+const TINY_LEN = 24
+const TINY_GROUP = 8
 const RETRY = 1
 
 let observer: MutationObserver | null = null
@@ -159,21 +166,51 @@ function insertTranslation(el: HTMLElement, original: string, text: string): voi
   appendBelow(el, text)
 }
 
-function takeBatch(): { els: HTMLElement[], texts: string[] } {
-  const els: HTMLElement[] = []
-  const texts: string[] = []
+interface BatchItem {
+  els: HTMLElement[]
+  texts: string[]
+  /** 送给模型的文本：单项为原文，小片段组为换行拼接 */
+  text: string
+}
+
+/**
+ * 组一批：字符预算是主约束；极短块按 TINY_GROUP 条合成一项，
+ * 避免 1300+ 个小锚点把请求数顶到十几条。
+ */
+function takeBatch(): BatchItem[] {
+  const items: BatchItem[] = []
   let chars = 0
-  while (queue.length && els.length < MAX_BLOCKS_PER_REQUEST) {
-    const el = queue[0]!
-    const text = (el.textContent ?? '').trim()
-    if (els.length && chars + text.length > MAX_CHARS_PER_REQUEST)
+  while (queue.length && items.length < MAX_BLOCKS_PER_REQUEST) {
+    const head = queue[0]!
+    const headText = (head.textContent ?? '').trim()
+
+    if (headText.length <= TINY_LEN) {
+      const els: HTMLElement[] = []
+      const texts: string[] = []
+      while (queue.length && els.length < TINY_GROUP) {
+        const el = queue[0]!
+        const text = (el.textContent ?? '').trim()
+        if (text.length > TINY_LEN)
+          break
+        if (els.length && chars + text.length > MAX_CHARS_PER_REQUEST)
+          break
+        queue.shift()
+        els.push(el)
+        texts.push(text)
+        chars += text.length
+      }
+      if (els.length)
+        items.push({ els, texts, text: texts.join('\n') })
+      continue
+    }
+
+    if (items.length && chars + headText.length > MAX_CHARS_PER_REQUEST)
       break
     queue.shift()
-    els.push(el)
-    texts.push(text)
-    chars += text.length
+    items.push({ els: [head], texts: [headText], text: headText })
+    chars += headText.length
   }
-  return { els, texts }
+  return items
 }
 
 async function translateBatch(texts: string[]): Promise<string[]> {
@@ -208,19 +245,43 @@ async function run(): Promise<void> {
   busy = true
   try {
     while (pageState.active && queue.length) {
-      const { els, texts } = takeBatch()
-      const results = await translateBatch(texts)
-      els.forEach((el, i) => {
+      const items = takeBatch()
+      const results = await translateBatch(items.map(item => item.text))
+      items.forEach((item, i) => {
         // 保留 MARK：避免 MutationObserver 因我们插入的节点而重扫造成重复翻译
-        pageState.done++
-        const text = results[i]?.trim()
-        if (text) {
-          insertTranslation(el, texts[i]!, text)
-          pageState.ok++
-        }
-        else {
+        const text = results[i]?.trim() ?? ''
+        const fail = (): void => item.els.forEach(() => {
+          pageState.done++
           pageState.failed++
+        })
+        if (!text) {
+          fail()
+          return
         }
+        // 单项：直接插入
+        if (item.els.length === 1) {
+          pageState.done++
+          insertTranslation(item.els[0]!, item.texts[0]!, text)
+          pageState.ok++
+          return
+        }
+        // 小片段组：按行拆回，行数对不上就整体算失败（下次扫描不再重试，避免死循环）
+        const parts = text.split('\n').map(part => part.trim())
+        if (parts.length !== item.els.length) {
+          fail()
+          return
+        }
+        item.els.forEach((el, k) => {
+          pageState.done++
+          const part = parts[k]!
+          if (part) {
+            insertTranslation(el, item.texts[k]!, part)
+            pageState.ok++
+          }
+          else {
+            pageState.failed++
+          }
+        })
       })
       await sleep(300)
     }

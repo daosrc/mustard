@@ -184,3 +184,12 @@
 - 原因：① `MDialog` 的**非 contained 分支只有 `position:fixed; inset:0`**——居中、遮罩、`z-index` 全写在 `.is-contained` 里，所以侧边栏里未传 `contained` 的弹框（QuizDialog）直接贴在左上角；② `DEFAULT_SETTINGS.vocab.autoAdd` 是 true；③ `startPageTranslate` 不看 AI 是否可用；④ `addProvider` 里硬编码了 `name: 'New provider'`；⑤ 结果只走 toast，位置在页面底部居中，弹窗打开时容易被忽略。
 - 解决：① 把居中/遮罩/`z-index` 提到 `.overlay` 基类，`.is-contained` 只保留 `position:absolute`；② `autoAdd` 默认改 false，并同步 README / 落地页 / `vocab.empty` 文案；③ `pageState` 增加 `notice`，`startPageTranslate` 先检查 `provider.apiKey + model`，没有就只显示顶部提示条（「网页翻译需要 AI 模型…」）且**不发起任何翻译**；AI 配好后 settings 变更会自动补开始；④ 名称留空只留 placeholder；⑤ 测试结果同时内联显示在按钮左侧（成功绿 / 失败红），toast 保留。
 - 备注：实测选项页弹框 `display:flex` + 遮罩 + 垂直居中；侧边栏记词弹框 420×760 内居中（20/380/20）；无 AI 时开启网页翻译 → 提示条出现且 `.mustard-translation` 数量为 0；autoAdd=false 时翻译单词词表数量不变（7→7）。
+
+### 2026-09-21 · 网页翻译太慢：批次切分与重试放大
+- 现象：维基条目（1300+ 段）整页翻译要等很久，侧边栏/锚点/小标题多的时候尤其明显。
+- 实测（`Target.attachToTarget` 挂到 service worker 上抓 `chat/completions` 请求）：
+  - 该页 **1341 个可译块，总字符仅 30223，中位块长只有 10 个字符**，85% 的块 ≤20 字符；原规则「80 段/10000 字符」下**段数先到顶**，每批只用到约一成字符预算 → **17 批**（按 400 段切只要 5 批）。
+  - 更严重的是**重试放大**：core `translateItems` 对「返回数组长度不匹配」也会重试同一份 payload（2 次），content 侧 `translateBatch` 又重试 1 次，一次失败最坏发 3~4 个**完全相同**的请求。同一进度点请求数 21 → 修掉后 7。
+  - 顺带发现测试用的 Agnes 端点频繁返回 **429**（`The rate exceeds the limit`），这也是「卡住不动」的一部分原因：`done` 只在整批回包后跳一次，429 重试期间进度条看着像卡死。
+- 解决：① 段数上限 80 → 150、字符预算仍是 10000（字符才是真正的主约束）；② **极短块合并**：连续 ≤24 字符的块每 8 条拼成一项（换行分隔），回包按行拆回，行数对不上则整组计失败；实测侧边栏标签逐条对得上（`Main page => 主頁`、`Contents => 目錄`）；③ core 遇长度不匹配**不再重试同一请求**，直接二分拆分（瞬时错误才重试一次）；④ 提示词改用可读语言名（`简体中文` 而非 `zh-CN`），避免模型输出繁体。
+- 备注：整页翻译的耗时下限由模型每请求延迟决定（该页约 4 批），批次越大单次等待越久但总往返更少；进度条按批跳动，不是卡死。
