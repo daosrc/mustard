@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { TranslateResult } from '@mustard/core/translation'
 import type { Settings } from '@mustard/shared'
-import { t as translateKey } from '@mustard/shared'
+import { hasOfflineDictFor, t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { addToVocab, isWord, speakText, translate, translateAi } from './actions'
 
 interface TipState {
@@ -20,6 +20,15 @@ interface TipState {
 
 const props = defineProps<{ settings: Settings | null }>()
 const emit = defineEmits<{ added: [] }>()
+
+/** 结果为空且该目标语言没有离线词典时，给出可操作的提示 */
+const emptyHint = computed(() => {
+  const settings = props.settings
+  if (!settings || hasOfflineDictFor(settings.dictionaries, settings.targetLang))
+    return ''
+  const provider = settings.providers.find(p => p.id === settings.activeProviderId)
+  return provider?.apiKey ? '' : t('content.noDict')
+})
 
 function t(key: string): string {
   return translateKey(props.settings?.uiLang ?? 'zh', key)
@@ -265,8 +274,11 @@ onBeforeUnmount(() => {
       <div class="ht-title">
         {{ tooltip.text }}
       </div>
-      <div class="ht-text">
+      <div v-if="tooltip.result?.card?.translation || tooltip.result?.text" class="ht-text">
         {{ tooltip.result?.card?.translation ?? tooltip.result?.text }}
+      </div>
+      <div v-else-if="emptyHint" class="ht-text ht-muted">
+        {{ emptyHint }}
       </div>
       <div v-if="tooltip.ai" class="ht-ai">
         <span class="ht-ai-tag">AI</span>{{ tooltip.ai }}

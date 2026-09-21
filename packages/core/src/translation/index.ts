@@ -19,8 +19,6 @@ export interface TranslateOptions {
   ai?: AiTarget
   /** 本地离线词典查询（按目标语言筛选；首次使用时下载；可为异步） */
   local?: (word: string) => DictResult | null | Promise<DictResult | null>
-  /** 兜底本地查询（不按目标语言筛选；AI 未命中时使用） */
-  localFallback?: (word: string) => DictResult | null | Promise<DictResult | null>
   /** 主模型失败（如 429）时依次尝试的其他模型 */
   aiFallbacks?: AiTarget[]
 }
@@ -79,13 +77,14 @@ export async function translateWord(
   if (!term)
     return { text: '' }
 
-  const key = cacheKey('w', term.toLowerCase(), sourceLang, targetLang, options.online === false ? 'off' : 'on', options.ai ? 'ai' : 'noai', options.local ? 'local' : 'nolocal', options.localFallback ? 'lf' : 'nolf')
+  const key = cacheKey('w', term.toLowerCase(), sourceLang, targetLang, options.online === false ? 'off' : 'on', options.ai ? 'ai' : 'noai', options.local ? 'local' : 'nolocal')
   const cached = cache.get(key)
   if (cached)
     return cached
 
-  // 目标英文：本地 → 在线 → AI
-  // 目标非英文：本地（目标语言）→ AI（保证英译中）→ 本地兜底（任意语言）→ 在线兜底
+  // 结果语言必须与目标语言一致：本地词典只查目标语言匹配的词典，
+  // 在线词典只有英英（dictionaryapi.dev），故仅在目标为英文时使用；
+  // 其余情况一律交给 AI，宁可空也不返回错误语言的释义。
   let card: DictResult | null = (await options.local?.(term)) ?? null
   if (!card && targetLang === 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
@@ -102,9 +101,7 @@ export async function translateWord(
       }
     }
   }
-  if (!card && targetLang !== 'en' && options.localFallback)
-    card = (await options.localFallback(term)) ?? null
-  if (!card && targetLang !== 'en' && options.online !== false)
+  if (!card && targetLang === 'en' && options.online !== false)
     card = await lookupOnline(term, targetLang)
 
   const result: TranslateResult = card ? { text: card.translation, card } : { text: '' }

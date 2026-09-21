@@ -156,3 +156,9 @@
 - 原因：`sendMessage` 组装 `history` 时只映射了 `{id, role, content, createdAt}`，把 `attachments`（图片 dataUrl）丢掉了，`buildChatBody → toContentParts` 自然拿不到图片。
 - 解决：`history` 映射时带上 `attachments`。验证：附带芥末信息框截图 + 「翻译图片中的文字」，模型正确输出「菜肴 / 调味品 / 地区或州 / 全球分布 / 主要成分 / 芥末籽、水、醋、盐」。
 - 备注：附件 dataUrl 会随多轮历史重复发送，长会话下请求体会变大；后续可考虑只在最近若干轮携带图片。
+
+### 2026-09-21 · 离线词典开关点不动 / 下载按钮状态不一致 / 非中文目标语言仍出中文
+- 现象：设置页「管理离线词典」里开关无论开或关都点不动；下载按钮有的能点有的点了没反应（CC-CEDICT/JMdict/FreeDict 永远灰着）；把目标语言切成「日」后，划词结果仍然是中文释义。
+- 原因：① 开关的 `model-value` 读的是 `GET_DICT_STATUS` 的一次性快照 `dictStatuses`，而不是实时的 `store.settings.dictionaries`，点完只写了 settings、快照没刷新，所以开关永远弹回原位；② CC-CEDICT/JMdict/FreeDict 在 `DICTIONARIES` 里根本没有 `format/url`（占位条目），`hasSource()` 为 false → 按钮 disabled，却仍渲染成可点的样子；③ `translateWord` 的 `localFallback` **不按目标语言筛选**，目标为「日」时本地词典（英→中）虽然被 `local` 跳过，却又从 `localFallback` 里命中并返回中文；在线词典（dictionaryapi.dev）本身是英英，也在非英文目标时被当成兜底。
+- 解决：① `dictStatusOf()` 的 `enabled` 改读实时 settings，`installed/progress/error` 仍取后台状态；`toggleDict` 后刷新一次状态；② 新增 `@mustard/shared` 的 `isDictAvailable()`/`AVAILABLE_DICTS`/`hasOfflineDictFor()`：无数据源的条目只显示「暂不支持」标签，不渲染开关与下载按钮，统计也只在可用词典里算（已安装 x/3）；③ 删除 `localFallback` 选项，在线词典仅在目标为英文时使用，结果语言不再可能与目标语言不符；④ 首次使用（一个词典都没装）后台自动下载并启用英汉词典；⑤ 目标语言没有离线词典时，设置页与划词/悬浮的空结果处给出「请配置模型（AI）」提示。
+- 备注：实测 `hello` 目标 ja → 空结果（不再出中文）；目标 en → Wordset 英英；目标 zh-CN → 现代英汉。离线词典目前只覆盖 英→中、英→英，日/韩/法/德等语种只能走 AI——若要补离线数据，需要选定数据源（CC-CEDICT / JMdict / FreeDict）并新增解析器，且注意其 CC BY-SA / EDRDG / GPL 许可。

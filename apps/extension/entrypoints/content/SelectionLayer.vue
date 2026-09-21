@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { TranslateResult } from '@mustard/core/translation'
 import type { Settings } from '@mustard/shared'
-import { t as translateKey } from '@mustard/shared'
+import { hasOfflineDictFor, t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { addToVocab, isWord, speakText, translate, translateAi } from './actions'
 
 const props = defineProps<{ settings: Settings | null }>()
@@ -12,6 +12,17 @@ const emit = defineEmits<{ added: [] }>()
 function t(key: string): string {
   return translateKey(props.settings?.uiLang ?? 'zh', key)
 }
+
+/** 结果为空时的提示：优先说明「该语言没有离线词典」，避免只显示「未找到」 */
+const emptyHint = computed(() => {
+  const settings = props.settings
+  if (!settings)
+    return t('content.notFound')
+  if (hasOfflineDictFor(settings.dictionaries, settings.targetLang))
+    return t('content.notFound')
+  const provider = settings.providers.find(p => p.id === settings.activeProviderId)
+  return provider?.apiKey ? t('content.notFound') : t('content.noDict')
+})
 
 function sourceLabel(source: string): string {
   if (source.startsWith('local'))
@@ -209,7 +220,7 @@ onBeforeUnmount(() => {
       {{ t('content.searching') }}
     </div>
     <div v-else-if="!result || (!result.text && !result.card)" class="pop-empty">
-      {{ t('content.notFound') }}
+      {{ emptyHint }}
     </div>
     <template v-else>
       <div v-if="result.card?.phonetic || result.card?.partOfSpeech || result.card?.source" class="pop-meta">

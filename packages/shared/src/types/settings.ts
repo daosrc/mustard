@@ -67,6 +67,8 @@ export interface DictionaryItem {
   perLetter?: boolean
   /** 该词典输出的目标语言（用于按目标语言筛选；缺省视为任意） */
   targetLang?: string
+  /** 首次使用时自动下载并启用（英汉词典） */
+  defaultInstall?: boolean
   /** 数据来源与署名 */
   attribution?: string
 }

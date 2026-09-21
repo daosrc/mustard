@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DictInstallStatus, DictionaryItem, Provider, Settings, UILang } from '@mustard/shared'
 import { send } from '@mustard/platform'
-import { DICTIONARIES, LANGS, SOURCE_LANGS, UI_LANGS } from '@mustard/shared'
+import { AVAILABLE_DICTS, DICTIONARIES, isDictAvailable, LANGS, SOURCE_LANGS, UI_LANGS } from '@mustard/shared'
 import { MButton, MChip, MDialog, MIcon, MSelect, MSwitch, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -198,16 +198,34 @@ const dictDialogOpen = ref(false)
 const dictStatuses = ref<Record<string, DictInstallStatus>>({})
 let pollTimer: ReturnType<typeof setInterval> | undefined
 
+/**
+ * 展示状态：`enabled` 取实时 settings（否则开关点了不动），
+ * `installed`/`progress`/`error` 取后台返回的运行时状态。
+ */
 function dictStatusOf(id: string): DictInstallStatus {
-  return dictStatuses.value[id] ?? { id, installed: dictState(id).installed, enabled: dictState(id).enabled, progress: null }
+  const live = dictState(id)
+  const status = dictStatuses.value[id]
+  return {
+    id,
+    installed: status?.installed ?? live.installed,
+    enabled: live.enabled,
+    progress: status?.progress ?? null,
+    error: status?.error,
+  }
 }
 
-const installedCount = computed(() => DICTIONARIES.filter(d => dictStatusOf(d.id).installed).length)
-const enabledCount = computed(() => DICTIONARIES.filter(d => dictStatusOf(d.id).installed && dictStatusOf(d.id).enabled).length)
+/** 只有带数据源的词典计入统计与开关；其余（暂无数据源）仅走 AI */
+const installedCount = computed(() => AVAILABLE_DICTS.filter(d => dictStatusOf(d.id).installed).length)
+const enabledCount = computed(() => AVAILABLE_DICTS.filter(d => dictStatusOf(d.id).installed && dictStatusOf(d.id).enabled).length)
 
-function hasSource(dict: DictionaryItem): boolean {
-  return !!dict.format && (!!dict.url || !!dict.perLetter)
-}
+/** 当前目标语言是否有离线词典；没有则只能走 AI */
+const targetHasOffline = computed(() => {
+  const lang = store.settings?.targetLang
+  if (!lang)
+    return true
+  return AVAILABLE_DICTS.some(d => d.targetLang === lang && dictState(d.id).enabled)
+})
+const aiConfigured = computed(() => !!store.activeProvider?.apiKey)
 
 async function loadDictStatus(): Promise<void> {
   const list = await send({ type: 'GET_DICT_STATUS' })
@@ -227,10 +245,11 @@ onBeforeUnmount(() => {
     clearInterval(pollTimer)
 })
 
-function toggleDict(id: string, enabled: boolean): void {
+async function toggleDict(id: string, enabled: boolean): Promise<void> {
   if (!store.settings)
     return
-  void store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { ...dictState(id), enabled } } })
+  await store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { ...dictState(id), enabled } } })
+  await loadDictStatus()
 }
 
 async function downloadDict(dict: DictionaryItem): Promise<void> {
@@ -385,6 +404,9 @@ async function removeDictPack(id: string): Promise<void> {
         </div>
         <MSelect size="sm" :model-value="store.settings?.targetLang" :options="targetOptions" @update:model-value="setTarget" />
       </div>
+      <p v-if="!targetHasOffline" class="m-muted hint">
+        {{ aiConfigured ? t('options.targetNoDictAi') : t('options.targetNoDict') }}
+      </p>
     </section>
 
     <!-- 离线词典 -->
@@ -403,7 +425,7 @@ async function removeDictPack(id: string): Promise<void> {
       </div>
       <div class="field">
         <div class="lab">
-          {{ t('options.dictSummary', { installed: installedCount, total: dictList.length, enabled: enabledCount }) }}
+          {{ t('options.dictSummary', { installed: installedCount, total: AVAILABLE_DICTS.length, enabled: enabledCount }) }}
         </div>
       </div>
       <button class="manage-btn" @click="dictDialogOpen = true">
@@ -500,12 +522,15 @@ async function removeDictPack(id: string): Promise<void> {
 
     <MDialog v-model="dictDialogOpen" :title="t('options.manageDict')" :contained="contained" width="540px">
       <div class="dict-list">
-        <div v-for="dict in dictList" :key="dict.id" class="dict-item">
+        <div v-for="dict in dictList" :key="dict.id" class="dict-item" :class="{ 'd-off': !isDictAvailable(dict) }">
           <div class="d-main">
             <div class="d-name">
               <span class="d-title">{{ dict.name }}</span>
               <MChip v-if="dict.perLetter" variant="primary">
                 {{ t('options.dictLazy') }}
+              </MChip>
+              <MChip v-if="!isDictAvailable(dict)">
+                {{ t('options.dictUnavailable') }}
               </MChip>
             </div>
             <div class="m-muted">
@@ -515,7 +540,7 @@ async function removeDictPack(id: string): Promise<void> {
               {{ t('options.dictFailed', { error: dictStatusOf(dict.id).error ?? '' }) }}
             </div>
           </div>
-          <div class="d-actions">
+          <div v-if="isDictAvailable(dict)" class="d-actions">
             <MSwitch :model-value="dictStatusOf(dict.id).enabled" @update:model-value="v => toggleDict(dict.id, v)" />
             <template v-if="dictStatusOf(dict.id).progress !== null">
               <div class="d-progress">
@@ -526,12 +551,15 @@ async function removeDictPack(id: string): Promise<void> {
             <button v-else-if="dictStatusOf(dict.id).installed" class="icon-btn" :title="t('options.dictDelete')" @click="removeDictPack(dict.id)">
               <MIcon name="trash" :size="15" />
             </button>
-            <MButton v-else variant="ghost" :disabled="!hasSource(dict)" :title="hasSource(dict) ? t('options.dictDownload') : t('options.dictNoSource')" @click="downloadDict(dict)">
+            <MButton v-else variant="ghost" :title="t('options.dictDownload')" @click="downloadDict(dict)">
               {{ t('options.dictDownload') }}
             </MButton>
           </div>
         </div>
       </div>
+      <p class="m-muted license">
+        {{ t('options.dictAiOnly') }}
+      </p>
       <p class="m-muted license">
         {{ t('options.dictLicense') }}
       </p>
@@ -605,6 +633,7 @@ async function removeDictPack(id: string): Promise<void> {
 
 .dict-list { display: flex; flex-direction: column; gap: 8px; }
 .dict-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--m-line); border-radius: 10px; }
+.dict-item.d-off { opacity: .6; }
 .d-main { flex: 1; min-width: 0; }
 .d-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
 .d-title { min-width: 0; }

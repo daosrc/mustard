@@ -132,8 +132,11 @@ export const DEFAULT_TOOLS: ToolItem[] = [
 
 /**
  * 离线词典清单：数据不打包进扩展，**首次使用时按需下载**（见 apps/extension/lib/dictionaryStore）。
+ * - ecdict-zh：open-ecdict《现代英汉》，**首次使用时自动下载并启用**（defaultInstall）。
  * - ecdict：ECDICT CSV（MIT），jsDelivr 上的样例文件（完整版体积大，可用自定义源）。
  * - wordset：Wordset 英英（CC BY-SA 4.0 + WordNet），**按首字母懒加载**，逐字母下载。
+ * - cc-cedict / jmdict / freedict：暂无可用数据源，只能走 AI 翻译（设置页显示为「暂不支持」）。
+ * 目标语言没有对应离线词典时（如日/韩/法/德），一律交给 AI 翻译。
  */
 export const DICTIONARIES: DictionaryItem[] = [
   {
@@ -148,6 +151,7 @@ export const DICTIONARIES: DictionaryItem[] = [
     url: 'https://cdn.jsdelivr.net/gh/mahavivo/open-ecdict@master/data/%E7%8E%B0%E4%BB%A3%E8%8B%B1%E6%B1%89%E8%AF%8D%E5%85%B8.txt',
     attribution: 'open-ecdict（数据源自《现代英汉词典》，许可待确认，见 THIRD-PARTY.md）',
     targetLang: 'zh-CN',
+    defaultInstall: true,
   },
   {
     id: 'ecdict',

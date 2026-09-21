@@ -2,7 +2,7 @@ import type { AiTarget } from '@mustard/core'
 import type { ChatPortClientMessage, DictResult, LangCode, Message, Settings, SourceLang } from '@mustard/shared'
 import { cardToEntry, chatOnce, chatStream, errorCode, IDENTITY_REPLY, isIdentityQuery, lookupWord, translateBlocks, translateImage, translateSentence, translateWord, withSystemPrompt } from '@mustard/core'
 import { getSettings, openSidePanel, setStored, updateSettings } from '@mustard/platform'
-import { CHAT_PORT_NAME, DICTIONARIES, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
+import { AVAILABLE_DICTS, CHAT_PORT_NAME, DICTIONARIES, ERR_MISSING_API_KEY, STORAGE_KEYS } from '@mustard/shared'
 import { cacheKey, parseVocabCsv, parseVocabJson, vocabToCsv, vocabToJson } from '@mustard/utils'
 import { browser } from 'wxt/browser'
 import { defineBackground } from '#imports'
@@ -45,13 +45,26 @@ async function localLookupFn(targetLang?: string): Promise<(word: string) => Pro
   return (word: string) => lookupLocal(enabled, word, targetLang ?? settings.targetLang)
 }
 
-/** 不按目标语言筛选的本地查询（AI 未命中时的兜底） */
-async function localFallbackFn(): Promise<(word: string) => Promise<DictResult | null>> {
+/**
+ * 首次使用：自动下载并启用默认离线词典（英汉词典）。
+ * 只在「一个词典都没装」时触发一次，避免覆盖用户的选择。
+ */
+async function ensureDefaultDict(): Promise<void> {
   const settings = await getSettings()
-  const enabled = Object.entries(settings.dictionaries)
-    .filter(([, state]) => state.enabled)
-    .map(([id]) => id)
-  return (word: string) => lookupLocal(enabled, word)
+  const anyInstalled = Object.values(settings.dictionaries).some(state => state.installed)
+  if (anyInstalled)
+    return
+  const target = AVAILABLE_DICTS.find(d => d.defaultInstall)
+  if (!target)
+    return
+  try {
+    await installDict(target.id)
+    await syncDictSettings()
+    void clearCached()
+  }
+  catch {
+    // 下载失败（离线/网络异常）→ 用户可稍后在设置页手动下载
+  }
 }
 
 /** 下载完成后把 installed 状态写回 settings（设置页据此展示） */
@@ -112,6 +125,9 @@ export default defineBackground({
     // 点击工具栏图标时打开侧边栏
     ;(browser as any).sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: true })?.catch?.(() => {})
 
+    // 首次使用：自动装好默认离线词典（英汉词典）
+    void ensureDefaultDict()
+
     browser.runtime.onMessage.addListener((raw, sender) => {
       const message = raw as Message
       switch (message.type) {
@@ -154,14 +170,12 @@ export default defineBackground({
                   ? {
                       online: settings.onlineDictionaryFallback,
                       local: await localLookupFn(targetLang),
-                      localFallback: await localFallbackFn(),
                     }
                   : {
                       online: settings.onlineDictionaryFallback,
                       ai: aiList[0],
                       aiFallbacks: aiList.slice(1),
                       local: await localLookupFn(targetLang),
-                      localFallback: await localFallbackFn(),
                     })
               void syncDictSettings()
               if (result.card && settings.vocab.autoAdd) {

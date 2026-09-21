@@ -1,4 +1,5 @@
 export * from './constants'
+export * from './dictionaries'
 export * from './i18n'
 export * from './langs'
 export * from './messaging'
