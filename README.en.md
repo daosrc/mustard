@@ -17,7 +17,7 @@
 | **Vocabulary** | Auto-saved words, pronunciation, delete, import/export (JSON / CSV) |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
 | **Offline dictionaries** | Local → online → AI fallback; dictionary data is **not bundled** but **downloaded on first use** (English→Chinese built in by default, plus ECDICT MIT sample and Wordset English), then works offline |
-| **Model providers** | OpenRouter by default (OpenAI-compatible, free models included), custom providers supported; models added one by one with declared input capabilities |
+| **Model providers** | OpenAI-compatible; add your own provider and models, each with declared input capabilities |
 | **Chat history** | Create / switch / delete sessions and reload past conversations |
 | **Target language** | Simplified Chinese by default, 14 languages supported |
 | **Theme** | Wasabi-green design system with a dark mode |
@@ -45,7 +45,7 @@ Then load `apps/extension/.output/chrome-mv3` via **Load unpacked**.
 
 ## Usage
 
-1. **Configure a model (AI features)**: open the extension settings and fill in your OpenRouter API key (or a custom provider), or add a custom provider.
+1. **Configure a model (AI features)**: open the extension settings, add a model provider and fill in its API key.
    Without a key, AI features prompt you to configure one; selection/dictionary features keep working.
 2. **Select-to-translate**: select text on a page, then click the floating icon.
 3. **Full-page translation**: open the floating ball, expand the tools and enable "Page translation".

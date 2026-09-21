@@ -69,7 +69,7 @@ const zh: Content = {
   stepsTitle: '三步上手',
   steps: [
     { n: '01', title: '安装扩展', desc: '从 GitHub Releases 下载 zip 解压，或在开发者模式加载已解压的扩展程序。' },
-    { n: '02', title: '配置模型', desc: '在设置页填入 OpenRouter 或自定义提供商的 API Key（可选，不填也能用词典翻译）。' },
+    { n: '02', title: '配置模型', desc: '在设置页添加模型提供商并填入 API Key（可选，不填也能用词典翻译）。' },
     { n: '03', title: '开始使用', desc: '划词、悬浮或开启网页翻译；打开侧边栏与 AI 对话，收录生词并记词。' },
   ],
   moreTitle: '更多细节',
@@ -132,7 +132,7 @@ const en: Content = {
   stepsTitle: 'Get started in three steps',
   steps: [
     { n: '01', title: 'Install the extension', desc: 'Download the zip from GitHub Releases, or load the unpacked extension in developer mode.' },
-    { n: '02', title: 'Configure a model', desc: 'Add an API key for OpenRouter or a custom provider in settings (optional — dictionary translation works without it).' },
+    { n: '02', title: 'Configure a model', desc: 'Add a model provider and its API key in settings (optional — dictionary translation works without it).' },
     { n: '03', title: 'Start using', desc: 'Select, hover or enable full-page translation; open the side panel to chat, save and practice words.' },
   ],
   moreTitle: 'More details',
