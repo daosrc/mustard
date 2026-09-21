@@ -1,6 +1,21 @@
 import type { DictionaryItem, ModelDef, Provider, Settings, ToolItem } from './types'
 import { DEFAULT_TARGET_LANG } from './langs'
 
+/**
+ * 构建期环境变量（Vite / WXT 注入）。这里只声明用到的字段，
+ * 避免 shared 包依赖 vite 的类型；声明为全局以便各包 typecheck 时都能识别。
+ */
+declare global {
+  interface ImportMetaEnv {
+    DEV: boolean
+    PROD: boolean
+    MODE: string
+  }
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+}
+
 /** chrome.storage.local 键名 */
 export const STORAGE_KEYS = {
   settings: 'mustard:settings',
@@ -14,7 +29,15 @@ export const STORAGE_KEYS = {
 } as const
 
 /**
+ * 是否注入内置提供商预设。
+ * 发布构建（`wxt build`，即 release 用的产物）**不包含任何提供商信息**，
+ * 用户需在设置页自行添加；开发时（`wxt dev`）保留预设便于调试。
+ */
+const WITH_PROVIDER_PRESETS = import.meta.env.DEV
+
+/**
  * 默认模型提供商：OpenRouter（OpenAI 兼容，默认包含两个免费模型）。
+ * 仅开发构建注入，见 `WITH_PROVIDER_PRESETS`。
  * baseUrl：`https://openrouter.ai/api/v1`；用户需在设置页填入自己的 API Key。
  * 免费模型走 OpenRouter 共享池，偶发 429 属正常，可切换其他免费模型。
  */
@@ -54,6 +77,7 @@ export const OPENROUTER_PRESET: Provider = {
 
 /**
  * Agnes AI（OpenAI 兼容）。
+ * 仅开发构建注入，见 `WITH_PROVIDER_PRESETS`。
  * baseUrl：`https://apihub.agnes-ai.com/v1`；模型 `agnes-2.5-flash`（支持图像 URL 输入）。
  * 用户需在设置页填入自己的 API Key。
  */
@@ -74,6 +98,7 @@ export const AGNES_PRESET: Provider = {
 
 /**
  * 备用内置提供商：OpenCode Zen（OpenAI 兼容）。
+ * 仅开发构建注入，见 `WITH_PROVIDER_PRESETS`。
  * baseUrl：`https://opencode.ai/zen/v1`；模型 ID 为 `GET /models` 的真实返回值。
  * 付费模型需在 OpenCode 工作区绑定付款方式；免费额度仅限其官方客户端。
  */
@@ -156,9 +181,9 @@ export const DICTIONARIES: DictionaryItem[] = [
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
-  providers: [OPENROUTER_PRESET, AGNES_PRESET],
-  activeProviderId: OPENROUTER_PRESET.id,
-  activeModel: OPENROUTER_PRESET.models[0]!.name, // 默认 glm-5.2:free（文本输入输出）
+  providers: WITH_PROVIDER_PRESETS ? [OPENROUTER_PRESET, AGNES_PRESET] : [],
+  activeProviderId: WITH_PROVIDER_PRESETS ? OPENROUTER_PRESET.id : '',
+  activeModel: WITH_PROVIDER_PRESETS ? OPENROUTER_PRESET.models[0]!.name : '',
   sourceLang: 'auto',
   targetLang: DEFAULT_TARGET_LANG,
   features: { pageTranslate: false, selectionTranslate: true, hoverTranslate: false },

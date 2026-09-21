@@ -82,10 +82,10 @@ async function test(): Promise<void> {
   <MDialog v-model="open" :title="t('options.providerEdit')" :contained="contained" width="520px">
     <div class="form">
       <MField :label="t('options.providerName')">
-        <input v-model="draft.name" class="m-input" placeholder="OpenCode Zen">
+        <input v-model="draft.name" class="m-input" placeholder="My Provider">
       </MField>
       <MField :label="t('options.providerBaseUrl')">
-        <input v-model="draft.baseUrl" class="m-input" placeholder="https://opencode.ai/zen/v1">
+        <input v-model="draft.baseUrl" class="m-input" placeholder="https://api.example.com/v1">
       </MField>
       <MField :label="t('options.providerKey')" :hint="t('options.providerKeyHint')">
         <input v-model="draft.apiKey" class="m-input" type="password" placeholder="sk-...">
