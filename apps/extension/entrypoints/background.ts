@@ -61,6 +61,8 @@ async function ensureDefaultDict(): Promise<void> {
     await installDict(target.id)
     await syncDictSettings()
     void clearCached()
+    // 让设置页在下次打开时给出「已自动下载」提示
+    void setStored(STORAGE_KEYS.notice, { type: 'dictInstalled', name: target.name })
   }
   catch {
     // 下载失败（离线/网络异常）→ 用户可稍后在设置页手动下载

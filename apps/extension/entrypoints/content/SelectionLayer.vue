@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TranslateResult } from '@mustard/core/translation'
 import type { Settings } from '@mustard/shared'
-import { hasOfflineDictFor, t as translateKey } from '@mustard/shared'
+import { hasOfflineDictFor, langOption, t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { addToVocab, isWord, speakText, translate, translateAi } from './actions'
@@ -9,8 +9,8 @@ import { addToVocab, isWord, speakText, translate, translateAi } from './actions
 const props = defineProps<{ settings: Settings | null }>()
 const emit = defineEmits<{ added: [] }>()
 
-function t(key: string): string {
-  return translateKey(props.settings?.uiLang ?? 'zh', key)
+function t(key: string, vars?: Record<string, string | number>): string {
+  return translateKey(props.settings?.uiLang ?? 'zh', key, vars)
 }
 
 /** 结果为空时的提示：优先说明「该语言没有离线词典」，避免只显示「未找到」 */
@@ -21,7 +21,10 @@ const emptyHint = computed(() => {
   if (hasOfflineDictFor(settings.dictionaries, settings.targetLang))
     return t('content.notFound')
   const provider = settings.providers.find(p => p.id === settings.activeProviderId)
-  return provider?.apiKey ? t('content.notFound') : t('content.noDict')
+  if (provider?.apiKey)
+    return t('content.notFound')
+  const label = langOption(settings.targetLang)?.label ?? settings.targetLang
+  return t('content.noDict', { lang: label })
 })
 
 function sourceLabel(source: string): string {

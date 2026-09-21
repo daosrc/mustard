@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TranslateResult } from '@mustard/core/translation'
 import type { Settings } from '@mustard/shared'
-import { hasOfflineDictFor, t as translateKey } from '@mustard/shared'
+import { hasOfflineDictFor, langOption, t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { addToVocab, isWord, speakText, translate, translateAi } from './actions'
@@ -27,11 +27,14 @@ const emptyHint = computed(() => {
   if (!settings || hasOfflineDictFor(settings.dictionaries, settings.targetLang))
     return ''
   const provider = settings.providers.find(p => p.id === settings.activeProviderId)
-  return provider?.apiKey ? '' : t('content.noDict')
+  if (provider?.apiKey)
+    return ''
+  const label = langOption(settings.targetLang)?.label ?? settings.targetLang
+  return t('content.noDict', { lang: label })
 })
 
-function t(key: string): string {
-  return translateKey(props.settings?.uiLang ?? 'zh', key)
+function t(key: string, vars?: Record<string, string | number>): string {
+  return translateKey(props.settings?.uiLang ?? 'zh', key, vars)
 }
 
 const tooltip = ref<TipState | null>(null)

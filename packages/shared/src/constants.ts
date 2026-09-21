@@ -26,6 +26,8 @@ export const STORAGE_KEYS = {
   pendingView: 'mustard:pending-view',
   /** 右键「翻译选中文本」待填入输入框的内容 */
   pendingCompose: 'mustard:pending-compose',
+  /** 一次性 UI 提示（如首次使用自动下载词典完成），读取后即清除 */
+  notice: 'mustard:notice',
 } as const
 
 /**

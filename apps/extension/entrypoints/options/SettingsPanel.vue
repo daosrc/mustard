@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DictInstallStatus, DictionaryItem, Provider, Settings, UILang } from '@mustard/shared'
-import { send } from '@mustard/platform'
-import { AVAILABLE_DICTS, DICTIONARIES, isDictAvailable, LANGS, SOURCE_LANGS, UI_LANGS } from '@mustard/shared'
+import { getStored, send, setStored } from '@mustard/platform'
+import { AVAILABLE_DICTS, DICTIONARIES, isDictAvailable, langOption, LANGS, SOURCE_LANGS, STORAGE_KEYS, UI_LANGS } from '@mustard/shared'
 import { MButton, MChip, MDialog, MIcon, MSelect, MSwitch, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -53,6 +53,7 @@ onMounted(async () => {
     await store.load()
   theme.value = store.settings?.theme ?? 'system'
   await loadDictStatus()
+  await showAutoInstallNotice()
 })
 
 const modelOptions = computed(() => (store.settings?.providers ?? []).flatMap(p => p.models.map(m => ({
@@ -226,6 +227,20 @@ const targetHasOffline = computed(() => {
   return AVAILABLE_DICTS.some(d => d.targetLang === lang && dictState(d.id).enabled)
 })
 const aiConfigured = computed(() => !!store.activeProvider?.apiKey)
+const targetLabel = computed(() => {
+  const lang = store.settings?.targetLang
+  return lang ? langOption(lang)?.label ?? lang : ''
+})
+
+/** 首次使用自动下载词典完成后，在设置页给出一次提示 */
+async function showAutoInstallNotice(): Promise<void> {
+  const notice = await getStored<{ type: string, name?: string }>(STORAGE_KEYS.notice).catch(() => undefined)
+  if (!notice)
+    return
+  await setStored(STORAGE_KEYS.notice, '').catch(() => {})
+  if (notice.type === 'dictInstalled')
+    success(t('options.dictAutoInstalled', { name: notice.name ?? '' }))
+}
 
 async function loadDictStatus(): Promise<void> {
   const list = await send({ type: 'GET_DICT_STATUS' })
@@ -405,7 +420,7 @@ async function removeDictPack(id: string): Promise<void> {
         <MSelect size="sm" :model-value="store.settings?.targetLang" :options="targetOptions" @update:model-value="setTarget" />
       </div>
       <p v-if="!targetHasOffline" class="m-muted hint">
-        {{ aiConfigured ? t('options.targetNoDictAi') : t('options.targetNoDict') }}
+        {{ aiConfigured ? t('options.targetNoDictAi', { lang: targetLabel }) : t('options.targetNoDict', { lang: targetLabel }) }}
       </p>
     </section>
 
