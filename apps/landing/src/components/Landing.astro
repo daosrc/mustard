@@ -48,7 +48,7 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
     <section class="hero">
       <Particles
         class="hero-particles"
-        particleCount={700}
+        particleCount={240}
         particleSpread={10}
         speed={0.1}
         particleBaseSize={100}
@@ -143,12 +143,18 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
     <section id="install" class="max-w-5xl mx-auto px-5 py-14">
       <h2 class="section-title">{c.installTitle}</h2>
       <p class="mt-3 text-muted">{c.installDesc}</p>
-      <div class="grid gap-4 sm:grid-cols-2 mt-8">
+      <div class="grid gap-5 sm:grid-cols-2 mt-8">
         {c.installOptions.map(o => (
-          <div class="card">
-            <h3 class="mt-0 mb-3 text-base font-700">{o.title}</h3>
-            <ol class="m-0 pl-5 text-sm text-muted leading-relaxed">
-              {o.steps.map(step => <li>{step}</li>)}
+          <div class="card install-card">
+            <h3 class="mt-0 mb-1 text-base font-700">{o.title}</h3>
+            <p class="m-0 mb-4 text-sm text-muted">{o.desc}</p>
+            <ol class="install-steps">
+              {o.steps.map(step => (
+                <li>
+                  <code class="install-cmd">{step.cmd}</code>
+                  <span class="install-note">{step.note}</span>
+                </li>
+              ))}
             </ol>
           </div>
         ))}
@@ -276,4 +282,21 @@ const SHOTS: Partial<Record<string, { src: string, w: number, h: number, uniform
 .mock-chips span.on { background: var(--m-primary-soft); color: var(--m-primary); border-color: transparent; }
 
 .step-n { font-size: 1.4rem; font-weight: 800; color: var(--m-primary); }
+
+.install-card { display: flex; flex-direction: column; }
+.install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: install; }
+.install-steps li { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "code note"; column-gap: 12px; align-items: start; }
+.install-cmd {
+  grid-area: code;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .8rem;
+  line-height: 1.5;
+  padding: 3px 8px;
+  border: 1px solid var(--m-line);
+  border-radius: 6px;
+  background: var(--m-surface-2);
+  color: var(--m-primary);
+  white-space: nowrap;
+}
+.install-note { grid-area: note; font-size: .82rem; line-height: 1.5; color: var(--m-muted); }
 </style>

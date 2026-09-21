@@ -148,12 +148,14 @@ const {
         const r = R * Math.cbrt(Math.random())
         const theta = Math.random() * Math.PI * 2
         const phi = Math.acos(2 * Math.random() - 1)
+        // 尺寸取较小区间：幂次分布让多数粒子偏小、仅极少数稍大，避免喧宾夺主
+        const spreadScale = 0.15 + Math.pow(Math.random(), 3.5) * 5.85
         return {
           x: r * Math.sin(phi) * Math.cos(theta),
           y: r * Math.cos(phi),
           z: r * Math.sin(phi) * Math.sin(theta),
-          scale: (1 - sizeRandomness) + sizeRandomness * Math.random(),
-          alpha: alphaParticles ? 0.2 + Math.random() * 0.6 : 1,
+          scale: (1 - sizeRandomness) + sizeRandomness * spreadScale,
+          alpha: alphaParticles ? 0.12 + Math.random() * 0.30 : 1,
           color: customColors.length
             ? customColors[Math.floor(Math.random() * customColors.length)]!
             : colors[Math.floor(Math.random() * colors.length)]!,
