@@ -61,8 +61,12 @@ export interface DictionaryItem {
   installed: boolean
   enabled: boolean
   /** 下载格式与地址（首次使用时下载） */
-  format?: 'ecdict-csv' | 'wordset-letters' | 'open-ecdict'
+  format?: 'ecdict-csv' | 'wordset-letters' | 'open-ecdict' | 'cedict-txt' | 'jmdict-xml' | 'freedict-tei'
   url?: string
+  /** 数据为 gzip（浏览器用 DecompressionStream 解压） */
+  gzip?: boolean
+  /** 词条本身的语言（用于按脚本粗筛，避免用中文词典查英文单词） */
+  sourceLang?: string
   /** 按字母懒加载（wordset） */
   perLetter?: boolean
   /** 该词典输出的目标语言（用于按目标语言筛选；缺省视为任意） */

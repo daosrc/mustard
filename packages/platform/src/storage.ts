@@ -1,5 +1,5 @@
 import type { Settings } from '@mustard/shared'
-import { DEFAULT_SETTINGS, STORAGE_KEYS } from '@mustard/shared'
+import { DEFAULT_SETTINGS, DICTIONARIES, STORAGE_KEYS } from '@mustard/shared'
 import { browser } from 'wxt/browser'
 
 async function read<T>(key: string): Promise<T | undefined> {
@@ -53,7 +53,11 @@ export async function getSettings(): Promise<Settings> {
     hover: { ...DEFAULT_SETTINGS.hover, ...stored?.hover },
     floatingBall: { ...DEFAULT_SETTINGS.floatingBall, ...stored?.floatingBall, tools: stored?.floatingBall?.tools ?? DEFAULT_SETTINGS.floatingBall.tools },
     vocab: { ...DEFAULT_SETTINGS.vocab, ...stored?.vocab },
-    dictionaries: { ...DEFAULT_SETTINGS.dictionaries, ...stored?.dictionaries },
+    // 只保留当前清单里的词典：丢弃历史遗留 id，并给新增词典补上默认值
+    dictionaries: Object.fromEntries(DICTIONARIES.map((d) => {
+      const saved = stored?.dictionaries?.[d.id]
+      return [d.id, { installed: saved?.installed ?? d.installed, enabled: saved?.enabled ?? d.enabled }]
+    })),
   }
 }
 

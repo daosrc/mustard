@@ -544,9 +544,6 @@ async function removeDictPack(id: string): Promise<void> {
           <div class="d-main">
             <div class="d-name">
               <span class="d-title">{{ dict.name }}</span>
-              <MChip v-if="dict.perLetter" variant="primary">
-                {{ t('options.dictLazy') }}
-              </MChip>
               <MChip v-if="!isDictAvailable(dict)">
                 {{ t('options.dictUnavailable') }}
               </MChip>

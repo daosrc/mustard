@@ -168,3 +168,13 @@
 - 原因：① 开关与下载按钮同时渲染，未区分「已安装」状态；② `toggleDict` 用 `{ ...dictState(id), enabled }` 整对象覆盖，而设置页的 `store.settings` 是下载前的快照（`installed:false`），把后台刚写好的 `installed:true` 覆盖掉了。
 - 解决：① 未下载只渲染「下载」按钮，下载完成后才出现开关 + 删除；② `toggleDict`/`downloadDict` 先 `await store.load()` 拉最新 settings 再 patch，避免陈旧快照覆盖；③ 开关改动会触发 `UPDATE_SETTINGS` 里的 `clearCached()`，翻译缓存同步失效，开关即时生效。
 - 备注：实测新装状态只有英汉词典有开关；点 ECDICT「下载」后开关出现且为开；关掉后 `{enabled:false, installed:true}`，installed 不再被覆盖。
+
+### 2026-09-21 · ECDICT 是假词典 / 三个占位词典无法离线 / 新增 gzip+XML 解析
+- 现象：ECDICT 英汉（MIT）开启后查不到任何词；CC-CEDICT / JMdict / FreeDict 永远是「暂不支持」，无法离线使用。
+- 原因：① ECDICT 指向的是 `ecdict.mini.csv`，实测只有 **53 行**、内容是 `no fonts installed`、`Why do you dislike the medicine so much` 这类脏数据，根本不是词典；② 后三条在清单里只有名字、没有 `format/url`，是占位条目。
+- 解决：① 删除 ECDICT 占位条目；② 为三条接上真实数据源并新增解析器：
+  - CC-CEDICT（MDBG 分发，gzip 文本 4MB）→ `parseCedictTxt`，繁简都建索引；
+  - JMdict（EDRDG，gzip XML 10MB）→ `parseJmdictXml`，按行扫描 `<entry>/<keb>/<reb>/<gloss>`，不构建 DOM；
+  - FreeDict（jsDelivr 上的 TEI，无需 xz）→ `parseFreedictTei`，只取 `<cit type="trans">` 内的 `<quote>`；「多语种」拆成英→法/葡/阿三条具体词对。
+  ③ 下载统一走 `fetchText(url, gzip)`，用浏览器原生 `DecompressionStream('gzip')` 解压；④ 非拉丁词条按码点分 64 桶存储（原来全挤在 `_` 分片，中文/日文词典会变成单个上万条的巨片）；⑤ 新增 `sourceLang` + 脚本粗筛，避免用中文词典查英文单词、也避免误触发下载；⑥ `getSettings` 只保留当前清单里的词典 id，清掉历史遗留键。
+- 备注：实测 `芥末→en` 命中 CC-CEDICT（mustard；wasabi）、`日本語→en` 命中 JMdict（Japanese (language)）、`abandon→fr` 命中 FreeDict；三条安装耗时 3.3s / 3.9s / 1.8s。注意旧用户存储里这三条是 `enabled:false`（占位时期写入），需手动开启开关。

@@ -1,6 +1,6 @@
 import type { LocalEntry } from '@mustard/core/dictionary'
 import type { DictInstallStatus, DictionaryItem, DictResult } from '@mustard/shared'
-import { createLocalLookup, lemmaCandidates, parseEcdictCsv, parseOpenEcdictTxt, parseWordsetJson } from '@mustard/core/dictionary'
+import { createLocalLookup, lemmaCandidates, parseCedictTxt, parseEcdictCsv, parseFreedictTei, parseJmdictXml, parseOpenEcdictTxt, parseWordsetJson } from '@mustard/core/dictionary'
 import { idbGet, idbSet } from '@mustard/platform'
 import { DICTIONARIES } from '@mustard/shared'
 
@@ -12,6 +12,21 @@ export const DICT_PACKS: Record<string, DictionaryItem> = Object.fromEntries(
   DICTIONARIES.filter(d => d.format && (d.url || d.perLetter)).map(d => [d.id, d]),
 )
 
+/** 非拉丁文字（中日韩等）按码点分桶，避免全部挤在单个 `_` 分片里 */
+const BUCKETS = Array.from({ length: 64 }, (_, i) => `_${i.toString(36)}`)
+
+/** 按词条语言粗筛，避免用中文词典去查英文单词（也避免误触发下载） */
+const SCRIPT_RE: Record<string, RegExp> = {
+  en: /[a-z]/i,
+  zh: /[\u3400-\u9FFF\uF900-\uFAFF]/,
+  ja: /[\u3040-\u30FF\u3400-\u9FFF]/,
+}
+
+function matchesScript(pack: DictionaryItem, word: string): boolean {
+  const re = pack.sourceLang ? SCRIPT_RE[pack.sourceLang] : undefined
+  return !re || re.test(word)
+}
+
 const progress = new Map<string, number | null>()
 const errors = new Map<string, string>()
 const installed = new Set<string>()
@@ -19,7 +34,21 @@ const shardCache = new Map<string, Map<string, LocalEntry>>()
 
 function shardLetter(word: string): string {
   const ch = word.trim().toLowerCase()[0] ?? '_'
-  return /[a-z]/.test(ch) ? ch : '_'
+  if (/[a-z]/.test(ch))
+    return ch
+  const codePoint = ch.codePointAt(0) ?? 0
+  return `_${(codePoint % 64).toString(36)}`
+}
+
+/** 下载文本；`gzip` 时用 DecompressionStream 解压（浏览器原生支持） */
+async function fetchText(url: string, gzip?: boolean): Promise<string> {
+  const res = await fetch(url)
+  if (!res.ok)
+    throw new Error(`HTTP ${res.status}`)
+  if (!gzip || !res.body)
+    return res.text()
+  const stream = res.body.pipeThrough(new DecompressionStream('gzip'))
+  return new Response(stream).text()
 }
 
 function shardKey(id: string, letter: string): string {
@@ -97,15 +126,22 @@ export async function installDict(id: string): Promise<void> {
   errors.delete(id)
   progress.set(id, 0)
   try {
+    if (!pack.url)
+      throw new Error('NO_SOURCE')
     if (pack.format === 'ecdict-csv' || pack.format === 'open-ecdict') {
-      if (!pack.url)
-        throw new Error('NO_SOURCE')
-      const res = await fetch(pack.url)
-      if (!res.ok)
-        throw new Error(`HTTP ${res.status}`)
-      const text = await res.text()
+      const text = await fetchText(pack.url)
       progress.set(id, 0.7)
       await storeShards(id, pack.format === 'open-ecdict' ? parseOpenEcdictTxt(text) : parseEcdictCsv(text))
+    }
+    else if (pack.format === 'cedict-txt' || pack.format === 'jmdict-xml' || pack.format === 'freedict-tei') {
+      const text = await fetchText(pack.url, pack.gzip)
+      progress.set(id, 0.7)
+      const entries = pack.format === 'cedict-txt'
+        ? parseCedictTxt(text)
+        : pack.format === 'jmdict-xml'
+          ? parseJmdictXml(text)
+          : parseFreedictTei(text)
+      await storeShards(id, entries)
     }
     else if (pack.format === 'wordset-letters') {
       for (let i = 0; i < LETTERS.length; i++) {
@@ -130,7 +166,7 @@ export async function installDict(id: string): Promise<void> {
 }
 
 export async function removeDict(id: string): Promise<void> {
-  for (const letter of [...LETTERS, '_']) {
+  for (const letter of [...LETTERS, '_', ...BUCKETS]) {
     await idbSet(shardKey(id, letter), [])
     shardCache.delete(shardKey(id, letter))
   }
@@ -179,6 +215,9 @@ export async function lookupLocal(enabledIds: string[], word: string, targetLang
         continue
       // 按目标语言筛选：wordset 只提供英文释义，目标非英文时跳过，交给 AI
       if (pack.targetLang && targetLang && pack.targetLang !== targetLang)
+        continue
+      // 按词条脚本粗筛：中文词典不查英文单词，反之亦然
+      if (!matchesScript(pack, candidate))
         continue
       let shard = await loadShard(id, letter)
       if (!shard) {

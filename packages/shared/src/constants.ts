@@ -134,11 +134,13 @@ export const DEFAULT_TOOLS: ToolItem[] = [
 
 /**
  * 离线词典清单：数据不打包进扩展，**首次使用时按需下载**（见 apps/extension/lib/dictionaryStore）。
- * - ecdict-zh：open-ecdict《现代英汉》，**首次使用时自动下载并启用**（defaultInstall）。
- * - ecdict：ECDICT CSV（MIT），jsDelivr 上的样例文件（完整版体积大，可用自定义源）。
+ * - ecdict-zh：open-ecdict《现代英汉》英→中，**首次使用时自动下载并启用**（defaultInstall）。
  * - wordset：Wordset 英英（CC BY-SA 4.0 + WordNet），**按首字母懒加载**，逐字母下载。
- * - cc-cedict / jmdict / freedict：暂无可用数据源，只能走 AI 翻译（设置页显示为「暂不支持」）。
- * 目标语言没有对应离线词典时（如日/韩/法/德），一律交给 AI 翻译。
+ * - cc-cedict：CC-CEDICT 中→英（CC BY-SA），gzip 文本。
+ * - jmdict：JMdict 日→英（EDRDG），gzip XML。
+ * - freedict-*：FreeDict 英→法/葡/阿（GPL），TEI。
+ * `sourceLang` 用于按脚本粗筛（避免用中文词典查英文单词）；
+ * 目标语言没有对应离线词典时（如日/韩/德/西），一律交给 AI 翻译。
  */
 export const DICTIONARIES: DictionaryItem[] = [
   {
@@ -153,20 +155,8 @@ export const DICTIONARIES: DictionaryItem[] = [
     url: 'https://cdn.jsdelivr.net/gh/mahavivo/open-ecdict@master/data/%E7%8E%B0%E4%BB%A3%E8%8B%B1%E6%B1%89%E8%AF%8D%E5%85%B8.txt',
     attribution: 'open-ecdict（数据源自《现代英汉词典》，许可待确认，见 THIRD-PARTY.md）',
     targetLang: 'zh-CN',
+    sourceLang: 'en',
     defaultInstall: true,
-  },
-  {
-    id: 'ecdict',
-    name: 'ECDICT 英汉（MIT）',
-    langPair: '英 → 中',
-    license: 'MIT',
-    size: '~4 KB（样例，首次使用时下载）',
-    installed: false,
-    enabled: true,
-    format: 'ecdict-csv',
-    url: 'https://cdn.jsdelivr.net/gh/skywind3000/ECDICT@master/ecdict.mini.csv',
-    attribution: 'ECDICT © skywind3000 (MIT)',
-    targetLang: 'zh-CN',
   },
   {
     id: 'wordset',
@@ -180,10 +170,80 @@ export const DICTIONARIES: DictionaryItem[] = [
     perLetter: true,
     attribution: 'Wordset (CC BY-SA 4.0) + WordNet 3.0',
     targetLang: 'en',
+    sourceLang: 'en',
   },
-  { id: 'cc-cedict', name: 'CC-CEDICT 汉英', langPair: '中 → 英', license: 'CC BY-SA', size: '待补充数据源', installed: false, enabled: false },
-  { id: 'jmdict', name: 'JMdict 日英', langPair: '日 → 英', license: 'EDRDG', size: '待补充数据源', installed: false, enabled: false },
-  { id: 'freedict', name: 'FreeDict 多语种', langPair: '多语', license: 'GPL', size: '待补充数据源', installed: false, enabled: false },
+  {
+    id: 'cc-cedict',
+    name: 'CC-CEDICT 汉英',
+    langPair: '中 → 英',
+    license: 'CC BY-SA 4.0',
+    size: '~4 MB（首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'cedict-txt',
+    gzip: true,
+    url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz',
+    attribution: 'CC-CEDICT (CC BY-SA 4.0)，由 MDBG 分发',
+    targetLang: 'en',
+    sourceLang: 'zh',
+  },
+  {
+    id: 'jmdict',
+    name: 'JMdict 日英',
+    langPair: '日 → 英',
+    license: 'EDRDG / CC BY-SA 4.0',
+    size: '~10 MB（首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'jmdict-xml',
+    gzip: true,
+    url: 'http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz',
+    attribution: 'JMdict © Electronic Dictionary Research and Development Group (EDRDG)',
+    targetLang: 'en',
+    sourceLang: 'ja',
+  },
+  {
+    id: 'freedict-fr',
+    name: 'FreeDict 英法',
+    langPair: '英 → 法',
+    license: 'GPL',
+    size: '~3.3 MB（首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'freedict-tei',
+    url: 'https://cdn.jsdelivr.net/gh/freedict/fd-dictionaries@master/eng-fra/eng-fra.tei',
+    attribution: 'FreeDict eng-fra (GPL)',
+    targetLang: 'fr',
+    sourceLang: 'en',
+  },
+  {
+    id: 'freedict-pt',
+    name: 'FreeDict 英葡',
+    langPair: '英 → 葡',
+    license: 'GPL',
+    size: '~6.6 MB（首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'freedict-tei',
+    url: 'https://cdn.jsdelivr.net/gh/freedict/fd-dictionaries@master/eng-por/eng-por.tei',
+    attribution: 'FreeDict eng-por (GPL)',
+    targetLang: 'pt',
+    sourceLang: 'en',
+  },
+  {
+    id: 'freedict-ar',
+    name: 'FreeDict 英阿',
+    langPair: '英 → 阿',
+    license: 'GPL',
+    size: '~19 MB（首次使用时下载）',
+    installed: false,
+    enabled: true,
+    format: 'freedict-tei',
+    url: 'https://cdn.jsdelivr.net/gh/freedict/fd-dictionaries@master/eng-ara/eng-ara.tei',
+    attribution: 'FreeDict eng-ara (GPL)',
+    targetLang: 'ar',
+    sourceLang: 'en',
+  },
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
