@@ -13,20 +13,30 @@ function t(key: string, vars?: Record<string, string | number>): string {
 </script>
 
 <template>
-  <div v-if="pageState.active" class="page-bar">
-    <span v-if="pageState.total > 0 && pageState.done >= pageState.total" class="pb-dot done" />
-    <span v-else class="pb-dot" />
-    <span class="pb-text">
-      <template v-if="!pageState.total">{{ t('content.pageScanning') }}</template>
-      <template v-else-if="pageState.done < pageState.total">{{ t('content.pageTranslating', { done: pageState.done, total: pageState.total }) }}</template>
-      <template v-else-if="pageState.failed">{{ t('content.pagePartial', { ok: pageState.ok, total: pageState.total }) }}</template>
-      <template v-else-if="pageState.ok">{{ t('content.pageDone', { ok: pageState.ok }) }}</template>
-      <template v-else>{{ t('content.pageNone') }}</template>
-    </span>
-    <button class="pb-btn" @click="$emit('restore')">
-      <MIcon name="close" :size="13" />
-      {{ t('content.restore') }}
-    </button>
+  <div v-if="pageState.active || pageState.notice" class="page-bar">
+    <template v-if="pageState.notice">
+      <span class="pb-dot warn" />
+      <span class="pb-text">{{ pageState.notice }}</span>
+      <button class="pb-btn" @click="$emit('restore')">
+        <MIcon name="close" :size="13" />
+        {{ t('content.close') }}
+      </button>
+    </template>
+    <template v-else>
+      <span v-if="pageState.total > 0 && pageState.done >= pageState.total" class="pb-dot done" />
+      <span v-else class="pb-dot" />
+      <span class="pb-text">
+        <template v-if="!pageState.total">{{ t('content.pageScanning') }}</template>
+        <template v-else-if="pageState.done < pageState.total">{{ t('content.pageTranslating', { done: pageState.done, total: pageState.total }) }}</template>
+        <template v-else-if="pageState.failed">{{ t('content.pagePartial', { ok: pageState.ok, total: pageState.total }) }}</template>
+        <template v-else-if="pageState.ok">{{ t('content.pageDone', { ok: pageState.ok }) }}</template>
+        <template v-else>{{ t('content.pageNone') }}</template>
+      </span>
+      <button class="pb-btn" @click="$emit('restore')">
+        <MIcon name="close" :size="13" />
+        {{ t('content.restore') }}
+      </button>
+    </template>
   </div>
 </template>
 
@@ -57,6 +67,7 @@ function t(key: string, vars?: Record<string, string | number>): string {
   animation: pb-pulse 1s ease-in-out infinite;
 }
 .pb-dot.done { animation: none; background: var(--m-accent); }
+.pb-dot.warn { animation: none; background: var(--m-warn); }
 @keyframes pb-pulse { 50% { opacity: .35; } }
 .pb-btn {
   display: inline-flex;

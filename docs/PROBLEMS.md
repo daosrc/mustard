@@ -178,3 +178,9 @@
   - FreeDict（jsDelivr 上的 TEI，无需 xz）→ `parseFreedictTei`，只取 `<cit type="trans">` 内的 `<quote>`；「多语种」拆成英→法/葡/阿三条具体词对。
   ③ 下载统一走 `fetchText(url, gzip)`，用浏览器原生 `DecompressionStream('gzip')` 解压；④ 非拉丁词条按码点分 64 桶存储（原来全挤在 `_` 分片，中文/日文词典会变成单个上万条的巨片）；⑤ 新增 `sourceLang` + 脚本粗筛，避免用中文词典查英文单词、也避免误触发下载；⑥ `getSettings` 只保留当前清单里的词典 id，清掉历史遗留键。
 - 备注：实测 `芥末→en` 命中 CC-CEDICT（mustard；wasabi）、`日本語→en` 命中 JMdict（Japanese (language)）、`abandon→fr` 命中 FreeDict；三条安装耗时 3.3s / 3.9s / 1.8s。注意旧用户存储里这三条是 `enabled:false`（占位时期写入），需手动开启开关。
+
+### 2026-09-21 · 弹窗不居中 / 记词弹框顶到顶部 / 测试连接无反馈 等五项
+- 现象：① 生词本的「记词」弹框贴侧边栏顶部、没有遮罩，压在词表上；② 生词本默认自动收录；③ 没配 AI 也能开网页翻译，然后什么都不翻；④ 新增服务商时名称被预填成 `New provider`；⑤ 点「测试连接」看不到成功/失败。
+- 原因：① `MDialog` 的**非 contained 分支只有 `position:fixed; inset:0`**——居中、遮罩、`z-index` 全写在 `.is-contained` 里，所以侧边栏里未传 `contained` 的弹框（QuizDialog）直接贴在左上角；② `DEFAULT_SETTINGS.vocab.autoAdd` 是 true；③ `startPageTranslate` 不看 AI 是否可用；④ `addProvider` 里硬编码了 `name: 'New provider'`；⑤ 结果只走 toast，位置在页面底部居中，弹窗打开时容易被忽略。
+- 解决：① 把居中/遮罩/`z-index` 提到 `.overlay` 基类，`.is-contained` 只保留 `position:absolute`；② `autoAdd` 默认改 false，并同步 README / 落地页 / `vocab.empty` 文案；③ `pageState` 增加 `notice`，`startPageTranslate` 先检查 `provider.apiKey + model`，没有就只显示顶部提示条（「网页翻译需要 AI 模型…」）且**不发起任何翻译**；AI 配好后 settings 变更会自动补开始；④ 名称留空只留 placeholder；⑤ 测试结果同时内联显示在按钮左侧（成功绿 / 失败红），toast 保留。
+- 备注：实测选项页弹框 `display:flex` + 遮罩 + 垂直居中；侧边栏记词弹框 420×760 内居中（20/380/20）；无 AI 时开启网页翻译 → 提示条出现且 `.mustard-translation` 数量为 0；autoAdd=false 时翻译单词词表数量不变（7→7）。

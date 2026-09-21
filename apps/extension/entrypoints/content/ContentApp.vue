@@ -8,7 +8,7 @@ import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from './ball'
 import HoverTooltip from './HoverTooltip.vue'
 import PageToolbar from './PageToolbar.vue'
-import { setPageSettings, startPageTranslate, stopPageTranslate } from './pageTranslator'
+import { pageState, setPageSettings, startPageTranslate, stopPageTranslate } from './pageTranslator'
 import SelectionLayer from './SelectionLayer.vue'
 
 const TOOL_ICON: Record<string, string> = {
@@ -94,7 +94,12 @@ const tools = computed(() =>
 
 useTheme(() => (enabled.value ? rootEl.value : undefined))
 
-watch(settings, value => setPageSettings(value))
+watch(settings, (value) => {
+  setPageSettings(value)
+  // 之前因未接入 AI 模型没开始翻译：配置好后自动开始
+  if (value?.features.pageTranslate && !pageState.active)
+    startPageTranslate(value)
+})
 watch(() => settings.value?.features.pageTranslate, (on) => {
   if (on)
     startPageTranslate(settings.value)

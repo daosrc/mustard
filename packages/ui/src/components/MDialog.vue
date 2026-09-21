@@ -139,10 +139,6 @@ onBeforeUnmount(() => {
 .overlay {
   position: fixed;
   inset: 0;
-}
-.overlay.is-contained .panel { max-height: calc(100% - 32px); }
-.overlay.is-contained {
-  position: absolute;
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -150,6 +146,11 @@ onBeforeUnmount(() => {
   padding: 20px;
   background: rgba(20, 30, 14, .42);
 }
+/* contained：遮罩只覆盖最近的定位祖先（侧边栏正文区），由 positionContainedOverlay 定位 */
+.overlay.is-contained {
+  position: absolute;
+}
+.overlay.is-contained .panel { max-height: calc(100% - 32px); }
 .panel {
   max-width: 100%;
   max-height: 90vh;

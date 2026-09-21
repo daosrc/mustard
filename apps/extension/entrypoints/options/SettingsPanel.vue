@@ -143,7 +143,7 @@ function openEdit(provider: Provider): void {
 }
 
 function addProvider(): void {
-  editing.value = { id: uid('p-'), name: 'New provider', baseUrl: 'https://', apiKey: '', models: [] }
+  editing.value = { id: uid('p-'), name: '', baseUrl: 'https://', apiKey: '', models: [] }
   dialogOpen.value = true
 }
 

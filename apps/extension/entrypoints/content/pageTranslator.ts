@@ -1,15 +1,27 @@
 import type { Settings } from '@mustard/shared'
 import { send } from '@mustard/platform'
+import { t } from '@mustard/shared'
 import { reactive } from 'vue'
 
 /** 网页翻译状态（顶部浮条用） */
 export const pageState = reactive({
   active: false,
+  /** 无法开始时的提示（如未配置 AI 模型） */
+  notice: '',
   done: 0,
   total: 0,
   ok: 0,
   failed: 0,
 })
+
+/** 是否已接入可用的 AI 模型（网页翻译只能走 AI） */
+function hasAi(settings: Settings | null): boolean {
+  if (!settings)
+    return false
+  const provider = settings.providers.find(p => p.id === settings.activeProviderId)
+  const model = provider?.models.find(m => m.name === settings.activeModel)
+  return !!provider?.apiKey && !!model
+}
 
 const MARK = 'data-mustard-translated'
 const CLS = 'mustard-translation'
@@ -243,6 +255,12 @@ export function startPageTranslate(settings: Settings | null): void {
   settingsRef = settings
   if (pageState.active)
     return
+  // 网页翻译依赖 AI：没接模型就只提示，不发起任何翻译
+  if (!hasAi(settings)) {
+    pageState.notice = t(settings?.uiLang ?? 'zh', 'content.needAi')
+    return
+  }
+  pageState.notice = ''
   ensurePageStyle()
   pageState.active = true
   pageState.done = 0
@@ -259,6 +277,7 @@ export function startPageTranslate(settings: Settings | null): void {
 
 export function stopPageTranslate(): void {
   pageState.active = false
+  pageState.notice = ''
   observer?.disconnect()
   observer = null
   clearTimeout(scanTimer)

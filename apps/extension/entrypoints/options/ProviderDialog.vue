@@ -13,6 +13,8 @@ const { t } = useI18n()
 
 const draft = reactive<Provider>({ id: '', name: '', baseUrl: '', apiKey: '', models: [], builtin: false })
 const testing = ref(false)
+/** 测试连接的即时结果，直接显示在按钮左侧（toast 容易被忽略） */
+const testState = ref<{ ok: boolean, text: string } | null>(null)
 
 function fillFromProvider(provider: Provider | null): void {
   if (!provider)
@@ -26,8 +28,10 @@ watch(() => props.provider, (provider) => {
     fillFromProvider(provider)
 }, { immediate: true })
 watch(open, (isOpen) => {
-  if (isOpen)
+  if (isOpen) {
+    testState.value = null
     fillFromProvider(props.provider)
+  }
 })
 
 function addModel(): void {
@@ -65,11 +69,14 @@ async function test(): Promise<void> {
     return
   }
   testing.value = true
+  testState.value = null
   try {
     await testConnection({ ...JSON.parse(JSON.stringify(draft)) as Provider, models: draft.models }, model)
+    testState.value = { ok: true, text: t('options.connected') }
     success(t('options.connected'))
   }
   catch (err) {
+    testState.value = { ok: false, text: t('options.connectFailed', { error: errorCode(err) }) }
     error(t('options.connectFailed', { error: errorCode(err) }))
   }
   finally {
@@ -116,6 +123,9 @@ async function test(): Promise<void> {
     </div>
 
     <template #footer>
+      <span v-if="testState" class="test-state" :class="testState.ok ? 'ok' : 'err'">
+        <MIcon :name="testState.ok ? 'check' : 'warning'" :size="14" />{{ testState.text }}
+      </span>
       <MButton variant="ghost" :disabled="testing" @click="test">
         {{ testing ? t('options.testing') : t('options.testConnection') }}
       </MButton>
@@ -147,4 +157,7 @@ async function test(): Promise<void> {
   cursor: pointer;
 }
 .del:hover { background: var(--m-surface-2); color: var(--m-blush); }
+.test-state { display: inline-flex; align-items: center; gap: 4px; margin-right: auto; font-size: 12px; }
+.test-state.ok { color: var(--m-primary); }
+.test-state.err { color: var(--m-blush); }
 </style>

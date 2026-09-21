@@ -14,7 +14,7 @@
 | **Full-page translation** | Bilingual side-by-side: a translated node is appended after each original block (placeholder → result), restorable at any time |
 | **Screenshot translation** | Paste a screenshot into the composer and let a multimodal model translate it |
 | **Side-panel chat** | Pick a model grouped by provider; attach files (image / PDF / TXT / Word / Markdown) or screenshots |
-| **Vocabulary** | Auto-saved words, pronunciation, delete, import/export (JSON / CSV) |
+| **Vocabulary** | Pronunciation, delete, import/export (JSON / CSV); "auto-save translated words" is off by default and can be enabled in settings |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
 | **Offline dictionaries** | Local → online → AI fallback; dictionary data is **not bundled** but **downloaded on first use** (English→Chinese built in by default, plus ECDICT MIT sample and Wordset English), then works offline |
 | **Model providers** | OpenAI-compatible; add your own provider and models, each with declared input capabilities |

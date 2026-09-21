@@ -255,7 +255,7 @@ export const DEFAULT_SETTINGS: Settings = {
   features: { pageTranslate: false, selectionTranslate: true, hoverTranslate: false },
   hover: { delay: 450, scope: 'word' },
   floatingBall: { enabled: true, position: 'right', expand: 'radial', tools: DEFAULT_TOOLS },
-  vocab: { autoAdd: true, wordOnly: true },
+  vocab: { autoAdd: false, wordOnly: true },
   theme: 'system',
   uiLang: 'zh',
   onlineDictionaryFallback: true,
