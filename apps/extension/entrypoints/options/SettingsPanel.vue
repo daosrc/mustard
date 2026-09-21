@@ -263,7 +263,9 @@ onBeforeUnmount(() => {
 async function toggleDict(id: string, enabled: boolean): Promise<void> {
   if (!store.settings)
     return
-  await store.patch({ dictionaries: { ...store.settings.dictionaries, [id]: { ...dictState(id), enabled } } })
+  // 先拉一次最新 settings：后台下载完成后 installed 变了，用陈旧快照会把 installed 覆盖回 false
+  await store.load()
+  await store.patch({ dictionaries: { ...store.settings!.dictionaries, [id]: { ...dictState(id), enabled } } })
   await loadDictStatus()
 }
 
@@ -274,6 +276,7 @@ async function downloadDict(dict: DictionaryItem): Promise<void> {
     success(t('options.dictDownloaded'))
   else
     error(res.error === 'NO_SOURCE' ? t('options.dictNoSource') : t('options.dictFailed', { error: res.error ?? '' }))
+  await store.load()
   await loadDictStatus()
 }
 
@@ -556,16 +559,19 @@ async function removeDictPack(id: string): Promise<void> {
             </div>
           </div>
           <div v-if="isDictAvailable(dict)" class="d-actions">
-            <MSwitch :model-value="dictStatusOf(dict.id).enabled" @update:model-value="v => toggleDict(dict.id, v)" />
+            <!-- 未下载：只给下载按钮；下载完成后才出现开关，开关实时生效 -->
             <template v-if="dictStatusOf(dict.id).progress !== null">
               <div class="d-progress">
                 <i :style="{ width: `${Math.round((dictStatusOf(dict.id).progress ?? 0) * 100)}%` }" />
               </div>
               <span class="d-pct">{{ Math.round((dictStatusOf(dict.id).progress ?? 0) * 100) }}%</span>
             </template>
-            <button v-else-if="dictStatusOf(dict.id).installed" class="icon-btn" :title="t('options.dictDelete')" @click="removeDictPack(dict.id)">
-              <MIcon name="trash" :size="15" />
-            </button>
+            <template v-else-if="dictStatusOf(dict.id).installed">
+              <MSwitch :model-value="dictStatusOf(dict.id).enabled" @update:model-value="v => toggleDict(dict.id, v)" />
+              <button class="icon-btn" :title="t('options.dictDelete')" @click="removeDictPack(dict.id)">
+                <MIcon name="trash" :size="15" />
+              </button>
+            </template>
             <MButton v-else variant="ghost" :title="t('options.dictDownload')" @click="downloadDict(dict)">
               {{ t('options.dictDownload') }}
             </MButton>

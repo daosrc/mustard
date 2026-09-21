@@ -162,3 +162,9 @@
 - 原因：① 开关的 `model-value` 读的是 `GET_DICT_STATUS` 的一次性快照 `dictStatuses`，而不是实时的 `store.settings.dictionaries`，点完只写了 settings、快照没刷新，所以开关永远弹回原位；② CC-CEDICT/JMdict/FreeDict 在 `DICTIONARIES` 里根本没有 `format/url`（占位条目），`hasSource()` 为 false → 按钮 disabled，却仍渲染成可点的样子；③ `translateWord` 的 `localFallback` **不按目标语言筛选**，目标为「日」时本地词典（英→中）虽然被 `local` 跳过，却又从 `localFallback` 里命中并返回中文；在线词典（dictionaryapi.dev）本身是英英，也在非英文目标时被当成兜底。
 - 解决：① `dictStatusOf()` 的 `enabled` 改读实时 settings，`installed/progress/error` 仍取后台状态；`toggleDict` 后刷新一次状态；② 新增 `@mustard/shared` 的 `isDictAvailable()`/`AVAILABLE_DICTS`/`hasOfflineDictFor()`：无数据源的条目只显示「暂不支持」标签，不渲染开关与下载按钮，统计也只在可用词典里算（已安装 x/3）；③ 删除 `localFallback` 选项，在线词典仅在目标为英文时使用，结果语言不再可能与目标语言不符；④ 首次使用（一个词典都没装）后台自动下载并启用英汉词典；⑤ 目标语言没有离线词典时，设置页与划词/悬浮的空结果处给出「请配置模型（AI）」提示。
 - 备注：实测 `hello` 目标 ja → 空结果（不再出中文）；目标 en → Wordset 英英；目标 zh-CN → 现代英汉。离线词典目前只覆盖 英→中、英→英，日/韩/法/德等语种只能走 AI——若要补离线数据，需要选定数据源（CC-CEDICT / JMdict / FreeDict）并新增解析器，且注意其 CC BY-SA / EDRDG / GPL 许可。
+
+### 2026-09-21 · 未下载的词典也显示开关 / 下载后开关写回 installed=false
+- 现象：管理离线词典里，未下载的词典（ECDICT/Wordset）也带一个开关，看着像「已启用却无效」；下载完成后点开关，会把该词典的 `installed` 覆盖回 false（下次打开又变回「下载」按钮）。
+- 原因：① 开关与下载按钮同时渲染，未区分「已安装」状态；② `toggleDict` 用 `{ ...dictState(id), enabled }` 整对象覆盖，而设置页的 `store.settings` 是下载前的快照（`installed:false`），把后台刚写好的 `installed:true` 覆盖掉了。
+- 解决：① 未下载只渲染「下载」按钮，下载完成后才出现开关 + 删除；② `toggleDict`/`downloadDict` 先 `await store.load()` 拉最新 settings 再 patch，避免陈旧快照覆盖；③ 开关改动会触发 `UPDATE_SETTINGS` 里的 `clearCached()`，翻译缓存同步失效，开关即时生效。
+- 备注：实测新装状态只有英汉词典有开关；点 ECDICT「下载」后开关出现且为开；关掉后 `{enabled:false, installed:true}`，installed 不再被覆盖。
