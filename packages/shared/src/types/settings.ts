@@ -31,6 +31,8 @@ export interface FloatingBallSettings {
   enabled: boolean
   position: 'right' | 'left'
   expand: 'radial' | 'stack'
+  /** 竖直位置：球心距顶部的高度占视口高度的比例（0~1，拖拽后记录） */
+  y?: number
   tools: ToolItem[]
 }
 

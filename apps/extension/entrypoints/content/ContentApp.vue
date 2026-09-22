@@ -33,6 +33,69 @@ const settings = ref<Settings | null>(null)
 const open = ref(false)
 let closeTimer: ReturnType<typeof setTimeout> | undefined
 
+// ---------- 悬浮球拖拽 ----------
+const viewport = ref({ w: window.innerWidth, h: window.innerHeight })
+const dragging = ref(false)
+const dragX = ref(0)
+const dragY = ref(0)
+let startX = 0
+let startY = 0
+let moved = false
+let suppressClick = false
+
+const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v))
+const side = computed<'left' | 'right'>(() => (settings.value?.floatingBall?.position === 'left' ? 'left' : 'right'))
+const ballY = computed(() => settings.value?.floatingBall?.y ?? 0.94)
+const ballBottom = computed(() => Math.round(clamp((1 - ballY.value) * viewport.value.h - 28, 8, viewport.value.h - 64)))
+const wrapStyle = computed<Record<string, string>>(() => {
+  if (dragging.value)
+    return { left: `${dragX.value}px`, top: `${dragY.value}px`, right: 'auto', bottom: 'auto' }
+  return { [side.value]: '22px', bottom: `${ballBottom.value}px` }
+})
+
+function onResize(): void {
+  viewport.value = { w: window.innerWidth, h: window.innerHeight }
+}
+
+function onFabDown(event: PointerEvent): void {
+  dragging.value = true
+  moved = false
+  suppressClick = false
+  startX = event.clientX
+  startY = event.clientY
+  dragX.value = event.clientX - 28
+  dragY.value = clamp(event.clientY - 28, -20, viewport.value.h - 36)
+  open.value = false
+  // 用 window 级监听，避免 pointer capture 与鼠标事件合成不一致导致收不到 up
+  window.addEventListener('pointermove', onDragMove)
+  window.addEventListener('pointerup', onDragUp)
+  window.addEventListener('pointercancel', onDragUp)
+}
+
+function onDragMove(event: PointerEvent): void {
+  if (!moved && Math.hypot(event.clientX - startX, event.clientY - startY) > 6)
+    moved = true
+  dragX.value = event.clientX - 28
+  dragY.value = clamp(event.clientY - 28, -20, viewport.value.h - 36)
+}
+
+function onDragUp(event: PointerEvent): void {
+  window.removeEventListener('pointermove', onDragMove)
+  window.removeEventListener('pointerup', onDragUp)
+  window.removeEventListener('pointercancel', onDragUp)
+  dragging.value = false
+  suppressClick = moved
+  const fb = settings.value?.floatingBall
+  if (!moved || !fb)
+    return
+  const nextSide: 'left' | 'right' = event.clientX < viewport.value.w / 2 ? 'left' : 'right'
+  const nextY = clamp(event.clientY / viewport.value.h, 0.06, 0.94)
+  void send({
+    type: 'UPDATE_SETTINGS',
+    payload: { floatingBall: { ...fb, position: nextSide, y: nextY } },
+  })
+}
+
 function onPointerEnter(): void {
   clearTimeout(closeTimer)
   open.value = true
@@ -49,9 +112,11 @@ function onPointerLeave(): void {
 onMounted(() => {
   void refresh()
   browser.storage.onChanged.addListener(onStorage)
+  window.addEventListener('resize', onResize)
 })
 onBeforeUnmount(() => {
   browser.storage.onChanged.removeListener(onStorage)
+  window.removeEventListener('resize', onResize)
   clearTimeout(closeTimer)
 })
 
@@ -147,12 +212,16 @@ async function onToolClick(tool: ToolItem): Promise<void> {
 }
 
 function onBallClick(): void {
+  if (suppressClick) {
+    suppressClick = false
+    return
+  }
   void send({ type: 'OPEN_SIDEBAR', payload: { view: 'chat' } })
 }
 </script>
 
 <template>
-  <div v-if="enabled" ref="rootEl" class="mustard-wrap" :class="ball?.position === 'left' ? 'left' : 'right'">
+  <div v-if="enabled" ref="rootEl" class="mustard-wrap" :class="[side, { dragging }]" :style="wrapStyle">
     <div class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
       <div class="tools">
         <button
@@ -168,8 +237,13 @@ function onBallClick(): void {
           <span class="tool-label">{{ toolLabel(tool) }}</span>
         </button>
       </div>
-      <button class="fab" :title="tr('app.name')" @click="onBallClick">
-        <img class="fab-logo" :src="BALL_ICON" alt="Mustard">
+      <button
+        class="fab"
+        :title="tr('app.name')"
+        @click="onBallClick"
+        @pointerdown="onFabDown"
+      >
+        <img class="fab-logo" :src="BALL_ICON" alt="Mustard" draggable="false">
       </button>
     </div>
 

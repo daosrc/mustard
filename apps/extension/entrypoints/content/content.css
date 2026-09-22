@@ -5,16 +5,11 @@
 
 .mustard-wrap {
   position: fixed;
-  right: 22px;
-  bottom: 22px;
   z-index: 2147483646;
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   color: var(--m-ink);
-}
-
-.mustard-wrap.left {
-  right: auto;
-  left: 22px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ---------- 悬浮球 ---------- */
@@ -22,7 +17,6 @@
   position: relative;
   width: 56px;
   height: 56px;
-  transition: right .32s cubic-bezier(.4, 0, .2, 1);
 }
 
 .fab {
@@ -31,10 +25,20 @@
   border: 0;
   padding: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.mustard-wrap.dragging .fab {
+  cursor: grabbing;
+}
+
+.fab-logo {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 .fab-logo {
