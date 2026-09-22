@@ -1,4 +1,4 @@
-import type { Attachment, ChatMessage, DictInstallStatus, DictResult, LangCode, Session, Settings, SourceLang, TranslateMode, WordEntry } from './types'
+import type { Attachment, ChatMessage, DictInstallStatus, DictResult, LangCode, PageContent, Session, Settings, SourceLang, TranslateMode, WordEntry } from './types'
 
 /** content / sidepanel ⇄ background 的消息协议 */
 export type Message
@@ -22,7 +22,7 @@ export type Message
     | { type: 'GET_SESSIONS' }
     | { type: 'SAVE_SESSION', payload: { session: Session } }
     | { type: 'DELETE_SESSION', payload: { id: string } }
-    | { type: 'OPEN_SIDEBAR', payload?: { view?: 'chat' | 'settings' | 'vocab' | 'history' } }
+    | { type: 'OPEN_SIDEBAR', payload?: { view?: 'chat' | 'settings' | 'vocab' | 'history' | 'summary', summary?: PageContent } }
     | { type: 'CAPTURE_TAB' }
 
 export type MessageType = Message['type']

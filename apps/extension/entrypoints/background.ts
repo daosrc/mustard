@@ -146,11 +146,14 @@ export default defineBackground({
           })()
         case 'OPEN_SIDEBAR': {
           const view = message.payload?.view
+          const summary = message.payload?.summary
           // 必须**先**调用 sidePanel.open（保留用户手势上下文），再写 pendingView；
           // 若先 await 存储会丢失手势，导致 sidePanel.open 被 Chrome 拒绝。
           const opened = openSidePanel((sender as any)?.tab?.id)
           if (view)
             void setStored(STORAGE_KEYS.pendingView, view)
+          if (summary)
+            void setStored(STORAGE_KEYS.pendingSummary, summary)
           return opened.then(() => ({ ok: true }))
         }
         case 'TRANSLATE_TEXT': {

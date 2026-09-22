@@ -12,6 +12,7 @@
 | **Hover translation** | Hover to see the translation; delay and scope (word / sentence) are configurable |
 | **Full-page translation** | Bilingual side-by-side: each block gets its translation appended in place, incrementally, restorable at any time (**requires a configured model**) |
 | **Screenshot translation** | Paste a screenshot into the composer and let a multimodal model translate it |
+| **Page summary** | "Page summary" on the floating ball extracts the article body (skipping nav / headings / footer), has AI summarize it and shows the key points in the side panel |
 | **Side-panel chat** | Pick a model, stream the answer, and attach text / Markdown, PDF or DOCX files (PDF / DOCX are parsed to text locally; if the model declares file support, they are sent as-is) |
 | **Vocabulary** | Pronunciation, delete, import/export (JSON / CSV); "auto-save translated words" is off by default and can be enabled in settings |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
@@ -46,8 +47,9 @@ Then load `apps/extension/.output/chrome-mv3` via **Load unpacked**.
    Without a key, AI features prompt you to configure one; selection/dictionary features keep working.
 2. **Select-to-translate**: select text on a page, then click the floating icon.
 3. **Full-page translation**: open the floating ball, expand the tools and enable "Page translation".
-4. **Vocabulary / dictation**: open the side panel, go to "Vocabulary" and click "Practice" (shown as "Review" once everything is mastered).
-5. **Offline dictionaries**: Settings → Offline dictionaries to download / enable / delete dictionaries, or turn off the online fallback for fully offline mode.
+4. **Page summary**: open the floating ball's tools and pick "Page summary"; the side panel shows the AI key points for this page.
+5. **Vocabulary / dictation**: open the side panel, go to "Vocabulary" and click "Practice" (shown as "Review" once everything is mastered).
+6. **Offline dictionaries**: Settings → Offline dictionaries to download / enable / delete dictionaries, or turn off the online fallback for fully offline mode.
 
 ## Development
 

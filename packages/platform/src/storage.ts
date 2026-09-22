@@ -1,4 +1,4 @@
-import type { Settings } from '@mustard/shared'
+import type { Settings, ToolItem } from '@mustard/shared'
 import { DEFAULT_SETTINGS, DICTIONARIES, STORAGE_KEYS } from '@mustard/shared'
 import { browser } from 'wxt/browser'
 
@@ -16,6 +16,20 @@ async function write<T>(key: string, value: T): Promise<void> {
  * 内置提供商的模型列表以默认预设为准：补齐预设有、存储缺失的模型，
  * 并在 activeModel 失效时回退到默认，避免旧版本残留的占位模型名导致请求失败。
  */
+/** 合并工具清单：保留用户已有顺序/显隐，补齐新版本新增的工具 */
+function mergeTools(stored?: ToolItem[]): ToolItem[] {
+  const defaults = DEFAULT_SETTINGS.floatingBall.tools
+  if (!stored?.length)
+    return defaults.map(tool => ({ ...tool }))
+  const list = stored.map(tool => ({ ...tool }))
+  let maxOrder = list.reduce((max, tool) => Math.max(max, tool.order), -1)
+  for (const tool of defaults) {
+    if (!list.some(item => item.id === tool.id))
+      list.push({ ...tool, order: ++maxOrder })
+  }
+  return list.sort((a, b) => a.order - b.order)
+}
+
 export async function getSettings(): Promise<Settings> {
   const stored = await read<Partial<Settings>>(STORAGE_KEYS.settings)
 
@@ -51,7 +65,7 @@ export async function getSettings(): Promise<Settings> {
     activeModel: activeModelValid ? activeModelName : DEFAULT_SETTINGS.activeModel,
     features: { ...DEFAULT_SETTINGS.features, ...stored?.features },
     hover: { ...DEFAULT_SETTINGS.hover, ...stored?.hover },
-    floatingBall: { ...DEFAULT_SETTINGS.floatingBall, ...stored?.floatingBall, tools: stored?.floatingBall?.tools ?? DEFAULT_SETTINGS.floatingBall.tools },
+    floatingBall: { ...DEFAULT_SETTINGS.floatingBall, ...stored?.floatingBall, tools: mergeTools(stored?.floatingBall?.tools) },
     vocab: { ...DEFAULT_SETTINGS.vocab, ...stored?.vocab },
     // 只保留当前清单里的词典：丢弃历史遗留 id，并给新增词典补上默认值
     dictionaries: Object.fromEntries(DICTIONARIES.map((d) => {

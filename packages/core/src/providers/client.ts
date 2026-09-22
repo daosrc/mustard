@@ -45,6 +45,13 @@ export function isIdentityQuery(text: string): boolean {
 }
 
 /** 若消息中没有 system，则前置系统提示 */
+/** 网页总结的系统提示词（忽略标题/导航等无关信息，按目标语言输出要点） */
+export function summaryPrompt(lang: string): string {
+  return `你是网页内容摘要助手。请用${lang}总结用户给出的网页正文：`
+    + '用 3~6 条要点覆盖主要信息与结论，忽略导航、页脚、广告、标题等无关内容；'
+    + '只输出摘要本身，不要寒暄、不要解释、不要重复原文。'
+}
+
 export function withSystemPrompt(messages: ChatMessage[]): ChatMessage[] {
   if (messages.some(m => m.role === 'system'))
     return messages

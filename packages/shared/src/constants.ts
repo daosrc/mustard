@@ -28,6 +28,8 @@ export const STORAGE_KEYS = {
   pendingCompose: 'mustard:pending-compose',
   /** 一次性 UI 提示（如首次使用自动下载词典完成），读取后即清除 */
   notice: 'mustard:notice',
+  /** 待总结的网页内容（content → sidepanel） */
+  pendingSummary: 'mustard:pending-summary',
 } as const
 
 /**
@@ -128,8 +130,9 @@ export const DEFAULT_TOOLS: ToolItem[] = [
   { id: 'pageTranslate', label: '网页翻译', type: 'toggle', visible: true, order: 0 },
   { id: 'hoverTranslate', label: '悬浮翻译', type: 'toggle', visible: true, order: 1 },
   { id: 'selectionTranslate', label: '划词翻译', type: 'toggle', visible: true, order: 2 },
-  { id: 'vocab', label: '生词本', type: 'action', visible: true, order: 3 },
-  { id: 'settings', label: '设置', type: 'action', visible: true, order: 4 },
+  { id: 'pageSummary', label: '网页总结', type: 'action', visible: true, order: 3 },
+  { id: 'vocab', label: '生词本', type: 'action', visible: true, order: 4 },
+  { id: 'settings', label: '设置', type: 'action', visible: true, order: 5 },
 ]
 
 /**

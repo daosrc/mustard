@@ -7,6 +7,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useTheme } from '../../lib/useTheme'
 import { BALL_ICON } from './ball'
 import HoverTooltip from './HoverTooltip.vue'
+import { extractMainContent } from './pageSummary'
 import PageToolbar from './PageToolbar.vue'
 import { pageState, setPageSettings, startPageTranslate, stopPageTranslate } from './pageTranslator'
 import SelectionLayer from './SelectionLayer.vue'
@@ -15,6 +16,7 @@ const TOOL_ICON: Record<string, string> = {
   pageTranslate: 'globe',
   hoverTranslate: 'message',
   selectionTranslate: 'translate',
+  pageSummary: 'summary',
   vocab: 'book',
   settings: 'settings',
 }
@@ -208,6 +210,12 @@ async function onToolClick(tool: ToolItem): Promise<void> {
       type: 'UPDATE_SETTINGS',
       payload: { features: { ...settings.value.features, [key]: !settings.value.features[key] } },
     })
+    return
+  }
+  // 网页总结：同步抽取正文，随 OPEN_SIDEBAR 交给后台写入，侧边栏再跑 AI
+  // （不 await，保留用户手势，否则 sidePanel.open 会被 Chrome 拒绝）
+  if (tool.id === 'pageSummary') {
+    void send({ type: 'OPEN_SIDEBAR', payload: { view: 'summary', summary: extractMainContent() } })
     return
   }
   void send({ type: 'OPEN_SIDEBAR', payload: { view: tool.id === 'vocab' ? 'vocab' : 'settings' } })

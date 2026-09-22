@@ -14,6 +14,7 @@ import { useSettingsStore } from '../../stores/settings'
 import { BALL_ICON } from '../content/ball'
 import SettingsPanel from '../options/SettingsPanel.vue'
 import HistoryView from './HistoryView.vue'
+import SummaryView from './SummaryView.vue'
 import VocabView from './VocabView.vue'
 
 useTheme()
@@ -21,7 +22,7 @@ const store = useSettingsStore()
 const { error } = useToast()
 const { t } = useI18n()
 
-const view = ref<'chat' | 'vocab' | 'history' | 'settings'>('chat')
+const view = ref<'chat' | 'vocab' | 'history' | 'settings' | 'summary'>('chat')
 
 function welcomeMessage(): ChatMessage {
   return {
@@ -46,8 +47,8 @@ let handle: { abort: () => void } | null = null
 onMounted(async () => {
   await store.load()
   try {
-    const pending = await getStored<'chat' | 'vocab' | 'history' | 'settings'>(STORAGE_KEYS.pendingView)
-    if (pending === 'vocab' || pending === 'history' || pending === 'settings')
+    const pending = await getStored<'chat' | 'vocab' | 'history' | 'settings' | 'summary'>(STORAGE_KEYS.pendingView)
+    if (pending === 'vocab' || pending === 'history' || pending === 'settings' || pending === 'summary')
       view.value = pending
     if (pending)
       await setStored(STORAGE_KEYS.pendingView, '')
@@ -392,7 +393,7 @@ async function sendMessage(): Promise<void> {
         <button class="icon-btn" :title="t('nav.back')" @click="view = 'chat'">
           <MIcon name="chevron-left" :size="16" />
         </button>
-        <span class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : t('nav.settings') }}</span>
+        <span class="name">{{ view === 'vocab' ? t('nav.vocab') : view === 'history' ? t('nav.history') : view === 'summary' ? t('nav.summary') : t('nav.settings') }}</span>
       </template>
       <span class="spacer" />
       <template v-if="view === 'chat'">
@@ -414,7 +415,8 @@ async function sendMessage(): Promise<void> {
       </button>
     </header>
 
-    <VocabView v-if="view === 'vocab'" />
+    <SummaryView v-if="view === 'summary'" />
+    <VocabView v-else-if="view === 'vocab'" />
     <HistoryView v-else-if="view === 'history'" :current-id="currentSession?.id ?? null" @open="openSession" />
     <div v-else-if="view === 'settings'" class="panel-body settings-body">
       <SettingsPanel contained />

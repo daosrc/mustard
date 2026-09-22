@@ -8,6 +8,7 @@ export type ToolId
   = | 'pageTranslate'
     | 'selectionTranslate'
     | 'hoverTranslate'
+    | 'pageSummary'
     | 'vocab'
     | 'settings'
     | (string & {})

@@ -57,6 +57,7 @@ export const ICONS: Record<string, IconShape[]> = {
   'info': [{ t: 'circle', cx: 12, cy: 12, r: 10 }, ...p('M12 16v-4', 'M12 8h.01')],
   'warning': p('M12 3 2 20h20L12 3z', 'M12 9v5', 'M12 17h.01'),
   'arrow-right': p('M5 12h14M13 6l6 6-6 6'),
+  'summary': p('M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z', 'M14 3v6h6', 'M8 13h8', 'M8 17h5'),
   'sparkles': p('M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z', 'M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z'),
 }
 
