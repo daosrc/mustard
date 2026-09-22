@@ -251,6 +251,8 @@ function onBallClick(): void {
 
     <SelectionLayer :settings="settings" @added="onAdded" />
     <HoverTooltip :settings="settings" @added="onAdded" />
-    <PageToolbar :ui-lang="settings?.uiLang ?? 'zh'" @restore="restorePage" />
+    <!-- 进度条只在顶层文档显示：各 frame 各有一条会重复；
+         「还原原文」通过 features.pageTranslate=false 广播到所有 frame，统一停止 -->
+    <PageToolbar v-if="isTopFrame" :ui-lang="settings?.uiLang ?? 'zh'" @restore="restorePage" />
   </div>
 </template>
