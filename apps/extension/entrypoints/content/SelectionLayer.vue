@@ -4,7 +4,7 @@ import type { Settings } from '@mustard/shared'
 import { hasOfflineDictFor, langOption, t as translateKey } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { addToVocab, isWord, speakText, translate, translateAi } from './actions'
+import { addToVocab, hasAi, isWord, speakText, translate, translateAi } from './actions'
 
 const props = defineProps<{ settings: Settings | null }>()
 const emit = defineEmits<{ added: [] }>()
@@ -92,6 +92,11 @@ function onMouseUp(event: MouseEvent): void {
     const selection = window.getSelection()
     const value = selection?.toString().trim() ?? ''
     if (!selection || selection.rangeCount === 0 || !value || value.length > 300) {
+      icon.value = null
+      return
+    }
+    // 段落/句子（非单词）走 AI：未接入模型时不弹翻译图标
+    if (!isWord(value) && !hasAi(props.settings)) {
       icon.value = null
       return
     }

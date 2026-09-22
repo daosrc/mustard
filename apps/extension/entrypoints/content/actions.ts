@@ -8,6 +8,15 @@ export function isWord(text: string): boolean {
   return /^\p{L}[\p{L}'-]*$/u.test(text.trim())
 }
 
+/** 是否已接入可用的 AI 模型（段落/句子翻译只能走 AI） */
+export function hasAi(settings: Settings | null): boolean {
+  if (!settings)
+    return false
+  const provider = settings.providers.find(p => p.id === settings.activeProviderId)
+  const model = provider?.models.find(m => m.name === settings.activeModel)
+  return !!provider?.apiKey && !!model
+}
+
 export async function translate(text: string, settings: Settings | null): Promise<TranslateResult> {
   const word = isWord(text)
   // 单词：先只查词典（本地/在线），快速出释义；句子：直接 AI

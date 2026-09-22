@@ -157,7 +157,7 @@ const tools = computed(() =>
     .sort((a, b) => a.order - b.order),
 )
 
-useTheme(() => (enabled.value ? rootEl.value : undefined))
+useTheme(() => rootEl.value)
 
 watch(settings, (value) => {
   setPageSettings(value)
@@ -221,8 +221,8 @@ function onBallClick(): void {
 </script>
 
 <template>
-  <div v-if="enabled" ref="rootEl" class="mustard-wrap" :class="[side, { dragging }]" :style="wrapStyle">
-    <div class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
+  <div ref="rootEl" class="mustard-wrap" :class="[side, { dragging }]" :style="wrapStyle">
+    <div v-if="enabled" class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
       <div class="tools">
         <button
           v-for="(tool, index) in tools"
