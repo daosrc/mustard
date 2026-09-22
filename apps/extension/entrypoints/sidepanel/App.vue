@@ -6,6 +6,7 @@ import { LANGS, STORAGE_KEYS } from '@mustard/shared'
 import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { extractDocxText, extractPdfText } from '../../lib/attachments'
 import { useI18n } from '../../lib/i18n'
 import { speak } from '../../lib/speech'
 import { useTheme } from '../../lib/useTheme'
@@ -179,10 +180,34 @@ async function addFile(file: File): Promise<void> {
   if (file.type.startsWith('image/')) {
     const dataUrl = await readAsDataURL(file)
     attachments.value.push({ type: 'image', name: file.name || 'screenshot.png', dataUrl, mime: file.type, size: file.size })
+    return
   }
-  else {
-    attachments.value.push({ type: 'file', name: file.name, mime: file.type, size: file.size })
+
+  const ext = (file.name.split('.').pop() ?? '').toLowerCase()
+
+  // 模型声明支持文件（附件能力）：PDF / DOCX 直接把原文件交给模型
+  if (store.activeModel?.inputs.file && (ext === 'pdf' || ext === 'docx')) {
+    const dataUrl = await readAsDataURL(file)
+    attachments.value.push({ type: 'file', name: file.name, dataUrl, mime: file.type, size: file.size })
+    return
   }
+
+  // 否则本地抽取文本：文本/MD 直接读，DOCX 解 XML，PDF 抽文本层
+  const text = await (async () => {
+    if (ext === 'docx')
+      return extractDocxText(new Uint8Array(await file.arrayBuffer()))
+    if (ext === 'pdf')
+      return extractPdfText(new Uint8Array(await file.arrayBuffer()))
+    if (file.type.startsWith('text/') || ext === 'txt' || ext === 'md' || ext === 'markdown')
+      return file.text()
+    return ''
+  })().catch(() => '')
+
+  if (!text.trim()) {
+    error(t('chat.fileNoText'))
+    return
+  }
+  attachments.value.push({ type: 'file', name: file.name, text, mime: file.type, size: file.size })
 }
 
 function onPickFile(event: Event): void {

@@ -71,6 +71,7 @@ export function parseSseDelta(line: string): string | null {
 export type ChatContentPart
   = | { type: 'text', text: string }
     | { type: 'image_url', image_url: { url: string } }
+    | { type: 'file', file: { filename: string, file_data: string } }
 
 export interface ChatBodyMessage {
   role: ChatMessage['role']
@@ -86,16 +87,28 @@ export interface ChatBody {
 /** 把消息（含图片/文件附件）转成 OpenAI 兼容 content（多模态为 content 数组） */
 export function toContentParts(message: ChatMessage): string | ChatContentPart[] {
   const images = (message.attachments ?? []).filter(a => a.type === 'image' && a.dataUrl)
+  // 模型声明支持「附件」时，直接传原文件（PDF / DOCX）；文本附件并入正文
+  const files = (message.attachments ?? []).filter(a => a.type === 'file' && a.dataUrl)
   const fileText = (message.attachments ?? []).filter(a => a.type === 'file' && a.text).map(a => a.text).join('\n')
   const text = [message.content, fileText].filter(Boolean).join('\n')
 
-  if (!images.length)
+  if (!images.length && !files.length)
     return text
   const parts: ChatContentPart[] = []
   if (text)
     parts.push({ type: 'text', text })
   for (const image of images)
     parts.push({ type: 'image_url', image_url: { url: image.dataUrl! } })
+  for (const file of files) {
+    parts.push({
+      type: 'file',
+      file: {
+        filename: file.name,
+        // 约定 file_data 为纯 base64（去掉 data: 前缀）
+        file_data: file.dataUrl!.replace(/^data:[^,]*,/, ''),
+      },
+    })
+  }
   return parts
 }
 

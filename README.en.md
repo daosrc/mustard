@@ -12,7 +12,7 @@
 | **Hover translation** | Hover to see the translation; delay and scope (word / sentence) are configurable |
 | **Full-page translation** | Bilingual side-by-side: each block gets its translation appended in place, incrementally, restorable at any time (**requires a configured model**) |
 | **Screenshot translation** | Paste a screenshot into the composer and let a multimodal model translate it |
-| **Side-panel chat** | Pick a model, stream the answer, and ask about pasted screenshots (attachment entries are gated by the selected model's input capabilities) |
+| **Side-panel chat** | Pick a model, stream the answer, and attach text / Markdown, PDF or DOCX files (PDF / DOCX are parsed to text locally; if the model declares file support, they are sent as-is) |
 | **Vocabulary** | Pronunciation, delete, import/export (JSON / CSV); "auto-save translated words" is off by default and can be enabled in settings |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
 | **Offline dictionaries** | Local → online → AI fallback; data is **not bundled** but **downloaded on first use**. The English→Chinese dictionary is installed automatically on first use; Wordset (EN→EN), CC-CEDICT (ZH→EN), JMdict (JA→EN) and FreeDict (EN→FR/PT/AR) are opt-in |
@@ -90,7 +90,7 @@ See [THIRD-PARTY.md](./THIRD-PARTY.md).
 
 - **Offline dictionaries**: data is not bundled and is **downloaded on first use**. The English→Chinese dictionary (现代英汉, ~2.8 MB) is downloaded and enabled automatically on first use; Wordset (EN→EN), CC-CEDICT (ZH→EN), JMdict (JA→EN) and FreeDict (EN→FR/PT/AR) are opt-in. **Target languages without an offline dictionary (JA/KO/DE/ES…) fall back to AI only.** The 现代英汉 data comes from open-ecdict and its license is unconfirmed (see THIRD-PARTY.md).
 - **Page translation needs a model**: it is AI-only; without one, enabling it just shows a notice and translates nothing.
-- **Attachments**: only images / screenshots are actually sent to the model; PDF / Word and other text attachments are recorded by name but not extracted yet.
+- **Attachments**: images / screenshots are sent to the model directly; text / Markdown is read locally and PDF / DOCX are parsed to text locally (best-effort text layer — **scanned PDFs with no text layer cannot be extracted**). When the selected model declares file support, PDF / DOCX are sent as-is instead of being parsed.
 - **UI language**: the extension UI supports **Simplified Chinese / English** (Settings → Appearance → UI language); strings live in `shared/i18n`. Please open an issue for any hard-coded text we missed.
 - **Homepage screenshots**: feature sections use real extension screenshots (`apps/landing/public/shots/`); re-shoot when the UI changes.
 
