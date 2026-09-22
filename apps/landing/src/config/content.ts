@@ -45,7 +45,7 @@ const repo = LINKS.repo
 const zh: Content = {
   lang: 'zh-CN',
   title: 'Mustard 芥末 · 开源 Chrome 划词翻译插件',
-  description: '划词 / 悬浮 / 网页 / 截图翻译 + 侧边栏 AI 对话、生词本与记词、离线词典。开源（MIT），仅通过 GitHub 分发。',
+  description: '划词 / 悬浮 / 网页 / 截图翻译 + 侧边栏 AI 对话、生词本与记词、离线词典。开源（MIT）。',
   nav: { features: '功能', steps: '使用', install: '安装', github: 'GitHub', altLabel: 'English', altHref: './en/' },
   hero: {
     badge: '开源浏览器翻译插件',
@@ -63,7 +63,7 @@ const zh: Content = {
     { title: '截图翻译', desc: '直接粘贴截图（⌘V / Ctrl+V），由多模态模型识别并翻译图片中的文字。', visual: 'image' },
     { title: '侧边栏 AI 对话', desc: '按提供商选择模型，流式输出；按模型能力门控附件与图片输入。', visual: 'chat' },
     { title: '生词本与记词', desc: '翻译后可一键收录（可选自动收录，默认关闭），支持搜索筛选与导入导出；听音默写，连续答对 3 次判定掌握。', visual: 'vocab' },
-    { title: '离线词典', desc: '本地词典 → 在线词典 → AI 分级查询；默认英汉词典，首次使用时按需下载，下载后离线可查。', visual: 'dict' },
+    { title: '离线词典', desc: '本地词典 → 在线词典 → AI 分级查询；首次使用自动装好英汉词典，另有英英 / 中英 / 日英 / 英法葡阿，按需下载后离线可查。', visual: 'dict' },
     { title: '模型提供商', desc: '支持自定义 OpenAI 兼容提供商，模型逐条配置能力。', visual: 'providers' },
   ],
   stepsTitle: '三步上手',
@@ -83,7 +83,7 @@ const zh: Content = {
   ossTitle: '开源与贡献',
   ossDesc: 'Mustard 采用 MIT 许可，欢迎提交 Issue 与 PR。内置词典数据遵循其原始许可。',
   installTitle: '安装与使用',
-  installDesc: '仅通过 GitHub 分发，无 Chrome 商店版本。',
+  installDesc: '从 GitHub Releases 下载打包好的扩展，或从源码构建。',
   installOptions: [
     {
       kind: 'steps',
@@ -108,7 +108,7 @@ const zh: Content = {
 const en: Content = {
   lang: 'en',
   title: 'Mustard · Open-source Chrome translation extension',
-  description: 'Select, hover, page and screenshot translation with a side-panel AI chat, vocabulary and dictation, and offline dictionaries. MIT, distributed on GitHub only.',
+  description: 'Select, hover, page and screenshot translation with a side-panel AI chat, vocabulary and dictation, and offline dictionaries. MIT.',
   nav: { features: 'Features', steps: 'Get started', install: 'Install', github: 'GitHub', altLabel: '中文', altHref: '../' },
   hero: {
     badge: 'Open-source browser translation extension',
@@ -126,7 +126,7 @@ const en: Content = {
     { title: 'Screenshot translation', desc: 'Paste a screenshot (⌘V / Ctrl+V) and let a multimodal model read and translate the text inside.', visual: 'image' },
     { title: 'Side-panel AI chat', desc: 'Pick a model per provider with streaming output; attachments and image input are gated by model capabilities.', visual: 'chat' },
     { title: 'Vocabulary & dictation', desc: 'Save a word with one click (optional auto-save, off by default), searchable and importable/exportable; listen-and-spell with mastery after 3 correct answers.', visual: 'vocab' },
-    { title: 'Offline dictionaries', desc: 'Local → online → AI fallback; an English→Chinese dictionary downloads on first use, then works offline.', visual: 'dict' },
+    { title: 'Offline dictionaries', desc: 'Local → online → AI fallback; the English→Chinese dictionary installs on first use, with EN→EN, ZH→EN, JA→EN and EN→FR/PT/AR available on demand.', visual: 'dict' },
     { title: 'Model providers', desc: 'Custom OpenAI-compatible providers with per-model capabilities.', visual: 'providers' },
   ],
   stepsTitle: 'Get started in three steps',
@@ -146,7 +146,7 @@ const en: Content = {
   ossTitle: 'Open source & contributing',
   ossDesc: 'Mustard is MIT licensed. Issues and PRs are welcome. Bundled dictionary data keeps its original licenses.',
   installTitle: 'Install & usage',
-  installDesc: 'Distributed on GitHub only — no Chrome Web Store listing.',
+  installDesc: 'Download the packaged extension from GitHub Releases, or build from source.',
   installOptions: [
     {
       kind: 'steps',

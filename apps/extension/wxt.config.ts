@@ -11,7 +11,7 @@ export default defineConfig({
   },
   manifest: {
     name: 'Mustard 芥末',
-    description: '开源 Chrome 划词/悬浮/网页翻译扩展：AI 对话、生词本与记词、离线词典。',
+    description: '开源 Chrome 划词/悬浮/网页/截图翻译扩展：侧边栏 AI 对话、生词本与记词、离线词典。',
     permissions: [
       'storage',
       'sidePanel',

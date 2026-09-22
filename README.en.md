@@ -1,7 +1,6 @@
 # Mustard
 
-> An open-source Chrome translation extension: select / hover / full-page translation, side-panel AI chat, vocabulary with dictation, and offline dictionaries.
-> Distributed on GitHub only — **no Chrome Web Store listing**.
+> An open-source Chrome translation extension: select / hover / page / screenshot translation, side-panel AI chat, vocabulary with dictation, and offline dictionaries.
 
 [中文](./README.md) · [Homepage](https://daosrc.github.io/mustard/en/) · [Releases](https://github.com/daosrc/mustard/releases)
 
@@ -11,12 +10,12 @@
 | --- | --- |
 | **Select-to-translate** | Select text, click the floating icon and read phonetics, part of speech, definitions and examples — pronounce it or save it to your vocabulary |
 | **Hover translation** | Hover to see the translation; delay and scope (word / sentence) are configurable |
-| **Full-page translation** | Bilingual side-by-side: a translated node is appended after each original block (placeholder → result), restorable at any time |
+| **Full-page translation** | Bilingual side-by-side: each block gets its translation appended in place, incrementally, restorable at any time (**requires a configured model**) |
 | **Screenshot translation** | Paste a screenshot into the composer and let a multimodal model translate it |
-| **Side-panel chat** | Pick a model grouped by provider; attach files (image / PDF / TXT / Word / Markdown) or screenshots |
+| **Side-panel chat** | Pick a model, stream the answer, and ask about pasted screenshots (attachment entries are gated by the selected model's input capabilities) |
 | **Vocabulary** | Pronunciation, delete, import/export (JSON / CSV); "auto-save translated words" is off by default and can be enabled in settings |
 | **Dictation practice** | See the word → spell it → verify; **3 correct answers in a row marks it "mastered"**; unmastered words come first |
-| **Offline dictionaries** | Local → online → AI fallback; dictionary data is **not bundled** but **downloaded on first use** (English→Chinese built in by default, plus ECDICT MIT sample and Wordset English), then works offline |
+| **Offline dictionaries** | Local → online → AI fallback; data is **not bundled** but **downloaded on first use**. The English→Chinese dictionary is installed automatically on first use; Wordset (EN→EN), CC-CEDICT (ZH→EN), JMdict (JA→EN) and FreeDict (EN→FR/PT/AR) are opt-in |
 | **Model providers** | OpenAI-compatible; add your own provider and models, each with declared input capabilities |
 | **Chat history** | Create / switch / delete sessions and reload past conversations |
 | **Target language** | Simplified Chinese by default, 14 languages supported |
@@ -24,11 +23,9 @@
 
 ## Install
 
-> No store release yet — install from GitHub.
-
 **Option 1: Download the packaged extension (recommended)**
 
-1. Open [Releases](https://github.com/daosrc/mustard/releases), download `mustard-<version>-chrome.zip` and unzip it.
+1. Open [Releases](https://github.com/daosrc/mustard/releases), download `mustard-translate-<version>-chrome.zip` and unzip it.
 2. Open `chrome://extensions/` and enable **Developer mode**.
 3. Click **Load unpacked** and select the unzipped folder.
 
@@ -49,8 +46,8 @@ Then load `apps/extension/.output/chrome-mv3` via **Load unpacked**.
    Without a key, AI features prompt you to configure one; selection/dictionary features keep working.
 2. **Select-to-translate**: select text on a page, then click the floating icon.
 3. **Full-page translation**: open the floating ball, expand the tools and enable "Page translation".
-4. **Vocabulary / dictation**: open the side panel, go to "Vocabulary" and click "Dictation".
-5. **Offline dictionaries**: Settings → Offline dictionaries to manage dictionaries and the online fallback.
+4. **Vocabulary / dictation**: open the side panel, go to "Vocabulary" and click "Practice" (shown as "Review" once everything is mastered).
+5. **Offline dictionaries**: Settings → Offline dictionaries to download / enable / delete dictionaries, or turn off the online fallback for fully offline mode.
 
 ## Development
 
@@ -86,12 +83,14 @@ design/                Design assets (prototype, design doc, icons, screenshots)
 
 ## Third-party data
 
-Bundled/downloadable dictionary data keeps its original license (ECDICT=MIT, CC-CEDICT/JMdict=CC BY-SA, some FreeDict=GPL).
+Downloadable dictionary data keeps its original license (open-ecdict, Wordset=CC BY-SA 4.0, CC-CEDICT=CC BY-SA 4.0, JMdict=EDRDG, FreeDict=GPL).
 See [THIRD-PARTY.md](./THIRD-PARTY.md).
 
 ## Known limitations
 
-- **Offline dictionaries**: data is not bundled and is **downloaded on first use**. An English→Chinese dictionary (现代英汉, ~2.8 MB) is the default, plus ECDICT (MIT sample) and Wordset English (CC BY-SA, lazy per letter). The 现代英汉 data comes from open-ecdict and its license is unconfirmed (see THIRD-PARTY.md). The full ECDICT and Chinese/Japanese sources are pending. The lookup chain (local → online → AI) and dictionary management are in place.
+- **Offline dictionaries**: data is not bundled and is **downloaded on first use**. The English→Chinese dictionary (现代英汉, ~2.8 MB) is downloaded and enabled automatically on first use; Wordset (EN→EN), CC-CEDICT (ZH→EN), JMdict (JA→EN) and FreeDict (EN→FR/PT/AR) are opt-in. **Target languages without an offline dictionary (JA/KO/DE/ES…) fall back to AI only.** The 现代英汉 data comes from open-ecdict and its license is unconfirmed (see THIRD-PARTY.md).
+- **Page translation needs a model**: it is AI-only; without one, enabling it just shows a notice and translates nothing.
+- **Attachments**: only images / screenshots are actually sent to the model; PDF / Word and other text attachments are recorded by name but not extracted yet.
 - **UI language**: the extension UI supports **Simplified Chinese / English** (Settings → Appearance → UI language); strings live in `shared/i18n`. Please open an issue for any hard-coded text we missed.
 - **Homepage screenshots**: feature sections use real extension screenshots (`apps/landing/public/shots/`); re-shoot when the UI changes.
 
