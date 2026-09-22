@@ -193,3 +193,10 @@
   - 顺带发现测试用的 Agnes 端点频繁返回 **429**（`The rate exceeds the limit`），这也是「卡住不动」的一部分原因：`done` 只在整批回包后跳一次，429 重试期间进度条看着像卡死。
 - 解决：① 段数上限 80 → 150、字符预算仍是 10000（字符才是真正的主约束）；② **极短块合并**：连续 ≤24 字符的块每 8 条拼成一项（换行分隔），回包按行拆回，行数对不上则整组计失败；实测侧边栏标签逐条对得上（`Main page => 主頁`、`Contents => 目錄`）；③ core 遇长度不匹配**不再重试同一请求**，直接二分拆分（瞬时错误才重试一次）；④ 提示词改用可读语言名（`简体中文` 而非 `zh-CN`），避免模型输出繁体。
 - 备注：整页翻译的耗时下限由模型每请求延迟决定（该页约 4 批），批次越大单次等待越久但总往返更少；进度条按批跳动，不是卡死。
+
+### 2026-09-22 · 划词单词偶发「无法翻译」：IndexedDB 记录损坏把整条链路炸掉
+- 现象：先划词翻译一整段，再划词单个单词，大概率显示「未找到结果。配置模型 API Key 后可用 AI 翻译。」——但 AI 明明配置好了，且单词本应走「本地词典 → AI」。
+- 排查：直接调后台 `TRANSLATE_TEXT`（dictionaryOnly）发现**整个请求 reject**（`A runtime.onMessage listener's promise rejected without an Error`）。继续读 IndexedDB，发现部分分片（`dict:ecdict-zh:h/m/s/c/a`）读取报 **`NotReadableError: Data lost due to missing file. Affected record should be considered irrecoverable`**，而 `:w`、`:e` 正常——Chrome 的 IDB 记录真的丢了。
+- 原因：① `loadShard()` 没有捕获 `idbGet` 的异常，异常一路上抛到 message handler；② `openPopover` 里 `await translate()` 抛异常后，`else if (isWord)` 的 AI 兜底**被跳过**，于是既没有词典结果也没有 AI 结果；③ `content.notFound` 文案写死了「配置模型 API Key」，AI 已配置时也这么提示，误导。
+- 解决：① `loadShard` 捕获读异常并当作「分片缺失」返回 null，交给 `lookupLocal` 既有的「缺分片 → installDict 重新下载」流程自愈；② `translate()` 加 `.catch(() => null)`，词典失败不再吞掉 AI 兜底；③ 文案改回中性的「未找到结果。」（需要提示配置的场景由 `content.noDict` 承担）。
+- 备注：实测四个原本必挂的词（hello/mustard/serendipity/curious）全部恢复；损坏分片 `dict:ecdict-zh:h` 重新下载后 len=1391 可读；划词弹框 `Serendipity → n. 意外发现新奇事物的本领`。这类损坏是环境/Chrome 层面的（本地 profile 反复清库后出现），但扩展现在能自愈而不是永久失效。

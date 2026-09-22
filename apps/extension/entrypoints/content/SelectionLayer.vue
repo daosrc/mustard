@@ -133,7 +133,8 @@ async function openPopover(): Promise<void> {
   added.value = false
   clearTimeout(aiTimer)
   try {
-    result.value = await translate(value, props.settings)
+    // 词典查询失败（如本地库损坏）不能吞掉后续的 AI 兜底
+    result.value = await translate(value, props.settings).catch(() => null)
     const card = result.value?.card
     if (card) {
       // 命中词典：3s 后若弹框仍打开，追加 AI 翻译

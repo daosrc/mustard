@@ -67,7 +67,16 @@ async function loadShard(id: string, letter: string): Promise<Map<string, LocalE
   const cached = shardCache.get(key)
   if (cached)
     return cached
-  const entries = await idbGet<LocalEntry[]>(key)
+  let entries: LocalEntry[] | undefined
+  try {
+    entries = await idbGet<LocalEntry[]>(key)
+  }
+  catch {
+    // IndexedDB 记录可能损坏（Chrome 的 NotReadableError: data lost）。
+    // 这里当作「没有这个分片」，交给 lookupLocal 走重新下载修复，
+    // 绝不能把异常抛出去——否则整条查询链路（含 AI 兜底）都会失败。
+    return null
+  }
   if (!entries || !entries.length)
     return null
   const map = toMap(entries)
