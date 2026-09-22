@@ -149,7 +149,9 @@ function toolLabel(tool: ToolItem): string {
 }
 
 const ball = computed(() => settings.value?.floatingBall ?? null)
-const enabled = computed(() => ball.value?.enabled !== false)
+/** 悬浮球只在顶层文档显示：content script 注入所有 frame，否则每个 iframe 都会长出一个球 */
+const isTopFrame = window.self === window.top
+const showBall = computed(() => isTopFrame && ball.value?.enabled !== false)
 const isStack = computed(() => ball.value?.expand === 'stack')
 const tools = computed(() =>
   [...(ball.value?.tools ?? [])]
@@ -222,7 +224,7 @@ function onBallClick(): void {
 
 <template>
   <div ref="rootEl" class="mustard-wrap" :class="[side, { dragging }]" :style="wrapStyle">
-    <div v-if="enabled" class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
+    <div v-if="showBall" class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
       <div class="tools">
         <button
           v-for="(tool, index) in tools"
