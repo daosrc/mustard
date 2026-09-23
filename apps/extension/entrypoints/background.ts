@@ -153,7 +153,7 @@ export default defineBackground({
           if (view)
             void setStored(STORAGE_KEYS.pendingView, view)
           if (summary)
-            void setStored(STORAGE_KEYS.pendingSummary, summary)
+            void setStored(STORAGE_KEYS.pendingSummary, { ...summary, tabId: (sender as any)?.tab?.id })
           return opened.then(() => ({ ok: true }))
         }
         case 'TRANSLATE_TEXT': {

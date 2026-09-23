@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Attachment, ChatMessage, Session, Settings } from '@mustard/shared'
 import { createSession, sessionTitle } from '@mustard/core/session'
-import { getStored, send, setStored, startChat } from '@mustard/platform'
+import { browser, getStored, send, setStored, startChat } from '@mustard/platform'
 import { LANGS, STORAGE_KEYS } from '@mustard/shared'
 import { MChip, MIcon, MSelect, MToastHost, useToast } from '@mustard/ui'
 import { uid } from '@mustard/utils'
@@ -44,8 +44,20 @@ const textareaEl = ref<HTMLTextAreaElement>()
 const fileEl = ref<HTMLInputElement>()
 let handle: { abort: () => void } | null = null
 
+const VIEWS = ['chat', 'vocab', 'history', 'settings', 'summary'] as const
+
+/** 面板已打开时，外部（悬浮球工具 / 右键菜单）再次请求视图也要跟随切换 */
+function onStorageChanged(changes: Record<string, any>): void {
+  const next = changes[STORAGE_KEYS.pendingView]?.newValue
+  if (typeof next === 'string' && (VIEWS as readonly string[]).includes(next) && next !== view.value) {
+    view.value = next as typeof view.value
+    void setStored(STORAGE_KEYS.pendingView, '')
+  }
+}
+
 onMounted(async () => {
   await store.load()
+  browser.storage.onChanged.addListener(onStorageChanged)
   try {
     const pending = await getStored<'chat' | 'vocab' | 'history' | 'settings' | 'summary'>(STORAGE_KEYS.pendingView)
     if (pending === 'vocab' || pending === 'history' || pending === 'settings' || pending === 'summary')

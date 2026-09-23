@@ -2,7 +2,7 @@
 import type { ChatStreamHandle } from '@mustard/platform'
 import type { ChatMessage, PageContent } from '@mustard/shared'
 import { summaryPrompt } from '@mustard/core'
-import { getStored, send, setStored, startChat } from '@mustard/platform'
+import { browser, getStored, send, setStored, startChat } from '@mustard/platform'
 import { langOption, STORAGE_KEYS } from '@mustard/shared'
 import { MButton, MIcon, useToast } from '@mustard/ui'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
@@ -13,11 +13,13 @@ const store = useSettingsStore()
 const { t } = useI18n()
 const { success } = useToast()
 
-type Phase = 'loading' | 'done' | 'error' | 'empty'
+type Phase = 'loading' | 'done' | 'error' | 'empty' | 'idle'
 const phase = ref<Phase>('loading')
 const summary = ref('')
 const errorText = ref('')
 const content = ref<PageContent | null>(null)
+/** 当前标签页是否就是发起总结的那个标签页 */
+const inScope = ref(true)
 let handle: ChatStreamHandle | null = null
 
 /** 打开侧边栏与写入内容几乎同时发生，这里短暂重试避免读到空 */
@@ -35,6 +37,17 @@ async function readPending(): Promise<PageContent | null> {
 function stop(): void {
   handle?.abort()
   handle = null
+}
+
+/** 当前窗口激活的标签页 id（侧边栏属于某个窗口，取 currentWindow） */
+async function activeTabId(): Promise<number | undefined> {
+  try {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+    return tab?.id
+  }
+  catch {
+    return undefined
+  }
 }
 
 async function run(target: PageContent, force = false): Promise<void> {
@@ -67,11 +80,17 @@ async function run(target: PageContent, force = false): Promise<void> {
     onDone: (full) => {
       handle = null
       summary.value = full || summary.value
-      phase.value = summary.value.trim() ? 'done' : 'error'
-      if (!summary.value.trim())
-        errorText.value = t('summary.failed')
-      else
+      const ok = !!summary.value.trim()
+      if (ok)
         void setStored(STORAGE_KEYS.pendingSummary, { ...target, summary: summary.value })
+      // 不在发起总结的标签页时只缓存结果，界面仍显示提示
+      if (!inScope.value) {
+        phase.value = 'idle'
+        return
+      }
+      phase.value = ok ? 'done' : 'error'
+      if (!ok)
+        errorText.value = t('summary.failed')
     },
     onError: (code, message) => {
       handle = null
@@ -81,11 +100,30 @@ async function run(target: PageContent, force = false): Promise<void> {
   })
 }
 
-onMounted(async () => {
+/**
+ * 总结只在「发起它的标签页」生效：切到别的标签页、或在新标签里打开，
+ * 都只显示提示，不展示别的标签页的总结。
+ */
+async function evaluate(): Promise<void> {
   const target = await readPending()
+  // 换了目标（重新点了总结）才中断上一次；切标签页不中断，让请求跑完并写缓存
+  if (target?.ts !== content.value?.ts) {
+    stop()
+    summary.value = ''
+  }
   content.value = target
   if (!target || !target.text.trim()) {
+    stop()
+    inScope.value = true
     phase.value = 'empty'
+    return
+  }
+  const tabId = await activeTabId()
+  inScope.value = !(tabId !== undefined && target.tabId !== undefined && target.tabId !== tabId)
+  if (!inScope.value) {
+    if (target.summary)
+      summary.value = target.summary
+    phase.value = 'idle'
     return
   }
   if (target.summary) {
@@ -93,10 +131,33 @@ onMounted(async () => {
     phase.value = 'done'
     return
   }
+  if (handle) {
+    phase.value = 'loading'
+    return
+  }
   await run(target)
+}
+
+function onStorageChanged(changes: Record<string, any>): void {
+  if (changes[STORAGE_KEYS.pendingSummary])
+    void evaluate()
+}
+
+function onTabActivated(): void {
+  void evaluate()
+}
+
+onMounted(async () => {
+  browser.storage.onChanged.addListener(onStorageChanged)
+  browser.tabs.onActivated.addListener(onTabActivated)
+  await evaluate()
 })
 
-onBeforeUnmount(stop)
+onBeforeUnmount(() => {
+  browser.storage.onChanged.removeListener(onStorageChanged)
+  browser.tabs.onActivated.removeListener(onTabActivated)
+  stop()
+})
 
 function retry(): void {
   stop()
@@ -116,7 +177,7 @@ function copy(): void {
 
 <template>
   <div class="summary">
-    <p v-if="content?.title" class="src">
+    <p v-if="phase !== 'idle' && content?.title" class="src">
       <MIcon name="summary" :size="13" />
       <span class="src-label">{{ t('summary.source') }}</span>
       <span class="src-title">{{ content.title }}</span>
@@ -129,6 +190,10 @@ function copy(): void {
 
     <div v-else-if="phase === 'empty'" class="state">
       {{ t('summary.empty') }}
+    </div>
+
+    <div v-else-if="phase === 'idle'" class="state">
+      {{ t('summary.notThisTab') }}
     </div>
 
     <template v-else-if="phase === 'error'">
