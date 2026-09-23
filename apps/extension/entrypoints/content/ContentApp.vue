@@ -102,19 +102,6 @@ function onDragUp(event: PointerEvent): void {
   })
 }
 
-function onPointerEnter(): void {
-  clearTimeout(closeTimer)
-  open.value = true
-}
-
-function onPointerLeave(): void {
-  // 宽限期：从球移向工具（两者间有空隙）时不闪退
-  clearTimeout(closeTimer)
-  closeTimer = setTimeout(() => {
-    open.value = false
-  }, 380)
-}
-
 onMounted(() => {
   void refresh()
   browser.storage.onChanged.addListener(onStorage)
@@ -123,6 +110,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   browser.storage.onChanged.removeListener(onStorage)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('pointermove', onWindowPointerMove)
   clearTimeout(closeTimer)
 })
 
@@ -211,6 +199,48 @@ function toolStyle(index: number): Record<string, string | number> {
     '--y': `${Math.round(dy * arcRadius.value * Math.sin(t))}px`,
     '--i': index,
   }
+}
+
+/**
+ * 悬浮球展开工具的命中范围：以球心为圆心、半径覆盖整个工具环的圆。
+ * 只监听球本身的 pointerleave 是不够的——球到工具之间有空隙，
+ * 指针穿过空隙时会立刻 leave，工具还没点到就收起来了。
+ * 因此：进入球时缓存球心并挂一个 window 级 pointermove，
+ * 只要指针还在这个圆内（含间隙与工具上）就保持展开，出圆才收起。
+ */
+const hoverRadius = computed(() => arcRadius.value + 45)
+let hoverCenter = { x: 0, y: 0 }
+
+function insideHover(x: number, y: number): boolean {
+  return Math.hypot(x - hoverCenter.x, y - hoverCenter.y) <= hoverRadius.value
+}
+
+function onPointerEnter(): void {
+  clearTimeout(closeTimer)
+  const rect = rootEl.value?.querySelector('.fab')?.getBoundingClientRect()
+  if (rect)
+    hoverCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+  open.value = true
+  window.addEventListener('pointermove', onWindowPointerMove)
+}
+
+function onWindowPointerMove(event: PointerEvent): void {
+  if (open.value && !insideHover(event.clientX, event.clientY))
+    closeMenu()
+}
+
+function closeMenu(): void {
+  clearTimeout(closeTimer)
+  open.value = false
+  window.removeEventListener('pointermove', onWindowPointerMove)
+}
+
+function onPointerLeave(event: PointerEvent): void {
+  // 圆内（含球到工具的间隙）不算离开；出圆才收，留一点宽限避免边界抖动
+  if (insideHover(event.clientX, event.clientY))
+    return
+  clearTimeout(closeTimer)
+  closeTimer = setTimeout(closeMenu, 120)
 }
 
 function isOn(id: string): boolean {
