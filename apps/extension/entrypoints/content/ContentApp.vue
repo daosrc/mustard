@@ -27,8 +27,12 @@ const FEATURE_BY_TOOL: Record<string, keyof Settings['features']> = {
   selectionTranslate: 'selectionTranslate',
 }
 
-const RADIUS = 100
-const STEP_DEG = 26
+/** 工具环基础半径；数量变多时按间距自动放大 */
+const RADIUS_BASE = 100
+/** 相邻工具的目标间距（px），保证图标不重叠 */
+const TOOL_GAP = 46
+/** 工具环始终张开 180°→90°：只在球的内侧（不越过球心），避免顶到屏幕边缘 */
+const ARC_SPAN = 90
 
 const rootEl = ref<HTMLElement>()
 const settings = ref<Settings | null>(null)
@@ -186,12 +190,25 @@ function restorePage(): void {
   }
 }
 
+/** 相邻工具的角度间隔（工具数为 1 时不展开） */
+const arcStep = computed(() => (tools.value.length > 1 ? ARC_SPAN / (tools.value.length - 1) : 0))
+/** 按目标间距放大半径，工具变多也不会挤在一起 */
+const arcRadius = computed(() => {
+  const step = arcStep.value
+  if (!step)
+    return RADIUS_BASE
+  return Math.max(RADIUS_BASE, Math.round((TOOL_GAP / 2) / Math.sin((step / 2) * Math.PI / 180)))
+})
+/** 球在上半屏时工具朝下张开，否则朝上——避免超出视口 */
+const fanDown = computed(() => (settings.value?.floatingBall?.y ?? 0.94) < 0.5)
+
 function toolStyle(index: number): Record<string, string | number> {
-  const angle = (180 - index * STEP_DEG) * Math.PI / 180
-  const mirror = ball.value?.position === 'left' ? -1 : 1
+  const t = (index * arcStep.value) * Math.PI / 180
+  const mirror = side.value === 'left' ? -1 : 1
+  const dy = fanDown.value ? 1 : -1
   return {
-    '--x': `${Math.round(RADIUS * Math.cos(angle)) * mirror}px`,
-    '--y': `${-Math.round(RADIUS * Math.sin(angle))}px`,
+    '--x': `${Math.round(-arcRadius.value * Math.cos(t) * mirror)}px`,
+    '--y': `${Math.round(dy * arcRadius.value * Math.sin(t))}px`,
     '--i': index,
   }
 }
@@ -231,7 +248,7 @@ function onBallClick(): void {
 </script>
 
 <template>
-  <div ref="rootEl" class="mustard-wrap" :class="[side, { dragging }]" :style="wrapStyle">
+  <div ref="rootEl" class="mustard-wrap" :class="[side, { dragging, 'fan-down': fanDown }]" :style="wrapStyle">
     <div v-if="showBall" class="fab-root" :class="{ open, stack: isStack }" @pointerenter="onPointerEnter" @pointerleave="onPointerLeave">
       <div class="tools">
         <button

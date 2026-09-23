@@ -104,6 +104,11 @@
   transform: translate(0, calc(var(--i) * -46px - 56px)) scale(1);
 }
 
+.mustard-wrap.fan-down .fab-root.stack.open .tool,
+.mustard-wrap.fan-down .fab-root.stack:hover .tool {
+  transform: translate(0, calc(var(--i) * 46px + 56px)) scale(1);
+}
+
 .tool:hover {
   background: var(--m-primary);
   color: var(--m-primary-ink);
