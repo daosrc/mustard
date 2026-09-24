@@ -37,6 +37,23 @@ function resolveSourceLang(sourceLang: SourceLang, word: string, targetLang: Lan
   return /^[\x20-\x7E]+$/.test(word) ? 'en' : targetLang
 }
 
+/** 记住哪些标签页开着网页翻译：只在内存，标签页关闭即清；用于同标签内跳转/刷新后恢复 */
+const pageTranslateTabs = new Set<number>()
+
+/** 只向指定标签页的所有 frame 广播网页翻译开关（网页翻译按标签页独立，不跨标签页） */
+async function broadcastPageTranslate(tabId: number, on: boolean): Promise<void> {
+  if (on)
+    pageTranslateTabs.add(tabId)
+  else
+    pageTranslateTabs.delete(tabId)
+  try {
+    await browser.tabs.sendMessage(tabId, { type: 'PAGE_TRANSLATE', payload: { on } } as Message)
+  }
+  catch {
+    // frame 未注入 content script 时忽略
+  }
+}
+
 async function localLookupFn(targetLang?: string): Promise<(word: string) => Promise<DictResult | null>> {
   const settings = await getSettings()
   const enabled = Object.entries(settings.dictionaries)
@@ -231,6 +248,17 @@ export default defineBackground({
               : await browser.tabs.captureVisibleTab({ format: 'png' })
             return { dataUrl }
           })()
+        case 'PAGE_TRANSLATE_SET':
+          return (async () => {
+            const tabId = (sender as any)?.tab?.id
+            if (typeof tabId === 'number')
+              await broadcastPageTranslate(tabId, message.payload.on)
+            return { ok: true }
+          })()
+        case 'PAGE_TRANSLATE_GET': {
+          const tabId = (sender as any)?.tab?.id
+          return Promise.resolve({ on: typeof tabId === 'number' && pageTranslateTabs.has(tabId) })
+        }
         case 'GET_VOCAB':
           return getVocab()
         case 'ADD_VOCAB':
@@ -387,10 +415,21 @@ export default defineBackground({
       }
       if (command === 'toggle-page-translate') {
         void (async () => {
-          const settings = await getSettings()
-          await updateSettings({ features: { ...settings.features, pageTranslate: !settings.features.pageTranslate } })
+          const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+          if (typeof tab?.id !== 'number')
+            return
+          // 快捷键切换的是「当前活动标签页」：交给其顶层 frame 决定开/关后再广播
+          try {
+            await browser.tabs.sendMessage(tab.id, { type: 'PAGE_TRANSLATE_TOGGLE' } as Message, { frameId: 0 })
+          }
+          catch {}
         })()
       }
+    })
+
+    // 标签页关闭时清掉其网页翻译状态，避免标签页 id 复用导致误恢复
+    browser.tabs?.onRemoved.addListener((tabId) => {
+      pageTranslateTabs.delete(tabId)
     })
 
     // 右键菜单：翻译选中文本 / 加入生词本

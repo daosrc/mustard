@@ -218,3 +218,9 @@
 - 原因：总结内容只存在全局键 `mustard:pending-summary` 里，没有记录来源标签页；侧边栏又是按窗口共享的，切标签不会换内容。
 - 解决：`PageContent` 增加 `tabId`，后台在 `OPEN_SIDEBAR` 时用 `sender.tab.id` 打标；SummaryView 以 `tabs.query({active,currentWindow})` 取当前标签页并**只在 tabId 匹配时展示**，否则显示「当前标签页没有网页总结」提示；监听 `tabs.onActivated` 与 `pendingSummary` 存储变化实时重算。另外切标签不再中断进行中的请求（跑完写缓存），完成后若不在发起标签页也只缓存、不改界面。
 - 备注：实测在发起标签页显示并流式输出、切到别的标签页显示提示、切回来仍是缓存的总结（未重新请求）；新开标签不在范围内。
+
+### 2026-09-24 · 网页翻译跨标签页串台
+- 现象：在 A 标签页开启网页翻译后，从当前页新开的 B 标签页（或切到别的标签页）也被翻译；开关状态没有按标签页隔离。
+- 原因：网页翻译由持久化的全局设置 `features.pageTranslate` 驱动，写一次所有标签页都读到 true，并通过 storage 变化广播到每个标签页触发翻译。
+- 解决：网页翻译改为**按标签页、仅内存**的开关，不再写全局设置。悬浮球工具 / 还原原文 / 快捷键都发 `PAGE_TRANSLATE_SET{on}`，后台用 `sender.tab.id` 记到内存集合并只用 `tabs.sendMessage(tabId)` 广播回**该标签页的所有 frame**（同标签内 iframe 仍翻译）；内容脚本用本地 `pageWanted`/`pageState.active` 驱动开关高亮。同标签内跳转 / 刷新后，内容脚本在挂载时 `PAGE_TRANSLATE_GET` 向后台询问本标签页状态并恢复；标签页关闭时后台清理该状态（防 id 复用误恢复）。options 里原有的全局「网页翻译」开关已移除。
+- 备注：实测 A 开启只 A 翻译（B 新标签 0 条、开关独立为关）；同标签内跳转开关保持、译文重新出现；同标签 iframe 一起翻译（top=2 iframes=7,7）；用户持久化设置 `features.pageTranslate` 不再被改动。

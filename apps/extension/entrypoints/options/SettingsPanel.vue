@@ -358,16 +358,6 @@ async function removeDictPack(id: string): Promise<void> {
       <div class="field">
         <div>
           <div class="lab">
-            {{ t('options.pageTranslate') }}
-          </div><div class="sub">
-            {{ t('options.pageTranslateSub') }}
-          </div>
-        </div>
-        <MSwitch :model-value="!!store.settings?.features.pageTranslate" @update:model-value="v => setFeature('pageTranslate', v)" />
-      </div>
-      <div class="field">
-        <div>
-          <div class="lab">
             {{ t('options.selectionTranslate') }}
           </div><div class="sub">
             {{ t('options.selectionTranslateSub') }}

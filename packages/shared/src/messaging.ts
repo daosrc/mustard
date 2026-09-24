@@ -24,6 +24,14 @@ export type Message
     | { type: 'DELETE_SESSION', payload: { id: string } }
     | { type: 'OPEN_SIDEBAR', payload?: { view?: 'chat' | 'settings' | 'vocab' | 'history' | 'summary', summary?: PageContent } }
     | { type: 'CAPTURE_TAB' }
+    // 网页翻译按标签页独立：内容脚本请求「本标签页」开/关，后台只广播回该标签页的所有 frame
+    | { type: 'PAGE_TRANSLATE_SET', payload: { on: boolean } }
+    // 内容脚本加载后询问本标签页的网页翻译开关（同标签内跳转 / 刷新后恢复）
+    | { type: 'PAGE_TRANSLATE_GET' }
+    // 后台 → 某标签页所有 frame：设置该 frame 的网页翻译开关
+    | { type: 'PAGE_TRANSLATE', payload: { on: boolean } }
+    // 后台 → 活动标签页顶层 frame：快捷键切换（由顶层 frame 决定开/关后再请求广播）
+    | { type: 'PAGE_TRANSLATE_TOGGLE' }
 
 export type MessageType = Message['type']
 
@@ -50,6 +58,10 @@ export interface ResponseMap {
   DELETE_SESSION: { id: string }
   OPEN_SIDEBAR: { ok: true }
   CAPTURE_TAB: { dataUrl: string }
+  PAGE_TRANSLATE_SET: { ok: true }
+  PAGE_TRANSLATE_GET: { on: boolean }
+  PAGE_TRANSLATE: { ok: true }
+  PAGE_TRANSLATE_TOGGLE: { ok: true }
 }
 
 export type ResponseOf<T extends MessageType> = ResponseMap[T]

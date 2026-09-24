@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Settings, ToolItem } from '@mustard/shared'
+import type { Message, Settings, ToolItem } from '@mustard/shared'
 import { browser, send } from '@mustard/platform'
 import { STORAGE_KEYS, t as translate } from '@mustard/shared'
 import { MIcon } from '@mustard/ui'
@@ -21,8 +21,8 @@ const TOOL_ICON: Record<string, string> = {
   settings: 'settings',
 }
 
+// 网页翻译按标签页独立处理，不在此表（此表只映射全局功能开关）
 const FEATURE_BY_TOOL: Record<string, keyof Settings['features']> = {
-  pageTranslate: 'pageTranslate',
   hoverTranslate: 'hoverTranslate',
   selectionTranslate: 'selectionTranslate',
 }
@@ -102,17 +102,51 @@ function onDragUp(event: PointerEvent): void {
   })
 }
 
+/** 本标签页（本 frame）是否想开着网页翻译：只存内存，不持久化，不跨标签页 */
+const pageWanted = ref(false)
+
+/** 设置本标签页的网页翻译开关：本地立即生效，并让后台广播到本标签页其余 frame */
+function setPageTranslate(on: boolean, broadcast = true): void {
+  pageWanted.value = on
+  if (on)
+    startPageTranslate(settings.value)
+  else
+    stopPageTranslate()
+  if (broadcast)
+    void send({ type: 'PAGE_TRANSLATE_SET', payload: { on } })
+}
+
 onMounted(() => {
-  void refresh()
   browser.storage.onChanged.addListener(onStorage)
+  browser.runtime.onMessage.addListener(onRuntimeMessage)
   window.addEventListener('resize', onResize)
+  void (async () => {
+    await refresh()
+    // 同标签内跳转 / 刷新后，向后台询问本标签页是否仍开着网页翻译并恢复
+    try {
+      const { on } = await send({ type: 'PAGE_TRANSLATE_GET' })
+      if (on)
+        setPageTranslate(true, false)
+    }
+    catch {}
+  })()
 })
 onBeforeUnmount(() => {
   browser.storage.onChanged.removeListener(onStorage)
+  browser.runtime.onMessage.removeListener(onRuntimeMessage)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('pointermove', onWindowPointerMove)
   clearTimeout(closeTimer)
 })
+
+/** 后台就本标签页的网页翻译下发指令：设置 / 快捷键切换。只影响本标签页各 frame */
+function onRuntimeMessage(raw: unknown): void {
+  const message = raw as Message
+  if (message.type === 'PAGE_TRANSLATE')
+    setPageTranslate(message.payload.on, false)
+  else if (message.type === 'PAGE_TRANSLATE_TOGGLE')
+    setPageTranslate(!pageWanted.value)
+}
 
 function onStorage(changes: Record<string, unknown>): void {
   if (changes[STORAGE_KEYS.settings] || changes[STORAGE_KEYS.vocab])
@@ -157,25 +191,13 @@ useTheme(() => rootEl.value)
 
 watch(settings, (value) => {
   setPageSettings(value)
-  // 之前因未接入 AI 模型没开始翻译：配置好后自动开始
-  if (value?.features.pageTranslate && !pageState.active)
+  // 之前因未接入 AI 模型没开始翻译：配置好后自动开始（仅当本页仍想开着）
+  if (pageWanted.value && !pageState.active)
     startPageTranslate(value)
-})
-watch(() => settings.value?.features.pageTranslate, (on) => {
-  if (on)
-    startPageTranslate(settings.value)
-  else
-    stopPageTranslate()
 })
 
 function restorePage(): void {
-  stopPageTranslate()
-  if (settings.value) {
-    void send({
-      type: 'UPDATE_SETTINGS',
-      payload: { features: { ...settings.value.features, pageTranslate: false } },
-    })
-  }
+  setPageTranslate(false)
 }
 
 /** 相邻工具的角度间隔（工具数为 1 时不展开） */
@@ -244,12 +266,20 @@ function onPointerLeave(event: PointerEvent): void {
 }
 
 function isOn(id: string): boolean {
+  // 网页翻译按标签页独立，用本地状态；其余功能仍是全局设置
+  if (id === 'pageTranslate')
+    return pageWanted.value || pageState.active
   const key = FEATURE_BY_TOOL[id]
   return key ? !!settings.value?.features[key] : false
 }
 
 async function onToolClick(tool: ToolItem): Promise<void> {
   if (tool.type === 'toggle') {
+    // 网页翻译只针对本标签页：不写全局设置，改为按标签页开关
+    if (tool.id === 'pageTranslate') {
+      setPageTranslate(!isOn('pageTranslate'))
+      return
+    }
     const key = FEATURE_BY_TOOL[tool.id]
     if (!key || !settings.value)
       return
@@ -307,7 +337,7 @@ function onBallClick(): void {
     <SelectionLayer :settings="settings" @added="onAdded" />
     <HoverTooltip :settings="settings" @added="onAdded" />
     <!-- 进度条只在顶层文档显示：各 frame 各有一条会重复；
-         「还原原文」通过 features.pageTranslate=false 广播到所有 frame，统一停止 -->
+         「还原原文」通过 PAGE_TRANSLATE_SET 让后台广播到本标签页所有 frame，统一停止 -->
     <PageToolbar v-if="isTopFrame" :ui-lang="settings?.uiLang ?? 'zh'" @restore="restorePage" />
   </div>
 </template>
